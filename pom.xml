@@ -10,7 +10,7 @@
   <name>flockr</name>
   <modules>
     <module>flockr-admin</module>
-    <module>users-api</module>
+    <module>flockr-users</module>
   </modules>
 
   <properties>

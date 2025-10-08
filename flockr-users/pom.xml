@@ -9,7 +9,7 @@
         <version>1.0</version>
     </parent>
 
-    <artifactId>users-api</artifactId>
+    <artifactId>flockr-users</artifactId>
 
     <properties>
         <maven.compiler.source>23</maven.compiler.source>
