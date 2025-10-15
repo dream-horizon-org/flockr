@@ -11,6 +11,7 @@
   <modules>
     <module>flockr-admin</module>
     <module>flockr-users</module>
+      <module>common</module>
   </modules>
 
   <properties>
