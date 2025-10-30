@@ -2,10 +2,12 @@ package com.ascend.flockr.config;
 
 import com.ascend.flockr.config.provider.ConfigProvider;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
+@Getter
 public class HttpServerConfig {
   private String host;
   private Integer port;

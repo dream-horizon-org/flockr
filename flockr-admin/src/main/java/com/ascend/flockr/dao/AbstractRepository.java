@@ -3,8 +3,6 @@ package com.ascend.flockr.dao;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
-import io.vertx.core.json.JsonObject;
-import io.vertx.mysqlclient.MySQLClient;
 import io.vertx.reactivex.mysqlclient.MySQLPool;
 import io.vertx.reactivex.sqlclient.*;
 import java.net.ConnectException;
@@ -62,31 +60,6 @@ public abstract class AbstractRepository implements ReadOperation, WriteOperatio
   }
 
   @Override
-  public Single<JsonObject> health() {
-    return rxExecute(HEALTH_CHECK_QUERY)
-        .ignoreElement()
-        .toSingle(() -> new JsonObject().put("PING", "PONG"));
-  }
-
-  @Override
-  public <T> Maybe<T> findOne(String preparedQuery, Function<Row, T> rowMapper) {
-    return rxExecute(preparedQuery)
-        .map(RowSet::iterator)
-        .filter(RowIterator::hasNext)
-        .map(RowIterator::next)
-        .map(rowMapper);
-  }
-
-  @Override
-  public <T> Maybe<T> findOneUsingSimpleQuery(String query, Function<Row, T> rowMapper) {
-    return rxExecuteSimpleQuery(query)
-        .map(RowSet::iterator)
-        .filter(RowIterator::hasNext)
-        .map(RowIterator::next)
-        .map(rowMapper);
-  }
-
-  @Override
   public <T> Maybe<T> findOne(String preparedQuery, Tuple tuple, Function<Row, T> rowMapper) {
     return rxExecute(preparedQuery, tuple)
         .map(RowSet::iterator)
@@ -101,37 +74,14 @@ public abstract class AbstractRepository implements ReadOperation, WriteOperatio
   }
 
   @Override
-  public <T> Single<List<T>> findMultipleUsingSimpleQuery(
-      String query, Function<Row, T> rowMapper) {
-    return rxExecuteSimpleQuery(query).map(rows -> toList(rows, rowMapper));
-  }
-
-  @Override
   public <T> Single<List<T>> findMultiple(
       String preparedQuery, Tuple tuple, Function<Row, T> rowMapper) {
     return rxExecute(preparedQuery, tuple).map(rows -> toList(rows, rowMapper));
   }
 
   @Override
-  public Single<Map<String, Integer>> findSingleColumnGroupCount(
-      String preparedQuery, Tuple tuple) {
-    return rxExecute(preparedQuery, tuple).map(this::toSingleColumnGroupCountMap);
-  }
-
-  @Override
-  public Single<Long> insertAndGenerateId(String preparedQuery, Tuple tuple) {
-    return rxExecute(preparedQuery, tuple)
-        .map(result -> result.property(new PropertyKind<>(MySQLClient.LAST_INSERTED_ID)));
-  }
-
-  @Override
   public Single<Integer> insert(String preparedQuery, Tuple tuple) {
     return rxExecute(preparedQuery, tuple).map(SqlResult::rowCount);
-  }
-
-  @Override
-  public Single<Integer> insertMultiple(String preparedQuery, List<Tuple> tuples) {
-    return rxExecuteBatch(preparedQuery, tuples).map(SqlResult::rowCount);
   }
 
   /**
@@ -140,26 +90,6 @@ public abstract class AbstractRepository implements ReadOperation, WriteOperatio
   @Override
   public Single<Integer> update(String preparedQuery, Tuple tuple) {
     return rxExecute(preparedQuery, tuple).map(SqlResult::rowCount);
-  }
-
-  @Override
-  public Single<Integer> updateMultiple(String preparedQuery, List<Tuple> tuples) {
-    return rxExecuteBatch(preparedQuery, tuples).map(SqlResult::rowCount);
-  }
-
-  @Override
-  public Single<Integer> update(String preparedQuery) {
-    return rxExecute(preparedQuery).map(SqlResult::rowCount);
-  }
-
-  @Override
-  public Single<Integer> delete(String preparedQuery, Tuple tuple) {
-    return rxExecute(preparedQuery, tuple).map(SqlResult::rowCount);
-  }
-
-  @Override
-  public Single<Boolean> exists(String preparedQuery, Tuple tuple, String columnAlias) {
-    return rxExecute(preparedQuery, tuple).map(rows -> checkIfExists(rows, columnAlias));
   }
 
   private Boolean checkIfExists(RowSet<Row> rows, String columnAlias) {

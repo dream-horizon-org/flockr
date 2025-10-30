@@ -3,10 +3,12 @@ package com.ascend.flockr.config;
 import com.ascend.flockr.config.provider.ConfigProvider;
 import com.typesafe.config.Optional;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
+@Getter
 public class WebClientConfig {
   private static final Integer DEFAULT_CONNECTION_TIMEOUT = 1000;
   private static final Integer DEFAULT_MAX_POOL_SIZE = 32;

@@ -17,7 +17,7 @@ import com.ascend.flockr.dao.*;
 import com.ascend.flockr.dao.impl.*;
 import com.ascend.flockr.model.task.rule.PatternSequenceRule;
 import com.ascend.flockr.service.*;
-import com.ascend.flockr.service.flink.EventStreamJobService;
+import com.ascend.flockr.service.admin.AdminOperationImpl;
 import com.ascend.flockr.service.flink.FlinkClientImpl;
 import com.ascend.flockr.service.impl.*;
 import com.ascend.flockr.service.web.AsyncJobService;
@@ -70,8 +70,9 @@ public class ServiceModule extends DefaultModule {
     bind(WebClientImpl.class).in(Singleton.class);
     bind(WebClient.class).to(WebClientImpl.class);
     bind(FlinkClient.class).to(FlinkClientImpl.class);
-    bind(new TypeLiteral<AsyncJobService<PatternSequenceRule>>() {})
-        .to(EventStreamJobService.class);
+//    bind(new TypeLiteral<AsyncJobService<PatternSequenceRule>>() {})
+//        .to(EventStreamJobService.class);
+    bind(AdminOperation.class).to(AdminOperationImpl.class);
   }
 
   private void bindDAOs() {
