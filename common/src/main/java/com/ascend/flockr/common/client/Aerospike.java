@@ -6,7 +6,7 @@ import java.util.Map;
 public interface Aerospike {
   Single<Boolean> isConnected();
 
-  Single<Map<String, Long>> getCohortExpiryBin(String id, String source);
+  Single<Map<String, Long>> getCohortExpiryBin(String id, String setName);
 
   Single<Boolean> appendCohort(String id, String cohort, String source, Long cohortExpiry);
 

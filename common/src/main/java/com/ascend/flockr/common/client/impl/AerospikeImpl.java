@@ -8,7 +8,9 @@ import com.aerospike.client.cdt.*;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.Replica;
 import com.aerospike.client.policy.WritePolicy;
+import com.ascend.flockr.common.client.Aerospike;
 import com.ascend.flockr.common.config.AerospikeConfig;
+import com.ascend.flockr.common.constants.Constants;
 import com.ascend.flockr.common.utils.CommonUtils;
 import com.google.inject.Inject;
 import io.d11.aerospike.client.AerospikeClient;
@@ -18,35 +20,32 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class AerospikeImpl {
-  private final AerospikeClient ascendAerospikeClient;
+public class AerospikeImpl implements Aerospike {
+  private final AerospikeClient flockrAerospikeClient;
   private final AerospikeConfig aerospikeConfig;
   private static final int MAX_RETRIES = 3;
 
   @Inject
-  public AerospikeImpl(AerospikeClient ascendAerospikeClient, AerospikeConfig aerospikeConfig) {
-    this.ascendAerospikeClient = ascendAerospikeClient;
+  public AerospikeImpl(AerospikeClient flockrAerospikeClient, AerospikeConfig aerospikeConfig) {
+    this.flockrAerospikeClient = flockrAerospikeClient;
     this.aerospikeConfig = aerospikeConfig;
   }
 
   @Override
   public Single<Boolean> isConnected() {
-    return AsyncResultSingle.toSingle(ascendAerospikeClient::isConnected);
+    return AsyncResultSingle.toSingle(flockrAerospikeClient::isConnected);
   }
 
   @Override
-  public Single<Map<String, Long>> getCohortExpiryBin(String id, String source) {
+  public Single<Map<String, Long>> getCohortExpiryBin(String id, String set) {
     String namespace = aerospikeConfig.getNamespace();
-    String set =
-        CommonUtils.getAerospikeSetNameFromSource(
-            aerospikeConfig.getPersistentCohortsSet(), source);
     Key key = new Key(namespace, set, Constants.USER_KEY + id);
     Policy policy = getPolicy();
 
     String binName = aerospikeConfig.getCohortExpiryBin();
     return AsyncResultSingle.<com.aerospike.client.Record>toSingle(
             asyncResultHandler ->
-                ascendAerospikeClient.get(policy, key, new String[] {binName}, asyncResultHandler))
+                flockrAerospikeClient.get(policy, key, new String[] {binName}, asyncResultHandler))
         .map(
             cohortMapRecord -> {
               if (cohortMapRecord == null
@@ -74,11 +73,11 @@ public class AerospikeImpl {
     Operation[] operations = getMapOperations(cohort, cohortExpiry);
 
     return AsyncResultSingle.<com.aerospike.client.Record>toSingle(
-            handler -> ascendAerospikeClient.operate(writePolicy, key, operations, handler))
+            handler -> flockrAerospikeClient.operate(writePolicy, key, operations, handler))
         .map(appendRecord -> true)
         .doOnError(
             err -> {
-              DatadogUtils.sendErrorToDatadog(err);
+              //              DatadogUtils.sendErrorToDatadog(err);
               log.error("Failed to append cohort: {} for userId: {} due error : ", cohort, id, err);
             });
   }
@@ -102,11 +101,11 @@ public class AerospikeImpl {
         };
 
     return AsyncResultSingle.<Record>toSingle(
-            handler -> ascendAerospikeClient.operate(writePolicy, key, operations, handler))
+            handler -> flockrAerospikeClient.operate(writePolicy, key, operations, handler))
         .map(removeRecord -> true)
         .doOnError(
             err -> {
-              DatadogUtils.sendErrorToDatadog(err);
+              //              DatadogUtils.sendErrorToDatadog(err);
               log.error("Failed to remove cohort: {} for userId: {} due error: ", cohort, id, err);
             });
   }
