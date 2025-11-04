@@ -20,5 +20,4 @@ public class Response<T> {
   public static <T> Response<T> errorResponse(String message, int httpStatusCode) {
     return new Response<>(false, httpStatusCode, message, null);
   }
-
 }

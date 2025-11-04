@@ -5,6 +5,7 @@ import com.ascend.flockr.model.task.Task;
 import com.ascend.flockr.model.task.TaskDefinition;
 import com.ascend.flockr.model.task.constant.TaskStatus;
 import com.ascend.flockr.model.task.rule.Rule;
+import com.ascend.flockr.service.ResumeJobConfig;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
 import io.vertx.core.Promise;

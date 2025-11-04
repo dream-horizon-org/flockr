@@ -14,11 +14,6 @@ public interface TaskDefinitionWriter extends TaskDefinitionReader {
 
   Single<Long> create(TaskDefinition taskDefinition);
 
-  Single<List<TaskDefinition>> createMultipleTaskForCohort(
-      List<TaskDefinition> taskDefinitions, Long cohortId);
-
-  Single<List<TaskDefinition>> createMultipleTask(List<TaskDefinition> taskDefinitions);
-
   Single<Boolean> updateTaskSchedule(Long id, TaskSchedule schedule, String updatedBy);
 
   Single<Boolean> updateTaskSchedule(
@@ -35,17 +30,6 @@ public interface TaskDefinitionWriter extends TaskDefinitionReader {
   Single<Boolean> updateStatusByIdAndUpdatedAt(
       Long id, TaskType type, TaskStatus status, Long updatedAt);
 
-  Single<Boolean> updateColumn(Long taskId, String columnName, Object columnValue);
-
   Single<Boolean> deleteDraft(Long id);
 
-  Single<Integer> insertCron(CronTrigger cronTrigger);
-
-  Single<Boolean> updateCronByIdAndUpdatedAt(
-      Long id, Long updatedAt, String requestId, Long nextExecutionTime);
-
-  Single<Boolean> updateCronStatusByTaskIdAndStatus(
-      Long taskId, CronTriggerStatus finalStatus, CronTriggerStatus currentStatus);
-
-  Single<Boolean> updateTask(Long taskId, Map<String, Object> pathValueMapping);
 }

@@ -3,6 +3,7 @@ package com.ascend.flockr.dao;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
+import io.vertx.mysqlclient.MySQLClient;
 import io.vertx.reactivex.mysqlclient.MySQLPool;
 import io.vertx.reactivex.sqlclient.*;
 import java.net.ConnectException;
@@ -123,4 +124,15 @@ public abstract class AbstractRepository implements ReadOperation, WriteOperatio
       return false;
     }
   }
+
+    @Override
+    public Single<Integer> delete(String preparedQuery, Tuple tuple) {
+        return rxExecute(preparedQuery, tuple).map(SqlResult::rowCount);
+    }
+
+    @Override
+    public Single<Long> insertAndGenerateId(String preparedQuery, Tuple tuple) {
+        return rxExecute(preparedQuery, tuple)
+                .map(result -> result.property(new PropertyKind<>(MySQLClient.LAST_INSERTED_ID)));
+    }
 }

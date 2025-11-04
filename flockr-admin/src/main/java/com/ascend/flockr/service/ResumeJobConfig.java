@@ -1,6 +1,7 @@
-package com.ascend.flockr.service.web;
+package com.ascend.flockr.service;
 
 import com.ascend.flockr.model.task.constant.TaskStatus;
+import com.ascend.flockr.service.web.JobConfig;
 import lombok.Getter;
 
 @Getter

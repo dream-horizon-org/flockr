@@ -22,6 +22,8 @@ public interface Column {
   String UPDATED_BY = "updated_by";
   String RESUME_USING_LATEST_ARTIFACT = "resume_using_latest_artifact";
   String RESUME_FROM_SAVEPOINT = "resume_from_savepoint";
+  String IS_EXPIRED = "is_expired";
+  String EXPIRATION_DATE = "expiration_date";
 }
 
 interface CronTriggerColumn {

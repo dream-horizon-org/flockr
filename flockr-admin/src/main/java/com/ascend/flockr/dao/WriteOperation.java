@@ -8,4 +8,7 @@ public interface WriteOperation extends ReadOperation {
   Single<Integer> insert(String preparedQuery, Tuple tuple);
 
   Single<Integer> update(String preparedQuery, Tuple tuple);
+
+  Single<Integer> delete(String preparedQuery, Tuple tuple);
+
 }

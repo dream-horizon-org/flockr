@@ -42,11 +42,20 @@ class TaskDefinitionSlaveRepository extends AbstractRepository implements TaskDe
           + "AND td.type = ? AND TIMESTAMPDIFF(SECOND, td.updated_at, NOW()) > 30 GROUP BY td.task_id"
           + ") AS temp INNER JOIN job_execution_log AS jel ON temp.task_id = jel.task_id AND temp.job_created_at = jel.created_at";
 
+  private static final String FIND_ALL_BY_COHORT_ID_OWNER =
+      "SELECT EXISTS(SELECT 1 FROM cohort_owner WHERE cohort_id = ? AND owner = ? AND is_removed = FALSE) AS is_owner ";
+
+    private static final String FIND_TASK_WITH_COHORT_BY_TASK_ID =
+            "SELECT td.task_id, td.cohort_id, td.type, UNIX_TIMESTAMP(td.start_time) AS start_time, "
+                    + "UNIX_TIMESTAMP(td.end_time) AS end_time, td.cron_expression, td.status, cm.is_expired as is_expired, UNIX_TIMESTAMP(cm.expiration_date) "
+                    + "as expiration_date FROM task_definition td INNER JOIN cohort_master cm ON td.cohort_id = cm.id WHERE task_id = ? ";
+
   protected final TaskDefinitionMapper taskDefinitionMapper = new TaskDefinitionMapper();
   protected final TaskWithJobInfoMapper taskWithJobInfoMapper = new TaskWithJobInfoMapper();
   protected final TaskMapper taskMapper = new TaskMapper();
+  protected final TaskWithCohortInfoMapper taskWithCohortInfoMapper = new TaskWithCohortInfoMapper();
 
-  @Inject
+    @Inject
   public TaskDefinitionSlaveRepository(@Named("mysql-client-nucleus") MySQLPool client) {
     super(client);
   }
@@ -86,4 +95,15 @@ class TaskDefinitionSlaveRepository extends AbstractRepository implements TaskDe
         Tuple.of(type),
         taskWithJobInfoMapper);
   }
+
+  @Override
+  public Maybe<Boolean> findIfCohortOwnerExists(Long cohortId, String owner) {
+    return findOne(
+        FIND_ALL_BY_COHORT_ID_OWNER, Tuple.of(cohortId, owner), row -> row.getBoolean("is_owner"));
+  }
+
+    @Override
+    public Maybe<TaskWithCohortInfo> findTaskWithCohortInfoById(Long taskId) {
+        return findOne(FIND_TASK_WITH_COHORT_BY_TASK_ID, Tuple.of(taskId), taskWithCohortInfoMapper);
+    }
 }
