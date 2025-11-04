@@ -15,15 +15,11 @@ import com.ascend.flockr.client.webclient.impl.WebClientImpl;
 import com.ascend.flockr.config.*;
 import com.ascend.flockr.dao.*;
 import com.ascend.flockr.dao.impl.*;
-import com.ascend.flockr.model.task.rule.PatternSequenceRule;
 import com.ascend.flockr.service.*;
-import com.ascend.flockr.service.flink.EventStreamJobService;
 import com.ascend.flockr.service.flink.FlinkClientImpl;
 import com.ascend.flockr.service.impl.*;
-import com.ascend.flockr.service.web.AsyncJobService;
 import com.ascend.flockr.util.CircuitBreakerFactory;
 import com.google.inject.Singleton;
-import com.google.inject.TypeLiteral;
 import io.vertx.rxjava3.core.Vertx;
 
 public class ServiceModule extends DefaultModule {
@@ -70,8 +66,6 @@ public class ServiceModule extends DefaultModule {
     bind(WebClientImpl.class).in(Singleton.class);
     bind(WebClient.class).to(WebClientImpl.class);
     bind(FlinkClient.class).to(FlinkClientImpl.class);
-    bind(new TypeLiteral<AsyncJobService<PatternSequenceRule>>() {})
-        .to(EventStreamJobService.class);
   }
 
   private void bindDAOs() {
