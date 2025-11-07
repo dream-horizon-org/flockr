@@ -1,8 +1,8 @@
-package com.ascend.flockr.dao.impl;
+package com.ascend.flockr.repository.impl;
 
 import com.ascend.flockr.client.aerospike.AerospikeClient;
 import com.ascend.flockr.client.mysql.MySQLReaderClient;
-import com.ascend.flockr.dao.HealthCheckDAO;
+import com.ascend.flockr.repository.HealthCheckDAO;
 import com.ascend.flockr.util.MaintenanceUtil;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Single;
@@ -13,11 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class HealthCheckDAOImpl implements HealthCheckDAO {
-  
-    private final AerospikeClient aerospikeClient;
-      private final MySQLReaderClient mySQLReaderClient;
-      
-    @Override
+
+  private final AerospikeClient aerospikeClient;
+  private final MySQLReaderClient mySQLReaderClient;
+
+  @Override
   public Single<Boolean> isMySQLReaderConnected() {
     return mySQLReaderClient
         .isConnected()
@@ -27,9 +27,8 @@ public class HealthCheckDAOImpl implements HealthCheckDAO {
               return false;
             });
   }
-  
-  
-    @Override
+
+  @Override
   public Single<Boolean> isAerospikeConnected() {
     return aerospikeClient
         .isConnected()
@@ -39,8 +38,7 @@ public class HealthCheckDAOImpl implements HealthCheckDAO {
               return false;
             });
   }
-  
-  
+
   @Override
   public Single<Boolean> isUnderMaintenance() {
     return Single.just(MaintenanceUtil.isUnderMaintenance(Vertx.currentContext().owner()).get());
