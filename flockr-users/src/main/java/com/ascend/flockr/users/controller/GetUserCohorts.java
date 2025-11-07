@@ -26,10 +26,10 @@ public class GetUserCohorts {
       @QueryParam("userId") Long userId,
       @QueryParam("guestId") String guestId,
       //            @AcceptedValues(values = {Constants.SOURCE_DREAM11, Constants.SOURCE_FANCODE})
-//      @QueryParam("source") String source)
-      @QueryParam("projectId") Long projectId){
+      //      @QueryParam("source") String source)
+      @QueryParam("projectId") Long projectId) {
 
-    validate(userId, guestId,projectId);
+    validate(userId, guestId, projectId);
 
     return userCohortsService
         .getCohorts(userId, guestId, projectId)
@@ -38,18 +38,18 @@ public class GetUserCohorts {
         .toCompletionStage();
   }
 
-      private void validate(Long userId, String guestId, Long projectId) {
-          if (projectId == null || projectId <= 0) {
-              log.error("Invalid projectId provided: {}", projectId);
-              throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
-          }
-          if (userId == null && guestId == null) {
-              log.error("userId and guestId provided are null ");
-              throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
-          }
-          if (userId != null && userId <= 0) {
-              log.error("Invalid request parameters provided: userId {}", userId);
-              throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
-          }
-      }
+  private void validate(Long userId, String guestId, Long projectId) {
+    if (projectId == null || projectId <= 0) {
+      log.error("Invalid projectId provided: {}", projectId);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+    if (userId == null && guestId == null) {
+      log.error("userId and guestId provided are null ");
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+    if (userId != null && userId <= 0) {
+      log.error("Invalid request parameters provided: userId {}", userId);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+  }
 }

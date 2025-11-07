@@ -8,7 +8,8 @@ public interface Aerospike {
 
   Single<Map<String, Long>> getCohortExpiryBin(String id, String setName);
 
-  Single<Boolean> appendCohort(String id, String cohort, String source, Long cohortExpiry);
+  Single<Boolean> appendCohort(
+      String id, String cohort, String source, Long cohortExpiry, String setName);
 
-  Single<Boolean> removeCohort(String id, String cohort, String source);
+  Single<Boolean> removeCohort(String id, String cohort, String source, String setName);
 }

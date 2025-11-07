@@ -11,7 +11,6 @@ import com.aerospike.client.policy.WritePolicy;
 import com.ascend.flockr.common.client.Aerospike;
 import com.ascend.flockr.common.config.AerospikeConfig;
 import com.ascend.flockr.common.constants.Constants;
-import com.ascend.flockr.common.utils.CommonUtils;
 import com.google.inject.Inject;
 import io.d11.aerospike.client.AerospikeClient;
 import io.reactivex.rxjava3.core.Single;
@@ -60,15 +59,13 @@ public class AerospikeImpl implements Aerospike {
   }
 
   @Override
-  public Single<Boolean> appendCohort(String id, String cohort, String source, Long cohortExpiry) {
+  public Single<Boolean> appendCohort(
+      String id, String cohort, String source, Long cohortExpiry, String setName) {
     WritePolicy writePolicy = getWritePolicy();
 
     String namespace = aerospikeConfig.getNamespace();
-    String set =
-        CommonUtils.getAerospikeSetNameFromSource(
-            aerospikeConfig.getPersistentCohortsSet(), source);
 
-    Key key = new Key(namespace, set, Constants.USER_KEY + id);
+    Key key = new Key(namespace, setName, Constants.USER_KEY + id);
 
     Operation[] operations = getMapOperations(cohort, cohortExpiry);
 
@@ -83,15 +80,12 @@ public class AerospikeImpl implements Aerospike {
   }
 
   @Override
-  public Single<Boolean> removeCohort(String id, String cohort, String source) {
+  public Single<Boolean> removeCohort(String id, String cohort, String source, String setName) {
     WritePolicy writePolicy = getWritePolicy();
 
     String namespace = aerospikeConfig.getNamespace();
-    String set =
-        CommonUtils.getAerospikeSetNameFromSource(
-            aerospikeConfig.getPersistentCohortsSet(), source);
 
-    Key key = new Key(namespace, set, Constants.USER_KEY + id);
+    Key key = new Key(namespace, setName, Constants.USER_KEY + id);
 
     Operation[] operations =
         new Operation[] {

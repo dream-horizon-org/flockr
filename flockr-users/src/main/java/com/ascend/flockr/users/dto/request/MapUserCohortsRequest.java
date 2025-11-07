@@ -16,7 +16,7 @@ public class MapUserCohortsRequest {
   @Positive private Long userId;
 
   private String guestId;
-
+  private Long projectId;
   @NotBlank private String cohortKey;
 
   @NotBlank

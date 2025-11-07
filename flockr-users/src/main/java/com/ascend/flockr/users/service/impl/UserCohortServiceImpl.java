@@ -12,10 +12,9 @@ import com.ascend.flockr.users.service.UserCohortsService;
 import com.dream11.rest.exception.RestException;
 import com.dream11.rest.util.ExceptionUtil;
 import io.reactivex.rxjava3.core.Single;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class UserCohortServiceImpl implements UserCohortsService {
@@ -23,15 +22,15 @@ public class UserCohortServiceImpl implements UserCohortsService {
 
   private final AerospikeConfig aerospikeConfig;
 
-    public UserCohortServiceImpl(Aerospike aerospikeClient, AerospikeConfig aerospikeConfig) {
-        this.aerospikeClient = aerospikeClient;
-        this.aerospikeConfig = aerospikeConfig;
-    }
+  public UserCohortServiceImpl(Aerospike aerospikeClient, AerospikeConfig aerospikeConfig) {
+    this.aerospikeClient = aerospikeClient;
+    this.aerospikeConfig = aerospikeConfig;
+  }
 
   @Override
   public Single<List<String>> getCohorts(Long userId, String guestId, Long projectId) {
     String userKey = CommonUtils.getUserKey(userId, guestId);
-    String setName =  String.valueOf(projectId);
+    String setName = String.valueOf(projectId);
     return aerospikeClient.getCohortExpiryBin(userKey, setName).map(this::getActiveCohortsFromMap);
   }
 
@@ -39,15 +38,17 @@ public class UserCohortServiceImpl implements UserCohortsService {
   public Single<Boolean> mapUserCohorts(MapUserCohortsRequest request) {
     String userKey = CommonUtils.getUserKey(request.getUserId(), request.getGuestId());
     String source = request.getSource();
+    String setName = request.getProjectId() != null ? String.valueOf(request.getProjectId()) : null;
 
     Single<Boolean> single;
     try {
       if (request.getAction().equals(Constants.ACTION_APPEND)) {
         Long cohortExpiry = request.expiryEpochFromExpireAt();
         single =
-            aerospikeClient.appendCohort(userKey, request.getCohortKey(), source, cohortExpiry);
+            aerospikeClient.appendCohort(
+                userKey, request.getCohortKey(), source, cohortExpiry, setName);
       } else {
-        single = aerospikeClient.removeCohort(userKey, request.getCohortKey(), source);
+        single = aerospikeClient.removeCohort(userKey, request.getCohortKey(), source, setName);
       }
     } catch (Exception e) {
       single = Single.error(e);
