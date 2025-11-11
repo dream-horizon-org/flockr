@@ -10,11 +10,15 @@ import com.ascend.flockr.client.mysql.MySQLReaderClient;
 import com.ascend.flockr.client.mysql.MySQLWriterClient;
 import com.ascend.flockr.client.mysql.impl.MySQLReaderClientImpl;
 import com.ascend.flockr.client.mysql.impl.MySQLWriterClientImpl;
+import com.ascend.flockr.client.postgres.PostgresReaderClient;
+import com.ascend.flockr.client.postgres.PostgresWriterClient;
+import com.ascend.flockr.client.postgres.impl.PostgresReaderClientImpl;
+import com.ascend.flockr.client.postgres.impl.PostgresWriterClientImpl;
 import com.ascend.flockr.client.webclient.WebClient;
 import com.ascend.flockr.client.webclient.impl.WebClientImpl;
 import com.ascend.flockr.config.*;
-import com.ascend.flockr.dao.*;
-import com.ascend.flockr.dao.impl.*;
+import com.ascend.flockr.repository.*;
+import com.ascend.flockr.repository.impl.*;
 import com.ascend.flockr.service.*;
 import com.ascend.flockr.service.impl.*;
 import com.ascend.flockr.util.CircuitBreakerFactory;
@@ -37,40 +41,51 @@ public class ServiceModule extends DefaultModule {
     bindDAOs();
     /* Bind Services */
     bindServices();
-        /* Static Binding */
+    /* Static Binding */
     requestStaticInjection(CircuitBreakerFactory.class);
-      }
+  }
 
   private void bindConfigs() {
-        bind(AerospikeConfig.class).toProvider(AerospikeConfig.provider()).asEagerSingleton();
-        bind(ApplicationConfig.class).toProvider(ApplicationConfig.provider()).asEagerSingleton();
-        bind(CircuitBreakerConfig.class).toProvider(CircuitBreakerConfig.provider()).asEagerSingleton();
-        bind(HttpServerConfig.class).toProvider(HttpServerConfig.provider()).asEagerSingleton();
-        bind(KafkaProducerConfig.class).toProvider(KafkaProducerConfig.provider()).asEagerSingleton();
-            bind(MySQLConfig.class).toProvider(MySQLConfig.provider()).asEagerSingleton();
-                    bind(WebClientConfig.class).toProvider(WebClientConfig.provider()).asEagerSingleton();
-      }
+    bind(AerospikeConfig.class).toProvider(AerospikeConfig.provider()).asEagerSingleton();
+    bind(ApplicationConfig.class).toProvider(ApplicationConfig.provider()).asEagerSingleton();
+    bind(CircuitBreakerConfig.class).toProvider(CircuitBreakerConfig.provider()).asEagerSingleton();
+    bind(HttpServerConfig.class).toProvider(HttpServerConfig.provider()).asEagerSingleton();
+    bind(KafkaProducerConfig.class).toProvider(KafkaProducerConfig.provider()).asEagerSingleton();
+    bind(MySQLConfig.class).toProvider(MySQLConfig.provider()).asEagerSingleton();
+    bind(PostgresConfig.class).toProvider(PostgresConfig.provider()).asEagerSingleton();
+    bind(WebClientConfig.class).toProvider(WebClientConfig.provider()).asEagerSingleton();
+  }
 
   private void bindClients() {
-        bind(AerospikeClientImpl.class).in(Singleton.class);
+    bind(AerospikeClientImpl.class).in(Singleton.class);
     bind(AerospikeClient.class).to(AerospikeClientImpl.class);
-        bind(DDClientImpl.class).in(Singleton.class);
+    bind(DDClientImpl.class).in(Singleton.class);
     bind(DDClient.class).to(DDClientImpl.class);
-        bind(KafkaProducerClientImpl.class).in(Singleton.class);
+    //    kafka clients binding
+    bind(KafkaProducerClientImpl.class).in(Singleton.class);
     bind(KafkaProducerClient.class).to(KafkaProducerClientImpl.class);
-            bind(MySQLReaderClientImpl.class).in(Singleton.class);
+    //    mysql client bindings
+    bind(MySQLReaderClientImpl.class).in(Singleton.class);
     bind(MySQLWriterClientImpl.class).in(Singleton.class);
     bind(MySQLReaderClient.class).to(MySQLReaderClientImpl.class);
     bind(MySQLWriterClient.class).to(MySQLWriterClientImpl.class);
-                    bind(WebClientImpl.class).in(Singleton.class);
+    //    postgres client bindings
+    bind(PostgresReaderClient.class).in(Singleton.class);
+    bind(PostgresWriterClient.class).in(Singleton.class);
+    bind(PostgresReaderClient.class).to(PostgresReaderClientImpl.class);
+    bind(PostgresWriterClient.class).to(PostgresWriterClientImpl.class);
+    //    web client bindings
+    bind(WebClientImpl.class).in(Singleton.class);
     bind(WebClient.class).to(WebClientImpl.class);
-      }
+  }
 
   private void bindDAOs() {
     bind(HealthCheckDAO.class).to(HealthCheckDAOImpl.class);
+    bind(DataConnectorRepository.class).to(DataConnectorRepositoryImpl.class);
   }
 
   private void bindServices() {
     bind(HealthCheckService.class).to(HealthCheckServiceImpl.class);
+    bind(DataConnectorService.class).to(DataConnectorServiceImpl.class);
   }
 }

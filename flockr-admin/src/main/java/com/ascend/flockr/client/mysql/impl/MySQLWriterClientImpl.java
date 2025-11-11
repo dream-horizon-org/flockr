@@ -27,6 +27,11 @@ public class MySQLWriterClientImpl extends AbstractMySQLClient implements MySQLW
   }
 
   @Override
+  public Single<SqlConnection> getConnection() {
+    return getMySQLPool().getConnection();
+  }
+
+  @Override
   public Single<Boolean> execute(SqlConnection connection, String preparedQuery, Tuple tuple) {
     return rxExecute(connection, preparedQuery, tuple).map(rows -> rows.rowCount() > 0);
   }

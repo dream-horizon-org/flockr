@@ -1,4 +1,4 @@
-package com.ascend.flockr.dto;
+package com.ascend.flockr.io;
 
 import lombok.Getter;
 

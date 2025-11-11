@@ -87,6 +87,13 @@
   </dependencyManagement>
 
   <dependencies>
+
+      <dependency>
+          <groupId>io.vertx</groupId>
+          <artifactId>vertx-pg-client</artifactId>
+          <version>5.0.5</version>
+      </dependency>
+
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>

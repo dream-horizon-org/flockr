@@ -7,7 +7,6 @@ import com.ascend.flockr.constants.web.WebConstants;
 import com.ascend.flockr.util.CommonUtil;
 import com.google.inject.Inject;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.github.resilience4j.rxjava3.circuitbreaker.operator.CircuitBreakerOperator;
 import io.reactivex.rxjava3.core.Completable;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.rxjava3.core.Vertx;
@@ -18,8 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 public class WebClientImpl implements WebClient {
 
   private final io.vertx.rxjava3.ext.web.client.WebClient webClient;
-    private CircuitBreaker circuitBreaker;
-    private final DDClient ddClient;
+  private CircuitBreaker circuitBreaker;
+  private final DDClient ddClient;
 
   @Inject
   public WebClientImpl(Vertx vertx, WebClientConfig webClientConfig, DDClient ddClient) {
@@ -34,12 +33,12 @@ public class WebClientImpl implements WebClient {
     return Completable.fromAction(webClient::close);
   }
 
-    @Override
+  @Override
   public WebClient setCircuitBreaker(CircuitBreaker circuitBreaker) {
     this.circuitBreaker = circuitBreaker;
     return this;
   }
-  
+
   private static WebClientOptions getWebClientOptions(WebClientConfig webClientConfig) {
     return new WebClientOptions()
         .setPipeliningLimit(webClientConfig.getPipeliningLimit())
@@ -51,7 +50,7 @@ public class WebClientImpl implements WebClient {
         .setPipelining(webClientConfig.isPipelining());
   }
 
-    private void printCircuitBreakerState() {
+  private void printCircuitBreakerState() {
 
     if (Objects.isNull(circuitBreaker)) return;
     log.info(
@@ -89,4 +88,4 @@ public class WebClientImpl implements WebClient {
       String aspectName, T metricValue, String... tags) {
     this.ddClient.gauge(CommonUtil.getCircuitBreakerAspect(aspectName), metricValue, tags);
   }
-  }
+}

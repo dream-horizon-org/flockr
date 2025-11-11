@@ -11,6 +11,8 @@ import java.util.function.Function;
 public interface MySQLWriterClient {
   Completable close();
 
+  Single<SqlConnection> getConnection();
+
   Single<Boolean> execute(SqlConnection connection, String preparedQuery, Tuple tuple);
 
   Single<Long> executeAndGenerateId(SqlConnection connection, String preparedQuery, Tuple tuple);
@@ -18,6 +20,5 @@ public interface MySQLWriterClient {
   Single<Boolean> executeMultiple(
       SqlConnection connection, String preparedQuery, List<Tuple> tuples);
 
-  <T> Maybe<T> executeWithTransaction(
-      Function<SqlConnection, Maybe<T>> transactionalFunction);
+  <T> Maybe<T> executeWithTransaction(Function<SqlConnection, Maybe<T>> transactionalFunction);
 }

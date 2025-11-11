@@ -17,10 +17,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import lombok.Getter;
 
 public abstract class AbstractMySQLClient {
 
-  private final MySQLPool mySQLPool;
+  @Getter private final MySQLPool mySQLPool;
   private final Integer retryCount;
 
   protected AbstractMySQLClient(Vertx vertx, MySQLConfig.BaseConfig mySQLBaseConfig) {
