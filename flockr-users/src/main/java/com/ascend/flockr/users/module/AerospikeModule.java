@@ -10,9 +10,21 @@ import io.d11.aerospike.client.AerospikeClient;
 import io.d11.aerospike.client.AerospikeConnectOptions;
 import io.vertx.core.Vertx;
 
+/**
+ * Guice module for Aerospike client configuration.
+ *
+ * <p>Provides Aerospike client instances and connection options for the flockr-users module.
+ *
+ * @since 1.0
+ */
 public class AerospikeModule extends AbstractModule {
   private final Vertx vertx;
 
+  /**
+   * Constructs a new AerospikeModule.
+   *
+   * @param vertx the Vert.x instance for async operations
+   */
   public AerospikeModule(Vertx vertx) {
     this.vertx = vertx;
   }
@@ -22,11 +34,23 @@ public class AerospikeModule extends AbstractModule {
     bind(Aerospike.class).to(AerospikeImpl.class).in(Singleton.class);
   }
 
+  /**
+   * Provides AerospikeClient instance.
+   *
+   * @param connectOptions the connection options for Aerospike
+   * @return configured AerospikeClient instance
+   */
   @Provides
   AerospikeClient provideFlockrAerospikeClient(AerospikeConnectOptions connectOptions) {
     return AerospikeClient.create(vertx, connectOptions);
   }
 
+  /**
+   * Provides AerospikeConnectOptions from configuration.
+   *
+   * @param config the Aerospike configuration
+   * @return configured AerospikeConnectOptions
+   */
   @Provides
   AerospikeConnectOptions provideAerospikeConnectOptions(AerospikeConfig config) {
 

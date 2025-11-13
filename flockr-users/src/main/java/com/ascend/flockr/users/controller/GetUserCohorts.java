@@ -12,15 +12,41 @@ import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * REST controller for retrieving user cohorts.
+ *
+ * <p>Provides endpoint to get active cohorts for a user identified by either userId or guestId.
+ *
+ * @since 1.0
+ */
 @Slf4j
-@Path("/flockr")
+@Path("/flockr/users/")
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class GetUserCohorts {
   private final UserCohortsService userCohortsService;
 
+  /**
+   * Retrieves active cohorts for a user.
+   *
+   * <p>Endpoint: GET /flockr/users/get-cohorts
+   *
+   * <p>Query parameters:
+   *
+   * <ul>
+   *   <li>{@code userId} - User ID (optional if guestId provided)
+   *   <li>{@code guestId} - Guest ID (optional if userId provided)
+   *   <li>{@code projectId} - Project ID (required, must be positive)
+   * </ul>
+   *
+   * @param userId the user ID from query parameter
+   * @param guestId the guest ID from query parameter
+   * @param projectId the project ID from query parameter
+   * @return CompletionStage resolving to HTTP 200 with list of cohort names, or 400 if validation
+   *     fails
+   * @since 1.0
+   */
   @GET
-  @Path("/get-user-cohorts")
-  @Consumes(MediaType.APPLICATION_JSON)
+  @Path("/get-cohorts")
   @Produces(MediaType.APPLICATION_JSON)
   public CompletionStage<Response> handle(
       @QueryParam("userId") Long userId,
@@ -38,6 +64,14 @@ public class GetUserCohorts {
         .toCompletionStage();
   }
 
+  /**
+   * Validates request parameters.
+   *
+   * @param userId the user ID to validate
+   * @param guestId the guest ID to validate
+   * @param projectId the project ID to validate
+   * @throws IllegalArgumentException if validation fails
+   */
   private void validate(Long userId, String guestId, Long projectId) {
     if (projectId == null || projectId <= 0) {
       log.error("Invalid projectId provided: {}", projectId);
