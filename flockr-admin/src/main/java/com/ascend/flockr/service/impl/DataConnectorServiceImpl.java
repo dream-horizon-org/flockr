@@ -8,6 +8,7 @@ import com.ascend.flockr.io.request.OnboardDataSourceRequest;
 import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.repository.DataConnectorRepository;
 import com.ascend.flockr.service.DataConnectorService;
+import com.ascend.flockr.util.DataSourceConfigValidator;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
@@ -33,8 +34,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
               if (!"SOURCE".equalsIgnoreCase(type.getKind())) {
                 throw new IllegalArgumentException("Provided typeId is not a SOURCE");
               }
-              com.ascend.flockr.util.DataSourceConfigValidator.validate(
-                  request.getConfig(), type.getType());
+              DataSourceConfigValidator.validate(request.getConfig(), type.getType());
               return type;
             })
         .flatMap(

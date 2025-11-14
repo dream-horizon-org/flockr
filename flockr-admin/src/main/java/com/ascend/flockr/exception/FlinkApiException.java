@@ -20,4 +20,3 @@ public class FlinkApiException extends FlinkClientException {
         statusCode);
   }
 }
-

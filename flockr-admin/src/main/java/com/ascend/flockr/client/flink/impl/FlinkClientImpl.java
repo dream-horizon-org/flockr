@@ -104,9 +104,7 @@ public class FlinkClientImpl implements FlinkClient {
               incrementMetric("flink.job.submit.failure");
             })
         .onErrorResumeNext(
-            error ->
-                Single.error(
-                    new FlinkJobSubmissionException(jarId, entryClass, error)));
+            error -> Single.error(new FlinkJobSubmissionException(jarId, entryClass, error)));
   }
 
   @Override
@@ -135,12 +133,12 @@ public class FlinkClientImpl implements FlinkClient {
                 log.info("JAR uploaded successfully with ID: {}", jarId);
                 incrementMetric("flink.jar.upload.success");
                 return jarId;
-               } else {
-                 log.error("Failed to upload JAR. Status: {}", response.statusCode());
-                 incrementMetric("flink.jar.upload.failure");
-                 throw new FlinkJarUploadException(jarFilePath, response.statusCode());
-               }
-             })
+              } else {
+                log.error("Failed to upload JAR. Status: {}", response.statusCode());
+                incrementMetric("flink.jar.upload.failure");
+                throw new FlinkJarUploadException(jarFilePath, response.statusCode());
+              }
+            })
         .doOnError(
             error -> {
               log.error("Error uploading JAR", error);
@@ -437,12 +435,12 @@ public class FlinkClientImpl implements FlinkClient {
                             .flatMap(
                                 tick ->
                                     pollSavepointStatusWithRetry(jobId, requestId, retryCount + 1));
-                       } else {
-                         // Failed state
-                         String failureCause = status.getString("failure-cause", "Unknown error");
-                         return Single.error(
-                             new FlinkSavepointException(jobId, state, failureCause));
-                       }
+                      } else {
+                        // Failed state
+                        String failureCause = status.getString("failure-cause", "Unknown error");
+                        return Single.error(
+                            new FlinkSavepointException(jobId, state, failureCause));
+                      }
                     }));
   }
 
@@ -474,9 +472,10 @@ public class FlinkClientImpl implements FlinkClient {
     } else {
       int statusCode = response.statusCode();
       String responseBody = response.bodyAsString();
-      
-      log.error("Flink API error: {}. Status: {}, Body: {}", errorMessage, statusCode, responseBody);
-      
+
+      log.error(
+          "Flink API error: {}. Status: {}, Body: {}", errorMessage, statusCode, responseBody);
+
       // Return specific exceptions based on status code
       if (statusCode == 404) {
         return Single.error(new FlinkJobNotFoundException(extractJobIdFromError(responseBody)));
@@ -489,7 +488,7 @@ public class FlinkClientImpl implements FlinkClient {
       }
     }
   }
-  
+
   /** Extract job ID from error response if available. */
   private String extractJobIdFromError(String responseBody) {
     // Simple extraction, can be enhanced with JSON parsing if needed

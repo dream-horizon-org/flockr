@@ -5,8 +5,10 @@ import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
 import com.ascend.flockr.io.ResponseEntity;
 import com.ascend.flockr.io.request.OnboardDataSinkRequest;
+import com.ascend.flockr.io.request.OnboardDataSourceRequest;
 import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.service.DataConnectorService;
+import com.ascend.flockr.util.ErrorHandler;
 import com.google.inject.Inject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,7 +34,6 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Data Connectors", description = "Data source and sink management APIs")
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataSourcesController {
-
   private final DataConnectorService service;
 
   @GET
@@ -54,7 +55,7 @@ public class DataSourcesController {
           @QueryParam("kind")
           @DefaultValue("SOURCE")
           String kind) {
-    return service.listTypes(kind).map(ResponseEntity.Success::new).toCompletionStage();
+    return ErrorHandler.handleAsync(service.listTypes(kind), "listTypes");
   }
 
   @POST
@@ -77,14 +78,11 @@ public class DataSourcesController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<DataSourceDetails>> onboardSource(
-      com.ascend.flockr.io.request.OnboardDataSourceRequest request,
+      OnboardDataSourceRequest request,
       @Parameter(description = "User email for authentication", required = true)
           @HeaderParam("email")
           String userEmail) {
-    return service
-        .onboardSource(request, userEmail)
-        .map(ResponseEntity.Success::new)
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(service.onboardSource(request, userEmail), "onboardSource");
   }
 
   @POST
@@ -109,10 +107,7 @@ public class DataSourcesController {
       @Parameter(description = "User email for authentication", required = true)
           @HeaderParam("email")
           String userEmail) {
-    return service
-        .onboardSink(request, userEmail)
-        .map(ResponseEntity.Success::new)
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(service.onboardSink(request, userEmail), "onboardSink");
   }
 
   @GET
@@ -144,10 +139,7 @@ public class DataSourcesController {
           @Min(0)
           @DefaultValue("0")
           int pageNum) {
-    return service
-        .listSources(pageNum, pageSize)
-        .map(ResponseEntity.Success::new)
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(service.listSources(pageNum, pageSize), "listSources");
   }
 
   @GET
@@ -177,9 +169,6 @@ public class DataSourcesController {
           @Min(0)
           @DefaultValue("0")
           int pageNum) {
-    return service
-        .listSinks(pageNum, pageSize)
-        .map(ResponseEntity.Success::new)
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(service.listSinks(pageNum, pageSize), "listSinks");
   }
 }

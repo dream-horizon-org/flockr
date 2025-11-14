@@ -6,6 +6,7 @@ import com.ascend.flockr.io.request.CreateRulesRequest;
 import com.ascend.flockr.io.response.AudienceDetailsResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
 import com.ascend.flockr.service.AudienceService;
+import com.ascend.flockr.util.ErrorHandler;
 import com.google.inject.Inject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -46,10 +47,7 @@ public class AudienceController {
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Long>> createAudience(
       CreateAudienceRequest requestBody) {
-    return audienceService
-        .createAudience(requestBody)
-        .map(ResponseEntity.Success::new)
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(audienceService.createAudience(requestBody), "createAudience");
   }
 
   @GET
@@ -76,10 +74,8 @@ public class AudienceController {
       @Parameter(description = "ID of the audience to retrieve", required = true)
           @PathParam("audienceId")
           Long audienceId) {
-    return audienceService
-        .getAudienceDetails(audienceId)
-        .map(ResponseEntity.Success::new)
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(
+        audienceService.getAudienceDetails(audienceId), "getAudienceDetails");
   }
 
   @POST
@@ -107,10 +103,7 @@ public class AudienceController {
       CreateRulesRequest requestBody) {
 
     requestBody.setAudienceId(audienceId);
-    return audienceService
-        .createRules(requestBody)
-        .map(ResponseEntity.Success::new)
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(audienceService.createRules(requestBody), "createRules");
   }
 
   @GET
@@ -141,9 +134,7 @@ public class AudienceController {
           Long audienceId,
       @Parameter(description = "ID of the rule to retrieve", required = true) @PathParam("ruleId")
           Long ruleId) {
-    return audienceService
-        .getRuleDetails(audienceId, ruleId)
-        .map(ResponseEntity.Success::new)
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(
+        audienceService.getRuleDetails(audienceId, ruleId), "getRuleDetails");
   }
 }

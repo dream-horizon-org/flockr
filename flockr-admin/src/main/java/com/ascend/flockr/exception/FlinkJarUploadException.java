@@ -18,4 +18,3 @@ public class FlinkJarUploadException extends FlinkClientException {
         statusCode);
   }
 }
-

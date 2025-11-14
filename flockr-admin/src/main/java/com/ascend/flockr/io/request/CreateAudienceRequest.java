@@ -1,6 +1,9 @@
 package com.ascend.flockr.io.request;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,11 +13,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateAudienceRequest {
-  private String name;
-  private String description;
-  private String userCount;
+  @NotEmpty private String name;
+  @NotEmpty private String description;
   private JsonNode customAudienceConfig;
-  private String type;
+  @NotEmpty private String type;
+
+  @Max(2177452799000L)
   private Long expiryDate;
-  private List<Long> sinkIds;
+
+  @Valid @NotEmpty private List<Long> sinkIds;
 }
