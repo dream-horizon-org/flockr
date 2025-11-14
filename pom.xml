@@ -22,9 +22,14 @@
     <resources.directory>src/main/resources</resources.directory>
 
     <!-- Swagger properties   -->
-    <swagger.configurationFilePath>${project.basedir}/${resources.directory}/config/swagger/swagger-info.json</swagger.configurationFilePath>
+    <!-- These are evaluated per-module because ${project.basedir} is different in each child -->
+    <swagger.configurationFilePath>
+      ${project.basedir}/${resources.directory}/config/swagger/swagger-info.json
+    </swagger.configurationFilePath>
     <swagger.outputFileName>swagger</swagger.outputFileName>
-    <swagger.outputPath>${resources.directory}/webroot/swagger</swagger.outputPath>
+    <swagger.outputPath>
+      ${project.basedir}/${resources.directory}/webroot/swagger
+    </swagger.outputPath>
     <swagger.resourcePackage>com.ascend.flockr.controller</swagger.resourcePackage>
 
     <!-- extension versions -->
@@ -44,6 +49,7 @@
     <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
     <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
     <swagger-maven-plugin-jakarta.version>2.2.16</swagger-maven-plugin-jakarta.version>
+    <swagger-annotations-jakarta.version>2.2.16</swagger-annotations-jakarta.version>
 
     <!-- dependency versions -->
     <aerospike-client.version>6.2.0</aerospike-client.version>
@@ -111,6 +117,24 @@
       <artifactId>swagger-request-validator-restassured</artifactId>
       <version>${swagger-validator.version}</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-annotations-jakarta</artifactId>
+      <version>${swagger-annotations-jakarta.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-jaxrs2-jakarta</artifactId>
+      <version>${swagger-annotations-jakarta.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.webjars</groupId>
+      <artifactId>swagger-ui</artifactId>
+      <version>5.10.3</version>
     </dependency>
 
     <dependency>
@@ -352,29 +376,8 @@
       </extension>
     </extensions>
 
-    <plugins>
-      <plugin>
-        <groupId>com.spotify.fmt</groupId>
-        <artifactId>fmt-maven-plugin</artifactId>
-        <version>${fmt-maven-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>format-code</id>
-            <phase>process-sources</phase>
-            <goals>
-              <goal>format</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>validate-code-format</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
+    <pluginManagement>
+      <plugins>
       <plugin>
         <groupId>io.swagger.core.v3</groupId>
         <artifactId>swagger-maven-plugin-jakarta</artifactId>
@@ -394,7 +397,32 @@
             <id>generate-swagger-docs</id>
             <phase>compile</phase>
             <goals>
-              <goal>resolve</goal>
+                <goal>resolve</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>com.spotify.fmt</groupId>
+        <artifactId>fmt-maven-plugin</artifactId>
+        <version>${fmt-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>format-code</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>format</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>validate-code-format</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
             </goals>
           </execution>
         </executions>

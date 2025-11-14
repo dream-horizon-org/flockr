@@ -3,12 +3,12 @@
   "openAPI": {
     "info": {
       "version": "1.0",
-      "title": "Flockr Admin API",
-      "description": "Flockr Admin Service - Manage audiences, rules, and data connectors"
+      "title": "Flockr Users API",
+      "description": "Flockr Users Service - User management and authentication"
     },
     "servers": [
       {
-        "url": "http://localhost:8080",
+        "url": "http://localhost:8081",
         "description": "Local development server"
       }
     ]

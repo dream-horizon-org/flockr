@@ -301,7 +301,7 @@ public class AudienceServiceImpl implements AudienceService {
    *
    * <p>Depending on the provided {@link RuleType}, this method delegates to either {@link
    * #buildEnrichedBatchConfiguration(BatchConfiguration, Map)} or {@link
-   * #buildEnrichedStreamConfiguration(StreamConfiguration, Map)}}.
+   * #buildEnrichedStreamConfiguration(StreamConfiguration, Map)}.
    *
    * @param basicConfig the basic configuration containing {@link SourceInfoBasic} references
    * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for

@@ -15,6 +15,10 @@
         <maven.compiler.source>23</maven.compiler.source>
         <maven.compiler.target>23</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Swagger overrides for this module -->
+        <swagger.outputFileName>flockr-admin</swagger.outputFileName>
+        <swagger.resourcePackage>com.ascend.flockr.rest</swagger.resourcePackage>
     </properties>
 
     <dependencies>
@@ -24,5 +28,15 @@
             <version>1.2</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Enable Swagger generation for this module using parent pluginManagement config -->
+            <plugin>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-maven-plugin-jakarta</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

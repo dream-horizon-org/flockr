@@ -1,0 +1,904 @@
+openapi: 3.0.1
+info:
+  title: Flockr Admin API
+  description: "Flockr Admin Service - Manage audiences, rules, and data connectors"
+  version: "1.0"
+servers:
+- url: http://localhost:8080
+  description: Local development server
+tags:
+- name: Audiences
+  description: Audience management APIs
+- name: Data Connectors
+  description: Data source and sink management APIs
+paths:
+  /v1/audiences:
+    post:
+      tags:
+      - Audiences
+      summary: Create a new audience
+      description: Creates a new audience and returns the audience ID
+      operationId: createAudience
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAudienceRequest'
+      responses:
+        "200":
+          description: Audience created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid/missing body params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/audiences/{audienceId}/rules:
+    post:
+      tags:
+      - Audiences
+      summary: Create rules for an audience
+      description: Creates rules for a specific audience
+      operationId: createRules
+      parameters:
+      - name: audienceId
+        in: path
+        description: ID of the audience
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRulesRequest'
+      responses:
+        "200":
+          description: Rules created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid/missing body params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/audiences/{audienceId}:
+    get:
+      tags:
+      - Audiences
+      summary: Get audience details
+      description: Retrieves detailed information about a specific audience
+      operationId: getAudienceDetails
+      parameters:
+      - name: audienceId
+        in: path
+        description: ID of the audience to retrieve
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "304":
+          description: Successful Not Modified Response
+        "400":
+          description: Bad Request due to invalid/missing body params / header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/audiences/{audienceId}/rules/{ruleId}:
+    get:
+      tags:
+      - Audiences
+      summary: Get rule details
+      description: Retrieves detailed information about a specific rule within an
+        audience
+      operationId: getRuleDetails
+      parameters:
+      - name: audienceId
+        in: path
+        description: ID of the audience
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: ruleId
+        in: path
+        description: ID of the rule to retrieve
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid/missing parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "404":
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/datasinks:
+    get:
+      tags:
+      - Data Connectors
+      summary: List data sinks
+      description: Retrieves a paginated list of data sinks
+      operationId: listSinks
+      parameters:
+      - name: pageSize
+        in: query
+        description: Number of items per page
+        schema:
+          minimum: 1
+          type: integer
+          format: int32
+          default: 10
+        example: 10
+      - name: pageNum
+        in: query
+        description: Page number (0-indexed)
+        schema:
+          minimum: 0
+          type: integer
+          format: int32
+          default: 0
+        example: 0
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/datasources:
+    get:
+      tags:
+      - Data Connectors
+      summary: List data sources
+      description: Retrieves a paginated list of data sources
+      operationId: listSources
+      parameters:
+      - name: pageSize
+        in: query
+        description: Number of items per page
+        schema:
+          minimum: 1
+          type: integer
+          format: int32
+          default: 10
+        example: 10
+      - name: pageNum
+        in: query
+        description: Page number (0-indexed)
+        schema:
+          minimum: 0
+          type: integer
+          format: int32
+          default: 0
+        example: 0
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/connectors/types:
+    get:
+      tags:
+      - Data Connectors
+      summary: List connector types
+      description: Retrieves a list of available data connector types
+      operationId: listTypes
+      parameters:
+      - name: kind
+        in: query
+        description: Kind of connector (SOURCE or SINK)
+        schema:
+          type: string
+          default: SOURCE
+        example: SOURCE
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/datasinks/onboard:
+    post:
+      tags:
+      - Data Connectors
+      summary: Onboard a data sink
+      description: Onboards a new data sink connector
+      operationId: onboardSink
+      parameters:
+      - name: email
+        in: header
+        description: User email for authentication
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardDataSinkRequest'
+      responses:
+        "200":
+          description: Data sink onboarded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid/missing body params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/datasources/onboard:
+    post:
+      tags:
+      - Data Connectors
+      summary: Onboard a data source
+      description: Onboards a new data source connector
+      operationId: onboardSource
+      parameters:
+      - name: email
+        in: header
+        description: User email for authentication
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardDataSourceRequest'
+      responses:
+        "200":
+          description: Data source onboarded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid/missing body params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+components:
+  schemas:
+    Success:
+      type: object
+      properties:
+        data:
+          type: object
+    ErrorEntity:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        cause:
+          type: string
+    Failure:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorEntity'
+    SuccessLong:
+      type: object
+      properties:
+        data:
+          type: integer
+          format: int64
+    CreateAudienceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        userCount:
+          type: string
+        customAudienceConfig:
+          $ref: '#/components/schemas/JsonNode'
+        type:
+          type: string
+        expiryDate:
+          type: integer
+          format: int64
+        sinkIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    JsonNode:
+      type: object
+    SuccessBoolean:
+      type: object
+      properties:
+        data:
+          type: boolean
+    BatchConfiguration:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/RuleConfigurationSourceInfoEnriched'
+      - type: object
+        properties:
+          cronExpression:
+            type: string
+          query:
+            type: string
+          source:
+            $ref: '#/components/schemas/SourceInfo'
+    CohortFilter:
+      type: object
+      properties:
+        belongsTo:
+          type: array
+          items:
+            type: string
+        notBelongsTo:
+          type: array
+          items:
+            type: string
+    Constraint:
+      required:
+      - temporal
+      - timeUnit
+      - value
+      type: object
+      properties:
+        temporal:
+          type: string
+          enum:
+          - within
+        timeUnit:
+          type: string
+        value:
+          type: integer
+          format: int64
+    CreateRulesRequest:
+      type: object
+      properties:
+        audienceId:
+          type: integer
+          format: int64
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rule'
+    EventCondition:
+      type: object
+      properties:
+        filterType:
+          type: string
+        propertyName:
+          type: string
+        propertyType:
+          type: string
+        conditionOperator:
+          type: string
+      discriminator:
+        propertyName: conditionOperator
+    EventDefinitionSourceInfo:
+      type: object
+      properties:
+        sourceInfo:
+          $ref: '#/components/schemas/SourceInfo'
+        eventName:
+          type: string
+        condition:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventCondition'
+    ListOperator:
+      required:
+      - conditionValues
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/EventCondition'
+      - type: object
+        properties:
+          conditionValues:
+            type: array
+            items:
+              type: string
+    PatternDefinitionSourceInfo:
+      type: object
+      properties:
+        groupBy:
+          type: array
+          items:
+            type: string
+        pattern:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatternStepSourceInfo'
+        cohortFilter:
+          $ref: '#/components/schemas/CohortFilter'
+        constraint:
+          $ref: '#/components/schemas/Constraint'
+    PatternStepSourceInfo:
+      type: object
+      properties:
+        order:
+          minimum: 1
+          type: integer
+          format: int32
+        data:
+          $ref: '#/components/schemas/StepDataSourceInfo'
+        contiguity:
+          type: string
+          enum:
+          - followedBy
+          - notFollowedBy
+    Quantifier:
+      type: object
+      properties:
+        conditionOperator:
+          type: string
+        conditionValue:
+          type: integer
+          format: int32
+    RangeOperator:
+      required:
+      - conditionEndValue
+      - conditionStartValue
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/EventCondition'
+      - type: object
+        properties:
+          conditionStartValue:
+            type: string
+          conditionEndValue:
+            type: string
+    Rule:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        configuration:
+          $ref: '#/components/schemas/RuleConfigurationSourceInfoBasic'
+        start_time:
+          type: integer
+          format: int64
+        end_time:
+          type: integer
+          format: int64
+        rule_type:
+          type: string
+          enum:
+          - STREAM
+          - BATCH
+        rule_action:
+          type: string
+          enum:
+          - ADD
+          - REMOVE
+    RuleConfigurationSourceInfoBasic:
+      type: object
+      properties:
+        type:
+          type: string
+      discriminator:
+        propertyName: type
+    SingleValueOperator:
+      required:
+      - conditionValue
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/EventCondition'
+      - type: object
+        properties:
+          conditionValue:
+            type: string
+    SourceInfo:
+      type: object
+    SourceInfoBasic:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/SourceInfo'
+      - type: object
+        properties:
+          id:
+            type: integer
+            format: int64
+    SourceInfoEnriched:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/SourceInfo'
+      - type: object
+        properties:
+          id:
+            type: integer
+            format: int64
+          name:
+            type: string
+          type:
+            type: string
+          active:
+            type: boolean
+    StepDataSourceInfo:
+      type: object
+      properties:
+        quantifier:
+          $ref: '#/components/schemas/Quantifier'
+        event:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventDefinitionSourceInfo'
+    StreamConfiguration:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/RuleConfigurationSourceInfoEnriched'
+      - type: object
+        properties:
+          pattern:
+            $ref: '#/components/schemas/PatternDefinitionSourceInfo'
+    AudienceDetailsResponse:
+      type: object
+      properties:
+        audienceMeta:
+          $ref: '#/components/schemas/AudienceMeta'
+        sinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSinkDetails'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleMetaSourceInfoEnriched'
+    AudienceMeta:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        projectId:
+          type: string
+        audienceId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        customAudienceConfig:
+          $ref: '#/components/schemas/JsonNode'
+        sinks:
+          type: array
+          items:
+            type: integer
+            format: int64
+        rulesCount:
+          type: integer
+          format: int32
+        verified:
+          type: boolean
+        userCount:
+          type: integer
+          format: int64
+        expireDate:
+          type: integer
+          format: int64
+        lastAudienceUpdatedAt:
+          type: integer
+          format: int64
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+        createdBy:
+          type: string
+    DataSinkDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        typeId:
+          type: integer
+          format: int64
+        type:
+          type: string
+        config:
+          $ref: '#/components/schemas/JsonObject'
+        status:
+          type: string
+        createdBy:
+          type: string
+    JsonObject:
+      type: object
+      properties:
+        map:
+          type: object
+          additionalProperties:
+            type: object
+        empty:
+          type: boolean
+    RuleConfigurationSourceInfoEnriched:
+      type: object
+      properties:
+        type:
+          type: string
+      discriminator:
+        propertyName: type
+    RuleMetaSourceInfoEnriched:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        projectId:
+          type: string
+        ruleId:
+          type: integer
+          format: int64
+        audienceId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: integer
+          format: int64
+        endTime:
+          type: integer
+          format: int64
+        ruleAction:
+          type: string
+          enum:
+          - ADD
+          - REMOVE
+        ruleType:
+          type: string
+          enum:
+          - STREAM
+          - BATCH
+        status:
+          type: string
+          enum:
+          - SCHEDULED
+          - RUNNING
+          - FAILED
+          - COMPLETED
+        configuration:
+          $ref: '#/components/schemas/RuleConfigurationSourceInfoEnriched'
+        createdBy:
+          type: string
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+    SuccessAudienceDetailsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AudienceDetailsResponse'
+    RuleDetailsResponse:
+      type: object
+      properties:
+        ruleDetails:
+          $ref: '#/components/schemas/RuleMetaSourceInfoEnriched'
+    SuccessRuleDetailsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RuleDetailsResponse'
+    PageInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        hasMore:
+          type: boolean
+    PaginatedResponseDataSinkDetails:
+      type: object
+      properties:
+        pageInfo:
+          $ref: '#/components/schemas/PageInfo'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSinkDetails'
+    SuccessPaginatedResponseDataSinkDetails:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PaginatedResponseDataSinkDetails'
+    DataSourceDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        typeId:
+          type: integer
+          format: int64
+        type:
+          type: string
+        config:
+          $ref: '#/components/schemas/JsonObject'
+        status:
+          type: string
+        createdBy:
+          type: string
+    PaginatedResponseDataSourceDetails:
+      type: object
+      properties:
+        pageInfo:
+          $ref: '#/components/schemas/PageInfo'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSourceDetails'
+    SuccessPaginatedResponseDataSourceDetails:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PaginatedResponseDataSourceDetails'
+    DataConnectorType:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+        type:
+          type: string
+        displayName:
+          type: string
+        active:
+          type: boolean
+    SuccessListDataConnectorType:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataConnectorType'
+    SuccessDataSinkDetails:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DataSinkDetails'
+    OnboardDataSinkRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        typeId:
+          type: integer
+          format: int64
+        config:
+          $ref: '#/components/schemas/JsonObject'
+    SuccessDataSourceDetails:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DataSourceDetails'
+    OnboardDataSourceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        typeId:
+          type: integer
+          format: int64
+        config:
+          $ref: '#/components/schemas/JsonObject'

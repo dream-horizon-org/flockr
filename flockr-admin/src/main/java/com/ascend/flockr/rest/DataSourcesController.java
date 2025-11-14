@@ -8,6 +8,12 @@ import com.ascend.flockr.io.request.OnboardDataSinkRequest;
 import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.service.DataConnectorService;
 import com.google.inject.Inject;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
@@ -22,6 +28,8 @@ import java.util.List;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 
+@Path("/")
+@Tag(name = "Data Connectors", description = "Data source and sink management APIs")
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataSourcesController {
 
@@ -30,8 +38,22 @@ public class DataSourcesController {
   @GET
   @Path("/v1/connectors/types")
   @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "List connector types",
+      description = "Retrieves a list of available data connector types")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successful Response",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<List<DataConnectorType>>> listTypes(
-      @QueryParam("kind") @DefaultValue("SOURCE") String kind) {
+      @Parameter(description = "Kind of connector (SOURCE or SINK)", example = "SOURCE")
+          @QueryParam("kind")
+          @DefaultValue("SOURCE")
+          String kind) {
     return service.listTypes(kind).map(ResponseEntity.Success::new).toCompletionStage();
   }
 
@@ -39,9 +61,26 @@ public class DataSourcesController {
   @Path("/v1/datasources/onboard")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Onboard a data source",
+      description = "Onboards a new data source connector")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Data source onboarded successfully",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid/missing body params",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<DataSourceDetails>> onboardSource(
       com.ascend.flockr.io.request.OnboardDataSourceRequest request,
-      @HeaderParam("email") String userEmail) {
+      @Parameter(description = "User email for authentication", required = true)
+          @HeaderParam("email")
+          String userEmail) {
     return service
         .onboardSource(request, userEmail)
         .map(ResponseEntity.Success::new)
@@ -52,8 +91,24 @@ public class DataSourcesController {
   @Path("/v1/datasinks/onboard")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
+  @Operation(summary = "Onboard a data sink", description = "Onboards a new data sink connector")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Data sink onboarded successfully",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid/missing body params",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<DataSinkDetails>> onboardSink(
-      OnboardDataSinkRequest request, @HeaderParam("email") String userEmail) {
+      OnboardDataSinkRequest request,
+      @Parameter(description = "User email for authentication", required = true)
+          @HeaderParam("email")
+          String userEmail) {
     return service
         .onboardSink(request, userEmail)
         .map(ResponseEntity.Success::new)
@@ -63,9 +118,32 @@ public class DataSourcesController {
   @GET
   @Path("/v1/datasources")
   @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "List data sources",
+      description = "Retrieves a paginated list of data sources")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successful Response",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid pagination parameters",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<PaginatedResponse<DataSourceDetails>>> listSources(
-      @QueryParam("pageSize") @Min(1) @DefaultValue("10") int pageSize,
-      @QueryParam("pageNum") @Min(0) @DefaultValue("0") int pageNum) {
+      @Parameter(description = "Number of items per page", example = "10")
+          @QueryParam("pageSize")
+          @Min(1)
+          @DefaultValue("10")
+          int pageSize,
+      @Parameter(description = "Page number (0-indexed)", example = "0")
+          @QueryParam("pageNum")
+          @Min(0)
+          @DefaultValue("0")
+          int pageNum) {
     return service
         .listSources(pageNum, pageSize)
         .map(ResponseEntity.Success::new)
@@ -75,9 +153,30 @@ public class DataSourcesController {
   @GET
   @Path("/v1/datasinks")
   @Produces(MediaType.APPLICATION_JSON)
+  @Operation(summary = "List data sinks", description = "Retrieves a paginated list of data sinks")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successful Response",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid pagination parameters",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<PaginatedResponse<DataSinkDetails>>> listSinks(
-      @QueryParam("pageSize") @Min(1) @DefaultValue("10") int pageSize,
-      @QueryParam("pageNum") @Min(0) @DefaultValue("0") int pageNum) {
+      @Parameter(description = "Number of items per page", example = "10")
+          @QueryParam("pageSize")
+          @Min(1)
+          @DefaultValue("10")
+          int pageSize,
+      @Parameter(description = "Page number (0-indexed)", example = "0")
+          @QueryParam("pageNum")
+          @Min(0)
+          @DefaultValue("0")
+          int pageNum) {
     return service
         .listSinks(pageNum, pageSize)
         .map(ResponseEntity.Success::new)
