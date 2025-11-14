@@ -21,4 +21,6 @@ public interface DataConnectorRepository {
   Single<List<DataSinkDetails>> listDataSinks(int page, int pageSize);
 
   Single<List<DataSourceDetails>> getDataSourcesByIds(List<Long> sourceIds);
+
+  Single<List<DataSinkDetails>> getDataSinksByIds(List<Long> sinkIds);
 }

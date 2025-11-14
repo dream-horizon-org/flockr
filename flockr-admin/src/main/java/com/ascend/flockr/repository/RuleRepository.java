@@ -9,4 +9,6 @@ public interface RuleRepository {
   Single<Boolean> createRules(List<RuleMeta<SourceInfoBasic>> ruleMetas);
 
   Single<RuleMeta<SourceInfoBasic>> getRuleById(Long ruleId);
+
+  Single<List<RuleMeta<SourceInfoBasic>>> getRulesByAudienceId(Long Ids);
 }

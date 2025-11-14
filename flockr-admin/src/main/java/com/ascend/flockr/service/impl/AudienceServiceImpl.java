@@ -1,6 +1,7 @@
 package com.ascend.flockr.service.impl;
 
 import com.ascend.flockr.domain.audience.AudienceMeta;
+import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
 import com.ascend.flockr.domain.rule.BatchConfiguration;
 import com.ascend.flockr.domain.rule.RuleConfiguration;
@@ -14,7 +15,6 @@ import com.ascend.flockr.io.request.CreateAudienceRequest;
 import com.ascend.flockr.io.request.CreateRulesRequest;
 import com.ascend.flockr.io.response.AudienceDetailsResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
-import com.ascend.flockr.repository.AudienceQueryRepository;
 import com.ascend.flockr.repository.AudienceRepository;
 import com.ascend.flockr.repository.DataConnectorRepository;
 import com.ascend.flockr.repository.RuleRepository;
@@ -22,10 +22,7 @@ import com.ascend.flockr.service.AudienceService;
 import com.ascend.flockr.util.RuleHelpers;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Single;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,12 +31,20 @@ import lombok.extern.slf4j.Slf4j;
 public class AudienceServiceImpl implements AudienceService {
   private final AudienceRepository audienceRepository;
   private final RuleRepository ruleRepository;
-  private final AudienceQueryRepository audienceQueryRepository;
   private final DataConnectorRepository dataConnectorRepository;
   private static final String DEFAULT_TENANT = "dummy_org";
   private static final String DEFAULT_PROJECT = "dummy_project";
   private static final String DEFAULT_CREATOR = "dummy_user";
 
+  /**
+   * Creates a new audience using the data provided in the request.
+   *
+   * <p>Default tenant, project and creator identifiers are applied before the audience metadata is
+   * persisted via the {@link AudienceRepository}.
+   *
+   * @param request the request payload containing audience metadata and configuration
+   * @return a {@link Single} emitting the generated audience identifier
+   */
   @Override
   public Single<Long> createAudience(CreateAudienceRequest request) {
 
@@ -60,20 +65,124 @@ public class AudienceServiceImpl implements AudienceService {
   }
 
   /**
-   * @param audienceId
-   * @return
+   * Retrieves detailed information about an audience, including sinks and rules with enriched
+   * source information.
+   *
+   * <p>This method fetches the {@link AudienceMeta}, associated {@link DataSinkDetails}, and all
+   * rules for the given audience. Rule configurations are transformed from {@link SourceInfoBasic}
+   * to {@link SourceInfoEnriched} using the corresponding {@link DataSourceDetails}.
+   *
+   * @param audienceId the unique identifier of the audience
+   * @return a {@link Single} emitting an {@link AudienceDetailsResponse} with enriched audience
+   *     details
    */
   @Override
   public Single<AudienceDetailsResponse> getAudienceDetails(Long audienceId) {
-    return null;
+
+    Single<AudienceMeta> audienceMetaSingle =
+        audienceRepository.getAudienceById(audienceId).cache();
+
+    Single<List<DataSinkDetails>> sinkDetailsListSingle =
+        audienceMetaSingle.map(AudienceMeta::getSinks).flatMap(this::getDataSinksInBatch);
+
+    Single<List<RuleMeta<SourceInfoBasic>>> ruleMetaListSingle =
+        audienceMetaSingle.flatMap(meta -> ruleRepository.getRulesByAudienceId(audienceId)).cache();
+
+    Single<List<DataSourceDetails>> dataSourceDetailsSingle =
+        ruleMetaListSingle
+            .map(
+                ruleMetaList -> {
+                  Set<Long> uniqueSources = new HashSet<>();
+                  ruleMetaList.forEach(
+                      ruleMeta ->
+                          uniqueSources.addAll(RuleHelpers.extractSourceIdFromRuleMeta(ruleMeta)));
+                  return new ArrayList<>(uniqueSources);
+                })
+            .flatMap(this::getDataSourcesInBatch);
+
+    Single<List<RuleMeta<SourceInfoEnriched>>> ruleMetasEnriched =
+        dataSourceDetailsSingle.zipWith(
+            ruleMetaListSingle,
+            (dataSourceDetailsList, ruleMetaList) -> {
+              Map<Long, DataSourceDetails> sourceIdToDetails = new HashMap<>();
+              for (DataSourceDetails sourceDetailsItem : dataSourceDetailsList) {
+                sourceIdToDetails.put(sourceDetailsItem.getId(), sourceDetailsItem);
+              }
+
+              List<RuleMeta<SourceInfoEnriched>> ruleMetasSourceEnriched = new ArrayList<>();
+              for (RuleMeta<SourceInfoBasic> sourceInfoBasicRuleMeta : ruleMetaList) {
+                // Build enriched configuration by transforming SourceInfoBasic to
+                // SourceInfoEnriched
+                RuleConfiguration<SourceInfoEnriched> enrichedConfig =
+                    buildEnrichedConfiguration(
+                        sourceInfoBasicRuleMeta.getConfiguration(),
+                        sourceIdToDetails,
+                        sourceInfoBasicRuleMeta.getRuleType());
+
+                // Build RuleMeta<SourceInfoEnriched>
+                ruleMetasSourceEnriched.add(
+                    RuleMeta.<SourceInfoEnriched>builder()
+                        .ruleId(sourceInfoBasicRuleMeta.getRuleId())
+                        .tenantId(sourceInfoBasicRuleMeta.getTenantId())
+                        .projectId(sourceInfoBasicRuleMeta.getProjectId())
+                        .audienceId(sourceInfoBasicRuleMeta.getAudienceId())
+                        .name(sourceInfoBasicRuleMeta.getName())
+                        .description(sourceInfoBasicRuleMeta.getDescription())
+                        .startTime(sourceInfoBasicRuleMeta.getStartTime())
+                        .endTime(sourceInfoBasicRuleMeta.getEndTime())
+                        .ruleAction(sourceInfoBasicRuleMeta.getRuleAction())
+                        .status(sourceInfoBasicRuleMeta.getStatus())
+                        .ruleType(sourceInfoBasicRuleMeta.getRuleType())
+                        .configuration(enrichedConfig)
+                        .createdBy(sourceInfoBasicRuleMeta.getCreatedBy())
+                        .createdAt(sourceInfoBasicRuleMeta.getCreatedAt())
+                        .updatedAt(sourceInfoBasicRuleMeta.getUpdatedAt())
+                        .build());
+              }
+              return ruleMetasSourceEnriched;
+            });
+
+    return Single.zip(
+        audienceMetaSingle, sinkDetailsListSingle, ruleMetasEnriched, AudienceDetailsResponse::new);
   }
 
+  /**
+   * Fetches detailed information for a batch of data sinks based on their identifiers.
+   *
+   * <p>If the provided list of sink IDs is {@code null} or empty, this method returns a {@link
+   * Single} emitting an empty list. Otherwise, it delegates to the {@link DataConnectorRepository}
+   * to fetch the data and logs the outcome.
+   *
+   * @param sinkIds the list of sink identifiers for which details are to be fetched
+   * @return a {@link Single} emitting the list of {@link DataSinkDetails} corresponding to the
+   *     requested sink IDs
+   */
+  private Single<List<DataSinkDetails>> getDataSinksInBatch(List<Long> sinkIds) {
+    if (sinkIds == null || sinkIds.isEmpty()) {
+      return Single.just(List.of());
+    }
+    log.info("Fetching data sinks for sinkIds: {}", sinkIds);
+
+    return dataConnectorRepository
+        .getDataSinksByIds(sinkIds)
+        .doOnSuccess(sinks -> log.info("Successfully fetched {} data sinks", sinks.size()))
+        .doOnError(
+            error -> log.error("Failed to fetch data sinks in batch: {}", error.getMessage()));
+  }
+
+  /**
+   * Creates rules for a given audience using the data from the request.
+   *
+   * <p>Each rule in the request is converted to a {@link RuleMeta} with {@link SourceInfoBasic}
+   * configuration and default tenant, project, creator and status values before being persisted via
+   * the {@link RuleRepository}.
+   *
+   * @param request the request containing the audience identifier and rule definitions
+   * @return a {@link Single} emitting {@code true} if the rules were created successfully,
+   *     otherwise propagating an error
+   */
   @Override
   public Single<Boolean> createRules(CreateRulesRequest request) {
-    String tenantId = "default-tenant";
-    String createdBy = "system";
-    String projectId = "default_project";
-
     List<RuleMeta<SourceInfoBasic>> list = new ArrayList<>();
     for (CreateRulesRequest.Rule rule : request.getRules()) {
       RuleMeta<SourceInfoBasic> ruleMeta =
@@ -106,6 +215,16 @@ public class AudienceServiceImpl implements AudienceService {
                     error.getMessage()));
   }
 
+  /**
+   * Retrieves detailed information for a specific rule belonging to an audience.
+   *
+   * <p>The rule configuration is enriched by replacing {@link SourceInfoBasic} entries with {@link
+   * SourceInfoEnriched} using the corresponding {@link DataSourceDetails}.
+   *
+   * @param audienceId the identifier of the audience to which the rule belongs
+   * @param ruleId the identifier of the rule whose details are to be retrieved
+   * @return a {@link Single} emitting a {@link RuleDetailsResponse} with enriched rule details
+   */
   @Override
   public Single<RuleDetailsResponse> getRuleDetails(Long audienceId, Long ruleId) {
     Single<RuleMeta<SourceInfoBasic>> ruleMetaSingle = ruleRepository.getRuleById(ruleId).cache();
@@ -153,10 +272,15 @@ public class AudienceServiceImpl implements AudienceService {
   }
 
   /**
-   * Fetches data source details for multiple source IDs in a single batch query.
+   * Fetches data source details for multiple source identifiers in a single batch query.
    *
-   * @param sourceIds List of data source IDs to fetch
-   * @return Single containing list of DataSourceDetails
+   * <p>If the provided list of source IDs is {@code null} or empty, this method returns a {@link
+   * Single} emitting an empty list. Otherwise, it delegates to the {@link DataConnectorRepository}
+   * and logs the outcome.
+   *
+   * @param sourceIds the list of data source identifiers to fetch
+   * @return a {@link Single} emitting the list of {@link DataSourceDetails} for the requested
+   *     identifiers
    */
   private Single<List<DataSourceDetails>> getDataSourcesInBatch(List<Long> sourceIds) {
     if (sourceIds == null || sourceIds.isEmpty()) {
@@ -172,12 +296,19 @@ public class AudienceServiceImpl implements AudienceService {
   }
 
   /**
-   * Builds enriched configuration by merging DataSourceDetails with SourceInfoBasic.
+   * Builds an enriched rule configuration by merging {@link DataSourceDetails} into a basic
+   * configuration.
    *
-   * @param basicConfig The configuration with SourceInfoBasic
-   * @param sourceDetailsMap Map of source ID to DataSourceDetails
-   * @param ruleType The type of rule (BATCH or STREAM)
-   * @return RuleConfiguration with SourceInfoEnriched
+   * <p>Depending on the provided {@link RuleType}, this method delegates to either {@link
+   * #buildEnrichedBatchConfiguration(BatchConfiguration, Map)} or {@link
+   * #buildEnrichedStreamConfiguration(StreamConfiguration, Map)}}.
+   *
+   * @param basicConfig the basic configuration containing {@link SourceInfoBasic} references
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @param ruleType the type of rule (e.g. {@link RuleType#BATCH} or {@link RuleType#STREAM})
+   * @return a {@link RuleConfiguration} where source information is represented as {@link
+   *     SourceInfoEnriched}
    */
   private RuleConfiguration<SourceInfoEnriched> buildEnrichedConfiguration(
       RuleConfiguration<SourceInfoBasic> basicConfig,
@@ -193,7 +324,17 @@ public class AudienceServiceImpl implements AudienceService {
     }
   }
 
-  /** Builds enriched batch configuration. */
+  /**
+   * Builds an enriched batch configuration from a basic configuration.
+   *
+   * <p>The source information in the basic configuration is replaced with {@link
+   * SourceInfoEnriched} using the provided {@link DataSourceDetails}.
+   *
+   * @param basicConfig the original batch configuration containing {@link SourceInfoBasic}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return a {@link BatchConfiguration} with enriched source information
+   */
   private BatchConfiguration<SourceInfoEnriched> buildEnrichedBatchConfiguration(
       BatchConfiguration<SourceInfoBasic> basicConfig,
       Map<Long, DataSourceDetails> sourceDetailsMap) {
@@ -209,7 +350,17 @@ public class AudienceServiceImpl implements AudienceService {
         .build();
   }
 
-  /** Builds enriched stream configuration. */
+  /**
+   * Builds an enriched stream configuration from a basic configuration.
+   *
+   * <p>Pattern definitions are transformed so that each step and event uses {@link
+   * SourceInfoEnriched} instead of {@link SourceInfoBasic}.
+   *
+   * @param basicConfig the original stream configuration containing {@link SourceInfoBasic}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return a {@link StreamConfiguration} with enriched pattern definitions
+   */
   private StreamConfiguration<SourceInfoEnriched> buildEnrichedStreamConfiguration(
       StreamConfiguration<SourceInfoBasic> basicConfig,
       Map<Long, DataSourceDetails> sourceDetailsMap) {
@@ -224,7 +375,17 @@ public class AudienceServiceImpl implements AudienceService {
         .build();
   }
 
-  /** Builds enriched pattern definition for stream configuration. */
+  /**
+   * Builds an enriched pattern definition for a stream configuration.
+   *
+   * <p>Each pattern step is transformed to use {@link SourceInfoEnriched} while preserving the
+   * grouping, filters and constraints from the basic definition.
+   *
+   * @param basicPattern the original pattern definition containing {@link SourceInfoBasic}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return a pattern definition with enriched pattern steps
+   */
   private StreamConfiguration.PatternDefinition<SourceInfoEnriched> buildEnrichedPatternDefinition(
       StreamConfiguration.PatternDefinition<SourceInfoBasic> basicPattern,
       Map<Long, DataSourceDetails> sourceDetailsMap) {
@@ -247,7 +408,17 @@ public class AudienceServiceImpl implements AudienceService {
     return enrichedPattern;
   }
 
-  /** Builds enriched pattern step. */
+  /**
+   * Builds an enriched pattern step from a basic pattern step.
+   *
+   * <p>Event definitions inside the step are transformed to use {@link SourceInfoEnriched} while
+   * preserving ordering and contiguity semantics.
+   *
+   * @param basicStep the original pattern step containing {@link SourceInfoBasic}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return a pattern step with enriched event data
+   */
   private StreamConfiguration.PatternStep<SourceInfoEnriched> buildEnrichedPatternStep(
       StreamConfiguration.PatternStep<SourceInfoBasic> basicStep,
       Map<Long, DataSourceDetails> sourceDetailsMap) {
@@ -279,7 +450,17 @@ public class AudienceServiceImpl implements AudienceService {
     return enrichedStep;
   }
 
-  /** Builds enriched event definition. */
+  /**
+   * Builds an enriched event definition from a basic event definition.
+   *
+   * <p>The source information is enriched using the provided {@link DataSourceDetails}, while the
+   * event name and condition are preserved.
+   *
+   * @param basicEvent the original event definition containing {@link SourceInfoBasic}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return an event definition with enriched source information
+   */
   private StreamConfiguration.EventDefinition<SourceInfoEnriched> buildEnrichedEventDefinition(
       StreamConfiguration.EventDefinition<SourceInfoBasic> basicEvent,
       Map<Long, DataSourceDetails> sourceDetailsMap) {
@@ -296,7 +477,19 @@ public class AudienceServiceImpl implements AudienceService {
     return enrichedEvent;
   }
 
-  /** Enriches a single SourceInfoBasic with DataSourceDetails. */
+  /**
+   * Enriches a single {@link SourceInfoBasic} instance with {@link DataSourceDetails}.
+   *
+   * <p>If the basic source is {@code null}, this method returns {@code null}. If no details are
+   * found for the given source identifier, the enriched source will contain only the identifier and
+   * default values for other fields.
+   *
+   * @param basicSource the basic source information to be enriched
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return an instance of {@link SourceInfoEnriched} with merged details, or {@code null} if the
+   *     input source is {@code null}
+   */
   private SourceInfoEnriched enrichSourceInfo(
       SourceInfoBasic basicSource, Map<Long, DataSourceDetails> sourceDetailsMap) {
 

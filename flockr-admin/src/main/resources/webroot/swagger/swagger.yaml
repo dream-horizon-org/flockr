@@ -3,3 +3,519 @@ info:
   title: flockr
   description: flockr Service
   version: "1.0"
+servers:
+  - url: /
+    description: Local server
+
+paths:
+  /v1/audiences:
+    post:
+      tags:
+        - Audience
+      summary: Create a new audience
+      description: Creates a new audience with the specified configuration
+      operationId: createAudience
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAudienceRequest'
+            example:
+              name: "Premium Users"
+              description: "Audience segment for premium tier users"
+              userCount: "1000"
+              type: "CUSTOM"
+              expiryDate: 1735689600000
+              customAudienceConfig:
+                key1: "value1"
+                key2: "value2"
+              sinkIds: [1, 2, 3]
+      responses:
+        '200':
+          description: Audience created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponseLong'
+              example:
+                data: 12345
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/audiences/{audienceId}:
+    get:
+      tags:
+        - Audience
+      summary: Get audience details
+      description: Retrieves detailed information about a specific audience including associated rules and sinks
+      operationId: getAudienceDetails
+      parameters:
+        - name: audienceId
+          in: path
+          description: ID of the audience to retrieve
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 12345
+      responses:
+        '200':
+          description: Audience details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponseAudienceDetails'
+        '404':
+          description: Audience not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/audiences/{audienceId}/rules:
+    post:
+      tags:
+        - Rules
+      summary: Create rules for an audience
+      description: Creates one or more rules for a specific audience
+      operationId: createRules
+      parameters:
+        - name: audienceId
+          in: path
+          description: ID of the audience to add rules to
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 12345
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRulesRequest'
+            example:
+              rules:
+                - name: "Add Premium Users"
+                  description: "Rule to add users with premium subscription"
+                  start_time: 1699920000000
+                  end_time: 1735689600000
+                  rule_type: "STREAM"
+                  rule_action: "ADD"
+                  configuration:
+                    source_type: "KAFKA"
+                    source_info:
+                      topic: "user-events"
+      responses:
+        '200':
+          description: Rules created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponseBoolean'
+              example:
+                data: true
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Audience not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/audiences/{audienceId}/rules/{ruleId}:
+    get:
+      tags:
+        - Rules
+      summary: Get rule details
+      description: Retrieves detailed information about a specific rule for an audience
+      operationId: getRuleDetails
+      parameters:
+        - name: audienceId
+          in: path
+          description: ID of the audience
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 12345
+        - name: ruleId
+          in: path
+          description: ID of the rule to retrieve
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 67890
+      responses:
+        '200':
+          description: Rule details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponseRuleDetails'
+        '404':
+          description: Rule or audience not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CreateAudienceRequest:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: Name of the audience
+          example: "Premium Users"
+        description:
+          type: string
+          description: Description of the audience
+          example: "Audience segment for premium tier users"
+        userCount:
+          type: string
+          description: Expected user count (as string)
+          example: "1000"
+        customAudienceConfig:
+          type: object
+          description: Custom configuration for the audience (JSON object)
+          additionalProperties: true
+        type:
+          type: string
+          description: Type of audience
+          example: "CUSTOM"
+        expiryDate:
+          type: integer
+          format: int64
+          description: Expiry date as Unix timestamp in milliseconds
+          example: 1735689600000
+        sinkIds:
+          type: array
+          description: List of data sink IDs associated with this audience
+          items:
+            type: integer
+            format: int64
+          example: [1, 2, 3]
+
+    CreateRulesRequest:
+      type: object
+      properties:
+        rules:
+          type: array
+          description: List of rules to create
+          items:
+            $ref: '#/components/schemas/Rule'
+
+    Rule:
+      type: object
+      required:
+        - name
+        - rule_type
+        - rule_action
+      properties:
+        name:
+          type: string
+          description: Name of the rule
+          example: "Add Premium Users"
+        description:
+          type: string
+          description: Description of the rule
+          example: "Rule to add users with premium subscription"
+        start_time:
+          type: integer
+          format: int64
+          description: Rule start time as Unix timestamp in milliseconds
+          example: 1699920000000
+        end_time:
+          type: integer
+          format: int64
+          description: Rule end time as Unix timestamp in milliseconds
+          example: 1735689600000
+        rule_type:
+          type: string
+          enum: [STREAM, BATCH]
+          description: Type of rule processing
+          example: "STREAM"
+        rule_action:
+          type: string
+          enum: [ADD, REMOVE]
+          description: Action to perform (add or remove users)
+          example: "ADD"
+        configuration:
+          type: object
+          description: Rule configuration with source information
+          properties:
+            source_type:
+              type: string
+              description: Type of data source
+            source_info:
+              type: object
+              description: Source-specific configuration
+              additionalProperties: true
+
+    AudienceDetailsResponse:
+      type: object
+      properties:
+        audienceId:
+          type: integer
+          format: int64
+          description: Unique identifier for the audience
+        tenantId:
+          type: string
+          description: Tenant identifier
+        projectId:
+          type: string
+          description: Project identifier
+        name:
+          type: string
+          description: Name of the audience
+        description:
+          type: string
+          description: Description of the audience
+        type:
+          type: string
+          description: Type of audience
+        customAudienceConfig:
+          type: object
+          description: Custom configuration (JSON object)
+          additionalProperties: true
+        verified:
+          type: boolean
+          description: Whether the audience is verified
+        userCount:
+          type: integer
+          format: int64
+          description: Number of users in the audience
+        rulesCount:
+          type: integer
+          description: Number of rules associated with the audience
+        expireDate:
+          type: integer
+          format: int64
+          description: Expiry date as Unix timestamp
+        lastAudienceUpdatedAt:
+          type: integer
+          format: int64
+          description: Last update timestamp
+        createdAt:
+          type: integer
+          format: int64
+          description: Creation timestamp
+        updatedAt:
+          type: integer
+          format: int64
+          description: Last modification timestamp
+        createdBy:
+          type: string
+          description: User who created the audience
+        sinks:
+          type: array
+          description: Associated data sinks
+          items:
+            $ref: '#/components/schemas/DataSinkDetails'
+        rules:
+          type: array
+          description: Associated rules
+          items:
+            $ref: '#/components/schemas/RuleDetails'
+
+    DataSinkDetails:
+      type: object
+      properties:
+        sinkId:
+          type: integer
+          format: int64
+        sinkType:
+          type: string
+        sinkName:
+          type: string
+        configuration:
+          type: object
+          additionalProperties: true
+
+    RuleDetails:
+      type: object
+      properties:
+        ruleId:
+          type: integer
+          format: int64
+          description: Unique identifier for the rule
+        name:
+          type: string
+          description: Name of the rule
+        description:
+          type: string
+          description: Description of the rule
+        startTime:
+          type: integer
+          format: int64
+          description: Rule start time
+        endTime:
+          type: integer
+          format: int64
+          description: Rule end time
+        ruleAction:
+          type: string
+          description: Rule action (ADD or REMOVE)
+        ruleType:
+          type: string
+          description: Rule type (STREAM or BATCH)
+        status:
+          type: string
+          description: Current status of the rule
+        configuration:
+          type: object
+          description: Rule configuration with enriched source information
+          additionalProperties: true
+        createdBy:
+          type: string
+          description: User who created the rule
+        createdAt:
+          type: integer
+          format: int64
+          description: Creation timestamp
+        updatedAt:
+          type: integer
+          format: int64
+          description: Last modification timestamp
+
+    RuleDetailsResponse:
+      type: object
+      properties:
+        ruleDetails:
+          type: object
+          description: Detailed rule metadata with enriched information
+          properties:
+            tenantId:
+              type: string
+            projectId:
+              type: string
+            ruleId:
+              type: integer
+              format: int64
+            audienceId:
+              type: integer
+              format: int64
+            name:
+              type: string
+            description:
+              type: string
+            startTime:
+              type: integer
+              format: int64
+            endTime:
+              type: integer
+              format: int64
+            ruleAction:
+              type: string
+              enum: [ADD, REMOVE]
+            ruleType:
+              type: string
+              enum: [STREAM, BATCH]
+            status:
+              type: string
+            configuration:
+              type: object
+              additionalProperties: true
+            createdBy:
+              type: string
+            createdAt:
+              type: integer
+              format: int64
+            updatedAt:
+              type: integer
+              format: int64
+
+    SuccessResponseLong:
+      type: object
+      properties:
+        data:
+          type: integer
+          format: int64
+          description: The response data (Long value)
+
+    SuccessResponseBoolean:
+      type: object
+      properties:
+        data:
+          type: boolean
+          description: The response data (Boolean value)
+
+    SuccessResponseAudienceDetails:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AudienceDetailsResponse'
+
+    SuccessResponseRuleDetails:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RuleDetailsResponse'
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorEntity'
+
+    ErrorEntity:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "ERR_001"
+        message:
+          type: string
+          description: Error message
+          example: "Resource not found"
+        cause:
+          type: string
+          description: Detailed cause of the error
+          example: "Audience with ID 12345 does not exist"
+
+tags:
+  - name: Audience
+    description: Operations related to audience management
+  - name: Rules
+    description: Operations related to audience rules
