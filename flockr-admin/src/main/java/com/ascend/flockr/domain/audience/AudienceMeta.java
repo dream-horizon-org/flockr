@@ -20,7 +20,6 @@ public class AudienceMeta {
   private String type;
   private JsonNode customAudienceConfig;
   private List<Long> sinks;
-  private Integer rulesCount;
   private Boolean verified;
   private Long userCount;
   private Long expireDate;

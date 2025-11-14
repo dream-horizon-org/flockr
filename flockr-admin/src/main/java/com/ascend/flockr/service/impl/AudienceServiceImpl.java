@@ -47,22 +47,21 @@ public class AudienceServiceImpl implements AudienceService {
    */
   @Override
   public Single<Long> createAudience(CreateAudienceRequest request) {
-      return null;
 
-//    AudienceMeta audienceMeta =
-//        AudienceMeta.builder()
-//            .tenantId(DEFAULT_TENANT)
-//            .projectId(DEFAULT_PROJECT)
-//            .name(request.getName())
-//            .description(request.getDescription())
-//            .customAudienceConfig(request.getCustomAudienceConfig())
-//            .type(request.getType())
-//            .expireDate(request.getExpiryDate())
-//            .sinks(request.getSinkIds())
-//            .createdBy(DEFAULT_CREATOR)
-//            .build();
-//
-//    return audienceRepository.createAudience(audienceMeta);
+    AudienceMeta audienceMeta =
+        AudienceMeta.builder()
+            .tenantId(DEFAULT_TENANT)
+            .projectId(DEFAULT_PROJECT)
+            .name(request.getName())
+            .description(request.getDescription())
+            .customAudienceConfig(request.getCustomAudienceConfig())
+            .type(request.getType())
+            .expireDate(request.getExpiryDate())
+            .sinks(request.getSinkIds())
+            .createdBy(DEFAULT_CREATOR)
+            .build();
+
+    return audienceRepository.createAudience(audienceMeta);
   }
 
   /**

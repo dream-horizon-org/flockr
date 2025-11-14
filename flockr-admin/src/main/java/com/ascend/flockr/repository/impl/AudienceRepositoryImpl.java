@@ -68,7 +68,6 @@ public class AudienceRepositoryImpl implements AudienceRepository {
                   .name(row.getString("name"))
                   .description(row.getString("description"))
                   .type(row.getString("type"))
-                  .rulesCount(row.getInteger("rules_count"))
                   .verified(row.getBoolean("verified"))
                   .userCount(row.getLong("user_count"))
                   .expireDate(row.getLong("expiry_date"))
