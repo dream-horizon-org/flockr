@@ -4,6 +4,8 @@ import com.ascend.flockr.client.aerospike.AerospikeClient;
 import com.ascend.flockr.client.aerospike.impl.AerospikeClientImpl;
 import com.ascend.flockr.client.datadog.DDClient;
 import com.ascend.flockr.client.datadog.impl.DDClientImpl;
+import com.ascend.flockr.client.flink.FlinkClient;
+import com.ascend.flockr.client.flink.impl.FlinkClientImpl;
 import com.ascend.flockr.client.kafka.KafkaProducerClient;
 import com.ascend.flockr.client.kafka.impl.KafkaProducerClientImpl;
 import com.ascend.flockr.client.mysql.MySQLReaderClient;
@@ -49,6 +51,7 @@ public class ServiceModule extends DefaultModule {
     bind(AerospikeConfig.class).toProvider(AerospikeConfig.provider()).asEagerSingleton();
     bind(ApplicationConfig.class).toProvider(ApplicationConfig.provider()).asEagerSingleton();
     bind(CircuitBreakerConfig.class).toProvider(CircuitBreakerConfig.provider()).asEagerSingleton();
+    bind(FlinkConfig.class).toProvider(FlinkConfig.provider()).asEagerSingleton();
     bind(HttpServerConfig.class).toProvider(HttpServerConfig.provider()).asEagerSingleton();
     bind(KafkaProducerConfig.class).toProvider(KafkaProducerConfig.provider()).asEagerSingleton();
     bind(MySQLConfig.class).toProvider(MySQLConfig.provider()).asEagerSingleton();
@@ -61,6 +64,9 @@ public class ServiceModule extends DefaultModule {
     bind(AerospikeClient.class).to(AerospikeClientImpl.class);
     bind(DDClientImpl.class).in(Singleton.class);
     bind(DDClient.class).to(DDClientImpl.class);
+    //    flink client bindings
+    bind(FlinkClientImpl.class).in(Singleton.class);
+    bind(FlinkClient.class).to(FlinkClientImpl.class);
     //    kafka clients binding
     bind(KafkaProducerClientImpl.class).in(Singleton.class);
     bind(KafkaProducerClient.class).to(KafkaProducerClientImpl.class);
