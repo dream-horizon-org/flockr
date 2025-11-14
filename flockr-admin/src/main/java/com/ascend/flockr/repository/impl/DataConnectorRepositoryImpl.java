@@ -2,9 +2,9 @@ package com.ascend.flockr.repository.impl;
 
 import com.ascend.flockr.client.mysql.MySQLReaderClient;
 import com.ascend.flockr.client.mysql.MySQLWriterClient;
-import com.ascend.flockr.dto.model.dataconnectors.DataConnectorType;
-import com.ascend.flockr.dto.model.dataconnectors.DataSinkDetails;
-import com.ascend.flockr.dto.model.dataconnectors.DataSourceDetails;
+import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
+import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
+import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
 import com.ascend.flockr.repository.DataConnectorRepository;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Maybe;
@@ -37,6 +37,9 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
   private static final String SQL_LIST_SINKS =
       "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sinks s JOIN data_connector_types t ON s.type_id = t.id ORDER BY s.id DESC LIMIT ? OFFSET ?";
+
+  private static final String SQL_GET_SOURCES_BY_IDS =
+      "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sources s JOIN data_connector_types t ON s.type_id = t.id WHERE s.id IN (%s)";
 
   @Override
   public Single<List<DataConnectorType>> listConnectorTypes(String kind) {
@@ -90,6 +93,25 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
     int offset = page * pageSize;
     return mySQLReaderClient.fetchAll(
         SQL_LIST_SINKS, Tuple.of(pageSize, offset), DataConnectorRepositoryImpl::mapSinkRow);
+  }
+
+  @Override
+  public Single<List<DataSourceDetails>> getDataSourcesByIds(List<Long> sourceIds) {
+    if (sourceIds == null || sourceIds.isEmpty()) {
+      return Single.just(List.of());
+    }
+
+    // Build placeholders for IN clause
+    String placeholders = String.join(",", sourceIds.stream().map(id -> "?").toList());
+    String query = String.format(SQL_GET_SOURCES_BY_IDS, placeholders);
+
+    // Build tuple with all IDs
+    Tuple tuple = Tuple.tuple();
+    for (Long sourceId : sourceIds) {
+      tuple.addValue(sourceId);
+    }
+
+    return mySQLReaderClient.fetchAll(query, tuple, DataConnectorRepositoryImpl::mapSourceRow);
   }
 
   private static DataConnectorType mapTypeRow(Row row) {

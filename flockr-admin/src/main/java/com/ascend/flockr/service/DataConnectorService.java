@@ -1,11 +1,11 @@
 package com.ascend.flockr.service;
 
-import com.ascend.flockr.dto.model.dataconnectors.DataConnectorType;
-import com.ascend.flockr.dto.model.dataconnectors.DataSinkDetails;
-import com.ascend.flockr.dto.model.dataconnectors.DataSourceDetails;
-import com.ascend.flockr.dto.request.OnboardDataSinkRequest;
-import com.ascend.flockr.dto.request.OnboardDataSourceRequest;
-import com.ascend.flockr.dto.response.PaginatedResponse;
+import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
+import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
+import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
+import com.ascend.flockr.io.request.OnboardDataSinkRequest;
+import com.ascend.flockr.io.request.OnboardDataSourceRequest;
+import com.ascend.flockr.io.response.PaginatedResponse;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 

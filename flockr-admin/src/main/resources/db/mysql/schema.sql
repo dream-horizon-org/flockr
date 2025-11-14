@@ -52,17 +52,32 @@ CREATE TABLE IF NOT EXISTS audience (
   verified TINYINT(1) NULL DEFAULT 0,
   rules_count INT NULL DEFAULT 0,
   expiry_date TIMESTAMP NULL,
+  sinks JSON NULL COMMENT 'Array of data sink IDs associated with this audience',
   KEY idx_tenant_id (tenant_id),
   KEY idx_project_id (project_id)
 );
 
 
-CREATE TABLE IF NOT EXISTS audience_sinks (
+-- Rules table for audience segmentation
+CREATE TABLE IF NOT EXISTS rules (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   audience_id BIGINT NOT NULL,
-  sink_id BIGINT NOT NULL,
+  tenant_id VARCHAR(64) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  start_time TIMESTAMP NULL,
+  end_time TIMESTAMP NULL,
+  rule_action ENUM('ADD', 'REMOVE') NOT NULL DEFAULT 'ADD',
+  rule_type ENUM('STREAM', 'BATCH') NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+  configuration JSON NOT NULL COMMENT 'Rule configuration including cronExpression for batch rules',
+  created_by VARCHAR(128) NULL,
+  updated_by VARCHAR(128) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_audience_sinks_audience FOREIGN KEY (audience_id) REFERENCES audience(id) ON DELETE CASCADE,
-  CONSTRAINT fk_audience_sinks_sink FOREIGN KEY (sink_id) REFERENCES data_sinks(id) ON DELETE CASCADE,
-  UNIQUE KEY uk_audience_sink (audience_id, sink_id)
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_rules_audience FOREIGN KEY (audience_id) REFERENCES audience(id) ON DELETE CASCADE,
+  KEY idx_audience_id (audience_id),
+  KEY idx_tenant_id (tenant_id),
+  KEY idx_rule_type (rule_type),
+  KEY idx_status (status)
 );

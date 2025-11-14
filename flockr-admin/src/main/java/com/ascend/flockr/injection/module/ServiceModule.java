@@ -82,6 +82,7 @@ public class ServiceModule extends DefaultModule {
   private void bindDAOs() {
     bind(HealthCheckDAO.class).to(HealthCheckDAOImpl.class);
     bind(DataConnectorRepository.class).to(DataConnectorRepositoryImpl.class);
+    bind(AudienceQueryRepository.class).to(AudienceQueryRepositoryImpl.class);
   }
 
   private void bindServices() {

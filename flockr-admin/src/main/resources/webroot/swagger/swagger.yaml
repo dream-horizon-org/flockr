@@ -1,0 +1,5 @@
+openapi: 3.0.1
+info:
+  title: flockr
+  description: flockr Service
+  version: "1.0"

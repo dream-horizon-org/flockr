@@ -1,6 +1,6 @@
 package com.ascend.flockr.rest;
 
-import com.ascend.flockr.dto.response.HealthCheckResponse;
+import com.ascend.flockr.io.response.HealthCheckResponse;
 import com.ascend.flockr.service.HealthCheckService;
 import com.google.inject.Inject;
 import io.swagger.v3.oas.annotations.Hidden;

@@ -1,4 +1,4 @@
-package com.ascend.flockr.domain.stream;
+package com.ascend.flockr.domain.rule;
 
 public enum PropertyType {
   bool("boolean"),

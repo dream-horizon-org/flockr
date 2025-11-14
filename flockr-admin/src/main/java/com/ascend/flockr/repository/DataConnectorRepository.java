@@ -1,8 +1,8 @@
 package com.ascend.flockr.repository;
 
-import com.ascend.flockr.dto.model.dataconnectors.DataConnectorType;
-import com.ascend.flockr.dto.model.dataconnectors.DataSinkDetails;
-import com.ascend.flockr.dto.model.dataconnectors.DataSourceDetails;
+import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
+import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
+import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
@@ -19,4 +19,6 @@ public interface DataConnectorRepository {
   Single<List<DataSourceDetails>> listDataSources(int page, int pageSize);
 
   Single<List<DataSinkDetails>> listDataSinks(int page, int pageSize);
+
+  Single<List<DataSourceDetails>> getDataSourcesByIds(List<Long> sourceIds);
 }

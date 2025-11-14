@@ -7,7 +7,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/** Immutable POJO representing an Audience. */
 @Data
 @AllArgsConstructor
 @Builder
@@ -28,4 +27,5 @@ public class AudienceMeta {
   private Long lastAudienceUpdatedAt;
   private Long createdAt;
   private Long updatedAt;
+  private String createdBy;
 }

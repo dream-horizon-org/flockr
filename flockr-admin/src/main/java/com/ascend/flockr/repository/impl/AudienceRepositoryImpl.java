@@ -1,7 +1,7 @@
 package com.ascend.flockr.repository.impl;
 
-import com.ascend.flockr.client.mysql.MySQLReaderClient;
-import com.ascend.flockr.client.mysql.MySQLWriterClient;
+import com.ascend.flockr.client.postgres.PostgresReaderClient;
+import com.ascend.flockr.client.postgres.PostgresWriterClient;
 import com.ascend.flockr.domain.audience.AudienceMeta;
 import com.ascend.flockr.repository.AudienceRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,16 +12,13 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class AudienceRepositoryImpl implements AudienceRepository {
-  private final MySQLReaderClient mySQLReaderClient;
-  private final MySQLWriterClient mySQLWriterClient;
+  private final PostgresReaderClient postgresReaderClient;
+  private final PostgresWriterClient postgresWriterClient;
   private final ObjectMapper objectMapper;
 
   private static final String SQL_CREATE_AUDIENCE =
       "INSERT INTO audience (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expiry_date) "
           + "VALUES (?, ?, ?, ?, ?, CAST(? AS JSON), ?, FROM_UNIXTIME(?))";
-
-  private static final String SQL_LINK_SINKS =
-      "INSERT IGNORE INTO audience_sinks (audience_id, sink_id) VALUES (?, ?)";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
       "SELECT id, tenant_id, project_id, name, description, client, created_by, created_at, updated_at, "
@@ -41,10 +38,12 @@ public class AudienceRepositoryImpl implements AudienceRepository {
             .addValue(audienceMeta.getType())
             .addValue(audienceMeta.getExpireDate());
 
-    return mySQLWriterClient
+    return postgresWriterClient
         .executeWithTransaction(
             conn ->
-                mySQLWriterClient.executeAndGenerateId(conn, SQL_CREATE_AUDIENCE, params).toMaybe())
+                postgresWriterClient
+                    .executeAndGenerateId(conn, SQL_CREATE_AUDIENCE, params)
+                    .toMaybe())
         .toSingle();
   }
 
