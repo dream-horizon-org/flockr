@@ -171,8 +171,9 @@ public class BulkOperationResultTest {
     int total = 1000;
     int success = 950;
     int failed = 50;
-    String message = "Processed %d users for cohort 'test'. Success: %d, Failed: %d"
-        .formatted(total, success, failed);
+    String message =
+        "Processed %d users for cohort 'test'. Success: %d, Failed: %d"
+            .formatted(total, success, failed);
 
     // Act
     result.setTotalProcessed(total);
@@ -189,4 +190,3 @@ public class BulkOperationResultTest {
     assertEquals(total, success + failed);
   }
 }
-

@@ -254,4 +254,3 @@ public class GetUserCohortsTest {
     verify(userCohortsService).getCohorts(eq(userId), eq(guestId), eq(projectId));
   }
 }
-

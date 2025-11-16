@@ -161,8 +161,7 @@ public class UserCohortServiceImplTest {
     Long projectId = 100L;
     RuntimeException error = new RuntimeException("Aerospike connection failed");
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq("100")))
-        .thenReturn(Single.error(error));
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq("100"))).thenReturn(Single.error(error));
 
     // Act & Assert
     try {
@@ -266,7 +265,8 @@ public class UserCohortServiceImplTest {
     AerospikeException exception =
         new AerospikeException(ResultCode.KEY_NOT_FOUND_ERROR, "Key not found");
 
-    when(aerospikeClient.appendCohort(anyString(), anyString(), anyString(), anyLong(), anyString()))
+    when(aerospikeClient.appendCohort(
+            anyString(), anyString(), anyString(), anyLong(), anyString()))
         .thenReturn(Single.error(exception));
 
     // Act
@@ -309,10 +309,10 @@ public class UserCohortServiceImplTest {
     request.setExpireAt("2025-12-31 23:59:59");
     request.setProjectId(100L);
 
-    AerospikeException exception =
-        new AerospikeException(ResultCode.SERVER_ERROR, "Server error");
+    AerospikeException exception = new AerospikeException(ResultCode.SERVER_ERROR, "Server error");
 
-    when(aerospikeClient.appendCohort(anyString(), anyString(), anyString(), anyLong(), anyString()))
+    when(aerospikeClient.appendCohort(
+            anyString(), anyString(), anyString(), anyLong(), anyString()))
         .thenReturn(Single.error(exception));
 
     // Act & Assert
@@ -382,12 +382,12 @@ public class UserCohortServiceImplTest {
     InputPart csvFilePart = mock(InputPart.class);
     when(csvFilePart.getBody(byte[].class, null)).thenReturn(csvBytes);
 
-    when(aerospikeClient.appendCohort(anyString(), eq(cohortName), anyString(), anyLong(), anyString()))
+    when(aerospikeClient.appendCohort(
+            anyString(), eq(cohortName), anyString(), anyLong(), anyString()))
         .thenReturn(Single.just(true));
 
     // Mock file system operations
-    when(fileSystem.open(anyString(), any(OpenOptions.class)))
-        .thenReturn(Single.just(asyncFile));
+    when(fileSystem.open(anyString(), any(OpenOptions.class))).thenReturn(Single.just(asyncFile));
 
     // Mock async file reading
     doAnswer(
@@ -502,4 +502,3 @@ public class UserCohortServiceImplTest {
     assertTrue(result.contains("exact"));
   }
 }
-

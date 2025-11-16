@@ -358,4 +358,3 @@ public class MapUserCohortsRequestTest {
     assertEquals(expireAt, request.getExpireAt());
   }
 }
-

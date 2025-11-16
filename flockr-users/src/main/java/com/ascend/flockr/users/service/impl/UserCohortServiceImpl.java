@@ -253,42 +253,43 @@ public class UserCohortServiceImpl implements UserCohortsService {
                     asyncFile -> {
                       // Set buffer size for efficient reading
                       asyncFile.setReadBufferSize(64 * 1024);
-                      
+
                       // Create parser to read lines (newline-delimited)
-                      RecordParser parser = RecordParser.newDelimited(
-                          "\n",
-                          buffer -> {
-                            String line = buffer.toString(StandardCharsets.UTF_8);
-                            if (!line.isEmpty()) {
-                              emitter.onNext(line);
-                            }
-                          });
-                      
+                      RecordParser parser =
+                          RecordParser.newDelimited(
+                              "\n",
+                              buffer -> {
+                                String line = buffer.toString(StandardCharsets.UTF_8);
+                                if (!line.isEmpty()) {
+                                  emitter.onNext(line);
+                                }
+                              });
+
                       // Handle end of file
                       parser.endHandler(
                           v -> {
                             asyncFile.close();
                             emitter.onComplete();
                           });
-                      
+
                       // Handle parsing errors
                       parser.exceptionHandler(
                           err -> {
                             asyncFile.close();
                             emitter.onError(err);
                           });
-                      
+
                       // Connect asyncFile to parser: feed data from file to parser
                       // Use lambda to bridge between AsyncFile's Handler and RecordParser
                       asyncFile.handler(buffer -> parser.handle(buffer.getDelegate()));
-                      
+
                       // Handle file read errors
                       asyncFile.exceptionHandler(
                           err -> {
                             asyncFile.close();
                             emitter.onError(err);
                           });
-                      
+
                       // Start reading the file
                       asyncFile.resume();
                     },
