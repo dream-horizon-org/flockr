@@ -251,9 +251,11 @@ public class UserCohortServiceImpl implements UserCohortsService {
                 .open(path.toString(), new OpenOptions().setRead(true))
                 .doOnSuccess(
                     asyncFile -> {
-                      RecordParser parser = RecordParser.newDelimited(",", asyncFile);
-                      parser.handler(
-                          buffer -> emitter.onNext(buffer.toString(StandardCharsets.UTF_8)));
+//                        asyncFile.setReadBufferSize(64*1024);
+                      RecordParser parser = RecordParser.newDelimited(
+                              ",",
+                              buffer -> emitter.onNext(buffer.toString(StandardCharsets.UTF_8))
+                      );
                       parser.endHandler(
                           v -> {
                             asyncFile.close();
@@ -265,7 +267,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
                             emitter.onError(err);
                           });
                     })
-                .onFailure(emitter::onError),
+                .filter(emitter::onError),
         BackpressureStrategy.BUFFER);
   }
 
