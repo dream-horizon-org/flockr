@@ -14,7 +14,13 @@ import com.ascend.flockr.repository.impl.*;
 import com.ascend.flockr.service.*;
 import com.ascend.flockr.service.impl.*;
 import com.ascend.flockr.util.CircuitBreakerFactory;
+import com.ascend.flockr.util.ConfigValidator;
+import com.ascend.flockr.util.ConfigValidatorRegistry;
+import com.ascend.flockr.util.validator.AthenaConfigValidator;
+import com.ascend.flockr.util.validator.KafkaConfigValidator;
+import com.ascend.flockr.util.validator.S3FolderSinkValidator;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import io.vertx.rxjava3.core.Vertx;
 
 public class ServiceModule extends DefaultModule {
@@ -31,6 +37,8 @@ public class ServiceModule extends DefaultModule {
     bindClients();
     /* Bind DAOs */
     bindDAOs();
+    /* Bind Validators */
+    bindValidators();
     /* Bind Services */
     bindServices();
     /* Static Binding */
@@ -65,6 +73,20 @@ public class ServiceModule extends DefaultModule {
     bind(DataConnectorRepository.class).to(DataConnectorRepositoryImpl.class);
     bind(AudienceRepository.class).to(AudienceRepositoryImpl.class);
     bind(RuleRepository.class).to(RuleRepositoryImpl.class);
+  }
+
+  private void bindValidators() {
+    // Use Multibinder to collect all ConfigValidator implementations
+    Multibinder<ConfigValidator> multibinder =
+        Multibinder.newSetBinder(binder(), ConfigValidator.class);
+
+    // Bind individual validators
+    multibinder.addBinding().to(AthenaConfigValidator.class).in(Singleton.class);
+    multibinder.addBinding().to(KafkaConfigValidator.class).in(Singleton.class);
+    multibinder.addBinding().to(S3FolderSinkValidator.class).in(Singleton.class);
+
+    // Bind registry (will automatically receive Set<ConfigValidator> via injection)
+    bind(ConfigValidatorRegistry.class).in(Singleton.class);
   }
 
   private void bindServices() {

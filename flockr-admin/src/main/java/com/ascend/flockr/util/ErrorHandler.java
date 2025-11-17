@@ -1,5 +1,7 @@
 package com.ascend.flockr.util;
 
+import com.ascend.flockr.exception.ConfigParsingException;
+import com.ascend.flockr.exception.ConfigValidationException;
 import com.ascend.flockr.io.ResponseEntity;
 import com.dream11.rest.exception.RestException;
 import io.reactivex.rxjava3.core.Single;
@@ -64,6 +66,24 @@ public class ErrorHandler {
     // If it's already a RestException, return as-is
     if (throwable instanceof RestException restException) {
       return restException;
+    }
+
+    // Map ConfigValidationException to BAD_REQUEST
+    if (throwable instanceof ConfigValidationException configException) {
+      return new RestException(
+          configException.getErrorCode(),
+          configException.getMessage(),
+          HttpStatus.SC_BAD_REQUEST,
+          configException);
+    }
+
+    // Map ConfigParsingException to BAD_REQUEST
+    if (throwable instanceof ConfigParsingException parsingException) {
+      return new RestException(
+          parsingException.getErrorCode(),
+          parsingException.getMessage(),
+          HttpStatus.SC_BAD_REQUEST,
+          parsingException);
     }
 
     // Map IllegalArgumentException to BAD_REQUEST

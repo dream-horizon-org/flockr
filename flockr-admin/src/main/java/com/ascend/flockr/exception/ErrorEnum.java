@@ -21,6 +21,21 @@ public enum ErrorEnum implements RestError {
   INVALID_REQUEST_BODY(
       "INVALID_REQUEST_BODY", "Invalid request body parameters", HttpStatus.SC_BAD_REQUEST),
 
+  CONFIG_VALIDATION_FAILED(
+      "CONFIG_VALIDATION_FAILED",
+      "Connector configuration validation failed",
+      HttpStatus.SC_BAD_REQUEST),
+
+  CONFIG_PARSING_FAILED(
+      "CONFIG_PARSING_FAILED",
+      "Failed to parse connector configuration",
+      HttpStatus.SC_BAD_REQUEST),
+
+  CONFIG_VALIDATOR_NOT_FOUND(
+      "CONFIG_VALIDATOR_NOT_FOUND",
+      "No validator found for the specified connector type",
+      HttpStatus.SC_BAD_REQUEST),
+
   DATABASE_ERROR(
       "DATABASE_ERROR", "Database operation failed", HttpStatus.SC_INTERNAL_SERVER_ERROR),
 

@@ -1,5 +1,7 @@
 package com.ascend.flockr.provider;
 
+import com.ascend.flockr.exception.ConfigParsingException;
+import com.ascend.flockr.exception.ConfigValidationException;
 import com.ascend.flockr.io.ResponseEntity;
 import com.dream11.rest.exception.RestException;
 import jakarta.ws.rs.WebApplicationException;
@@ -39,6 +41,24 @@ public class GenericExceptionMapper implements ExceptionMapper<Throwable> {
           getWebApplicationMessage(statusCode),
           throwable.getMessage(),
           statusCode);
+    }
+
+    // Handle ConfigValidationException
+    if (throwable instanceof ConfigValidationException configException) {
+      return buildErrorResponse(
+          configException.getErrorCode(),
+          configException.getMessage(),
+          getCauseMessage(configException),
+          HttpStatus.SC_BAD_REQUEST);
+    }
+
+    // Handle ConfigParsingException
+    if (throwable instanceof ConfigParsingException parsingException) {
+      return buildErrorResponse(
+          parsingException.getErrorCode(),
+          parsingException.getMessage(),
+          getCauseMessage(parsingException),
+          HttpStatus.SC_BAD_REQUEST);
     }
 
     // Handle IllegalArgumentException (typically validation errors)
