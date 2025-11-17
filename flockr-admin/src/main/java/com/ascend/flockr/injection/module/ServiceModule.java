@@ -23,11 +23,44 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import io.vertx.rxjava3.core.Vertx;
 
+/**
+ * Guice module that configures all service bindings for the Flockr application.
+ *
+ * <p>This module binds:
+ * <ul>
+ *   <li>Configuration providers (ApplicationConfig, CircuitBreakerConfig, etc.)</li>
+ *   <li>Client implementations (WebClient, FlinkClient, PostgreSQL clients)</li>
+ *   <li>Repository implementations</li>
+ *   <li>Config validators (using Multibinder for extensibility)</li>
+ *   <li>Service implementations</li>
+ * </ul>
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 public class ServiceModule extends DefaultModule {
+  /**
+   * Constructs a new ServiceModule with the provided Vert.x instance.
+   *
+   * @param vertx the Vert.x instance to use for module configuration
+   */
   public ServiceModule(Vertx vertx) {
     super(vertx);
   }
 
+  /**
+   * Configures all bindings for the application.
+   *
+   * <p>This method sets up bindings in the following order:
+   * <ol>
+   *   <li>Configuration providers</li>
+   *   <li>Client implementations</li>
+   *   <li>Repository implementations</li>
+   *   <li>Config validators</li>
+   *   <li>Service implementations</li>
+   *   <li>Static injection for CircuitBreakerFactory</li>
+   * </ol>
+   */
   @Override
   protected void configure() {
     super.configure();
@@ -45,6 +78,12 @@ public class ServiceModule extends DefaultModule {
     requestStaticInjection(CircuitBreakerFactory.class);
   }
 
+  /**
+   * Binds configuration providers as eager singletons.
+   *
+   * <p>All configuration classes are bound as eager singletons to ensure they are loaded at
+   * application startup.
+   */
   private void bindConfigs() {
     bind(ApplicationConfig.class).toProvider(ApplicationConfig.provider()).asEagerSingleton();
     bind(CircuitBreakerConfig.class).toProvider(CircuitBreakerConfig.provider()).asEagerSingleton();
@@ -54,6 +93,11 @@ public class ServiceModule extends DefaultModule {
     bind(WebClientConfig.class).toProvider(WebClientConfig.provider()).asEagerSingleton();
   }
 
+  /**
+   * Binds client implementations as singletons.
+   *
+   * <p>Binds WebClient, FlinkClient, and PostgreSQL reader/writer clients.
+   */
   private void bindClients() {
     //    web client bindings
     bind(WebClientImpl.class).in(Singleton.class);
@@ -68,6 +112,11 @@ public class ServiceModule extends DefaultModule {
     bind(PostgresWriterClient.class).to(PostgresWriterClientImpl.class);
   }
 
+  /**
+   * Binds repository implementations.
+   *
+   * <p>Binds all repository interfaces to their implementations.
+   */
   private void bindDAOs() {
     bind(HealthCheckDAO.class).to(HealthCheckDAOImpl.class);
     bind(DataConnectorRepository.class).to(DataConnectorRepositoryImpl.class);
@@ -75,6 +124,12 @@ public class ServiceModule extends DefaultModule {
     bind(RuleRepository.class).to(RuleRepositoryImpl.class);
   }
 
+  /**
+   * Binds config validators using Multibinder for extensibility.
+   *
+   * <p>Uses Guice Multibinder to collect all ConfigValidator implementations, allowing new
+   * validators to be added by simply binding them to the ConfigValidator interface.
+   */
   private void bindValidators() {
     // Use Multibinder to collect all ConfigValidator implementations
     Multibinder<ConfigValidator> multibinder =
@@ -89,6 +144,11 @@ public class ServiceModule extends DefaultModule {
     bind(ConfigValidatorRegistry.class).in(Singleton.class);
   }
 
+  /**
+   * Binds service implementations.
+   *
+   * <p>Binds all service interfaces to their implementations.
+   */
   private void bindServices() {
     bind(HealthCheckService.class).to(HealthCheckServiceImpl.class);
     bind(DataConnectorService.class).to(DataConnectorServiceImpl.class);

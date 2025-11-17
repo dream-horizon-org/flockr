@@ -15,6 +15,19 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Implementation of {@link AudienceRepository} using PostgreSQL as the data store.
+ *
+ * <p>This implementation handles:
+ * <ul>
+ *   <li>Creating audiences with JSONB field serialization</li>
+ *   <li>Retrieving audience details with proper JSON deserialization</li>
+ *   <li>Optimized paginated queries with full-text search support</li>
+ * </ul>
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class AudienceRepositoryImpl implements AudienceRepository {
   private final PostgresReaderClient postgresReaderClient;
@@ -34,6 +47,12 @@ public class AudienceRepositoryImpl implements AudienceRepository {
           + "EXTRACT(EPOCH FROM expiry_date)::BIGINT AS expiry_date, sinks, created_by "
           + "FROM audiences WHERE id = $1 AND tenant_id = $2 AND project_id = $3";
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation serializes JSON fields (custom_audience_config, sinks) and handles
+   * timestamp conversion for expiry dates.
+   */
   @Override
   public Single<Long> createAudience(AudienceMeta audienceMeta) {
     Tuple params =
@@ -57,6 +76,12 @@ public class AudienceRepositoryImpl implements AudienceRepository {
         .toSingle();
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation deserializes JSON fields and converts database timestamps to epoch
+   * milliseconds.
+   */
   @Override
   public Single<AudienceMeta> getAudienceById(String tenantId, String projectId, Long id) {
     return postgresReaderClient.fetchOne(

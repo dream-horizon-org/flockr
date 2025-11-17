@@ -22,6 +22,21 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * REST controller for managing audiences and their associated rules.
+ *
+ * <p>This controller provides endpoints for:
+ * <ul>
+ *   <li>Creating and retrieving audiences</li>
+ *   <li>Creating and retrieving rules for audiences</li>
+ *   <li>Listing audiences with filtering and pagination</li>
+ * </ul>
+ *
+ * <p>All endpoints require tenant and project identifiers via headers (X-Tenant-Id, X-Project-Id).
+ *
+ * @author
+ * @since 1.0
+ */
 @Path("/")
 @Tag(name = "Audiences", description = "Audience management APIs")
 @RequiredArgsConstructor(onConstructor = @__(@Inject))

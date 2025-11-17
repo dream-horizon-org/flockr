@@ -6,6 +6,20 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.http.HttpStatus;
 
+/**
+ * Enumeration of application error codes with their associated HTTP status codes and messages.
+ *
+ * <p>This enum implements {@link RestError} to provide standardized error handling across the
+ * application. Each error code includes:
+ * <ul>
+ *   <li>A unique error code string</li>
+ *   <li>A human-readable error message</li>
+ *   <li>An HTTP status code</li>
+ * </ul>
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @Getter
 @AllArgsConstructor
 public enum ErrorEnum implements RestError {
@@ -44,10 +58,23 @@ public enum ErrorEnum implements RestError {
       "An unexpected internal error occurred",
       HttpStatus.SC_INTERNAL_SERVER_ERROR);
 
+  /** The unique error code identifier. */
   private final String errorCode;
+
+  /** Human-readable error message. */
   private final String errorMessage;
+
+  /** HTTP status code associated with this error. */
   private final int httpStatusCode;
 
+  /**
+   * Handles an exception by returning it if it's already a RestException, otherwise returns the
+   * default exception.
+   *
+   * @param throwable the exception to handle
+   * @param defaultException the default exception to return if throwable is not a RestException
+   * @return the throwable if it's a RestException, otherwise the defaultException
+   */
   public static RestException handleException(Throwable throwable, RestException defaultException) {
     if (throwable instanceof RestException restException) return restException;
     else return defaultException;

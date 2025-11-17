@@ -15,9 +15,29 @@ import java.util.List;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Main verticle that orchestrates the deployment of all other verticles in the application.
+ *
+ * <p>This verticle is responsible for:
+ * <ul>
+ *   <li>Deploying REST API verticles with appropriate instance counts and worker pool sizes</li>
+ *   <li>Gracefully shutting down all clients (PostgreSQL readers/writers, WebClient) when stopped</li>
+ * </ul>
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @Slf4j
 public class MainVerticle extends AbstractVerticle {
 
+  /**
+   * Starts the main verticle by deploying all configured verticles.
+   *
+   * <p>Deploys verticles sequentially and logs any deployment errors. The deployment completes
+   * when all verticles are successfully deployed.
+   *
+   * @return a Completable that completes when all verticles are deployed, or errors if deployment fails
+   */
   @Override
   public Completable rxStart() {
     return Observable.fromIterable(this.getVerticleDeployments())
@@ -30,11 +50,21 @@ public class MainVerticle extends AbstractVerticle {
         .doOnComplete(() -> log.info("Deployed all verticles. Started Application.........."));
   }
 
+  /**
+   * Stops the main verticle by closing all clients gracefully.
+   *
+   * @return a Completable that completes when all clients are closed
+   */
   @Override
   public Completable rxStop() {
     return stopClients();
   }
 
+  /**
+   * Gets the list of verticles to be deployed along with their deployment options.
+   *
+   * @return a list of verticle deployments configured for the application
+   */
   private List<VerticleDeployment> getVerticleDeployments() {
     return List.of(
         new VerticleDeployment(
@@ -45,9 +75,20 @@ public class MainVerticle extends AbstractVerticle {
                 .setWorkerPoolSize(40)));
   }
 
+  /**
+   * Record representing a verticle deployment configuration.
+   *
+   * @param verticleSupplier supplier that provides the verticle instance to deploy
+   * @param deploymentOptions options for deploying the verticle
+   */
   record VerticleDeployment(
       Supplier<Verticle> verticleSupplier, DeploymentOptions deploymentOptions) {}
 
+  /**
+   * Closes all clients used by the application (PostgreSQL readers/writers, WebClient).
+   *
+   * @return a Completable that completes when all clients are closed
+   */
   private Completable stopClients() {
     PostgresReaderClient mySQLReaderClient = GuiceInjector.getInstance(PostgresReaderClient.class);
     PostgresWriterClient mySQLWriterClient = GuiceInjector.getInstance(PostgresWriterClient.class);
