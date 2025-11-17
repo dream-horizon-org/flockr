@@ -5,6 +5,7 @@ import com.ascend.flockr.io.request.CreateAudienceRequest;
 import com.ascend.flockr.io.request.CreateRulesRequest;
 import com.ascend.flockr.io.response.AudienceDetailsResponse;
 import com.ascend.flockr.io.response.AudienceMetaResponse;
+import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
 import com.ascend.flockr.service.AudienceService;
 import com.ascend.flockr.util.ErrorHandler;
@@ -15,9 +16,9 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Min;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import java.util.List;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 
@@ -177,26 +178,33 @@ public class AudienceController {
       responseCode = "500",
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-  public CompletionStage<ResponseEntity.Success<List<AudienceMetaResponse>>> getAudiencesList(
-      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-          String tenantId,
-      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
-          String projectId,
-      @Parameter(description = "Search audiences by name (partial match)") @QueryParam("nameSearch")
-          String nameSearch,
-      @Parameter(description = "Filter by creator username") @QueryParam("createdBy")
-          String createdBy,
-      @Parameter(description = "Filter by verification status") @QueryParam("verified")
-          Boolean verified,
-      @Parameter(description = "Maximum number of results to return", example = "20")
-          @QueryParam("limit")
-          Integer limit,
-      @Parameter(description = "Number of results to skip for pagination", example = "0")
-          @QueryParam("offset")
-          Integer offset) {
+  public CompletionStage<ResponseEntity.Success<PaginatedResponse<AudienceMetaResponse>>>
+      getAudiencesList(
+          @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
+              String tenantId,
+          @Parameter(description = "Project identifier", required = true)
+              @HeaderParam("X-Project-Id")
+              String projectId,
+          @Parameter(description = "Search audiences by name (partial match)")
+              @QueryParam("nameSearch")
+              String nameSearch,
+          @Parameter(description = "Filter by creator username") @QueryParam("createdBy")
+              String createdBy,
+          @Parameter(description = "Filter by verification status") @QueryParam("verified")
+              Boolean verified,
+          @Parameter(description = "Number of items per page", example = "10")
+              @QueryParam("pageSize")
+              @DefaultValue("10")
+              @Min(1)
+              int pageSize,
+          @Parameter(description = "Page number (0-indexed)", example = "0")
+              @QueryParam("page")
+              @DefaultValue("0")
+              @Min(0)
+              int page) {
     return ErrorHandler.handleAsync(
         audienceService.getAudiencesList(
-            tenantId, projectId, nameSearch, createdBy, verified, limit, offset),
+            tenantId, projectId, nameSearch, createdBy, verified, page, pageSize),
         "getAudiencesList");
   }
 }

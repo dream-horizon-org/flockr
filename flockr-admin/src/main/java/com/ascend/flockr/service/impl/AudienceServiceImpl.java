@@ -15,6 +15,7 @@ import com.ascend.flockr.io.request.CreateAudienceRequest;
 import com.ascend.flockr.io.request.CreateRulesRequest;
 import com.ascend.flockr.io.response.AudienceDetailsResponse;
 import com.ascend.flockr.io.response.AudienceMetaResponse;
+import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
 import com.ascend.flockr.repository.AudienceRepository;
 import com.ascend.flockr.repository.DataConnectorRepository;
@@ -34,6 +35,8 @@ public class AudienceServiceImpl implements AudienceService {
   private final RuleRepository ruleRepository;
   private final DataConnectorRepository dataConnectorRepository;
   private static final String DEFAULT_CREATOR = "dummy_user";
+  private static final int DEFAULT_PAGE = 0;
+  private static final int DEFAULT_LIMIT = 10;
 
   /**
    * Creates a new audience using the data provided in the request.
@@ -525,30 +528,47 @@ public class AudienceServiceImpl implements AudienceService {
    * Retrieves a list of audiences with basic metadata and rule counts.
    *
    * <p>This method supports filtering by name search, creator, and verification status. Results can
-   * be paginated using limit and offset parameters.
+   * be paginated using page (0-indexed) and pageSize parameters similar to data connector listings.
    *
    * @param tenantId the tenant identifier from the request header
    * @param projectId the project identifier from the request header
    * @param nameSearch optional name search filter (partial match)
    * @param createdBy optional creator filter (exact match)
    * @param verified optional verification status filter
-   * @param limit optional maximum number of results to return
-   * @param offset optional number of results to skip for pagination
+   * @param page optional page number (0-indexed). If null or negative, defaults to 0.
+   * @param pageSize optional maximum number of results per page. If null or not positive, defaults
+   *     to 10.
    * @return a {@link Single} emitting a list of {@link AudienceMetaResponse} with basic metadata
    *     and rule counts
    */
   @Override
-  public Single<List<AudienceMetaResponse>> getAudiencesList(
+  public Single<PaginatedResponse<AudienceMetaResponse>> getAudiencesList(
       String tenantId,
       String projectId,
       String nameSearch,
       String createdBy,
       Boolean verified,
-      Integer limit,
-      Integer offset) {
+      Integer page,
+      Integer pageSize) {
+
+    int resolvedPageSize = (pageSize == null || pageSize <= 0) ? DEFAULT_LIMIT : pageSize;
+    int resolvedPage = (page == null || page < 0) ? DEFAULT_PAGE : page;
+    int offset = resolvedPage * resolvedPageSize;
+
     return audienceRepository
-        .getAudiencesList(tenantId, projectId, nameSearch, createdBy, verified, limit, offset)
-        .doOnSuccess(audiences -> log.info("Successfully fetched {} audiences", audiences.size()))
+        .getAudiencesList(
+            tenantId, projectId, nameSearch, createdBy, verified, resolvedPageSize, offset)
+        .map(
+            audiences ->
+                new PaginatedResponse<>(
+                    new PaginatedResponse.PageInfo(
+                        resolvedPage, resolvedPageSize, audiences.size() == resolvedPageSize),
+                    audiences))
+        .doOnSuccess(
+            response ->
+                log.info(
+                    "Successfully fetched {} audiences",
+                    response.data() != null ? response.data().size() : 0))
         .doOnError(error -> log.error("Failed to fetch audiences list: {}", error.getMessage()));
   }
 }

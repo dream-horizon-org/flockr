@@ -4,9 +4,9 @@ import com.ascend.flockr.io.request.CreateAudienceRequest;
 import com.ascend.flockr.io.request.CreateRulesRequest;
 import com.ascend.flockr.io.response.AudienceDetailsResponse;
 import com.ascend.flockr.io.response.AudienceMetaResponse;
+import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
 import io.reactivex.rxjava3.core.Single;
-import java.util.List;
 
 public interface AudienceService {
   Single<Long> createAudience(String tenantId, String projectId, CreateAudienceRequest request);
@@ -19,12 +19,12 @@ public interface AudienceService {
   Single<RuleDetailsResponse> getRuleDetails(
       String tenantId, String projectId, Long audienceId, Long ruleId);
 
-  Single<List<AudienceMetaResponse>> getAudiencesList(
+  Single<PaginatedResponse<AudienceMetaResponse>> getAudiencesList(
       String tenantId,
       String projectId,
       String nameSearch,
       String createdBy,
       Boolean verified,
-      Integer limit,
-      Integer offset);
+      Integer page,
+      Integer pageSize);
 }
