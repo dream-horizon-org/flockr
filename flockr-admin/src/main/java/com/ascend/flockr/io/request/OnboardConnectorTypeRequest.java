@@ -16,5 +16,5 @@ public class OnboardConnectorTypeRequest {
   @NotBlank(message = "Display name is required")
   private String displayName;
 
-  @NotEmpty private JsonObject configSchema; // Optional JSON schema for validation
+  @NotEmpty private JsonObject configSchema;
 }

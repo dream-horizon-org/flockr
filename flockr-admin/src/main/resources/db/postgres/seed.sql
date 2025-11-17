@@ -5,23 +5,55 @@ SET search_path TO flockr, public;
 -- Seed supported connector types
 INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active)
 VALUES
-  ('SOURCE', 'ATHENA', 'AWS Athena', NULL, TRUE)
-ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, is_active=EXCLUDED.is_active;
+  ('SOURCE', 'ATHENA', 'AWS Athena', 
+   '{
+      "kind": "SOURCE",
+      "type": "KAFKA",
+      "displayName": "ApacheKafkaSource",
+      "configSchema": {
+        "query": {
+          "type": "string"
+        },
+        "database": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "accessKey": {
+          "type": "string"
+        },
+        "secretKey": {
+          "type": "string"
+        },
+        "catalog": {
+          "type": "string"
+        }
+      }
+    }',
+   1)
+ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, config_schema=EXCLUDED.config_schema, is_active=EXCLUDED.is_active;
 
 INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active)
 VALUES
-  ('SOURCE', 'KAFKA', 'Apache Kafka (Source)', NULL, TRUE)
-ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, is_active=EXCLUDED.is_active;
+  ('SOURCE', 'KAFKA', 'Apache Kafka (Source)', 
+   '{"type": "object", "properties": {"topic": {"type": "string"}, "bootstrapServersUrl": {"type": "string"}}, "required": ["topic", "bootstrapServersUrl", "connectorType"]}',
+   TRUE)
+ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, config_schema=EXCLUDED.config_schema, is_active=EXCLUDED.is_active;
 
 INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active)
 VALUES
-  ('SINK', 'KAFKA', 'Apache Kafka (Sink)', NULL, TRUE)
-ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, is_active=EXCLUDED.is_active;
+  ('SINK', 'KAFKA', 'Apache Kafka (Sink)', 
+   '{"type": "object", "properties": {"topic": {"type": "string"}, "bootstrapServersUrl": {"type": "string"}}, "required": ["topic", "bootstrapServersUrl", "connectorType"]}',
+   TRUE)
+ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, config_schema=EXCLUDED.config_schema, is_active=EXCLUDED.is_active;
 
 INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active)
 VALUES
-  ('SINK', 'S3_FOLDER', 'AWS S3 Folder', NULL, TRUE)
-ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, is_active=EXCLUDED.is_active;
+  ('SINK', 'S3_FOLDER', 'AWS S3 Folder', 
+   '{"type": "object", "properties": {"bucket": {"type": "string"}, "folderPath": {"type": "string"}, "region": {"type": "string"}, "accessKey": {"type": "string"}, "secretKey": {"type": "string"}, "fileFormat": {"type": "string"}}, "required": ["bucket", "folderPath", "connectorType"]}',
+   TRUE)
+ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, config_schema=EXCLUDED.config_schema, is_active=EXCLUDED.is_active;
 
 -- Insert sample data sources (configs match KafkaSourceConfig and AthenaSourceConfig POJOs)
 INSERT INTO data_sources (name, type_id, config, status, created_by) VALUES

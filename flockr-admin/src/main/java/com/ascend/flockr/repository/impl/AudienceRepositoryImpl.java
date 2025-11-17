@@ -23,7 +23,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
 
   private static final String SQL_CREATE_AUDIENCE =
       "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expiry_date, created_by) "
-          + "VALUES (?, ?, ?, ?, ?, CAST(? AS JSONB), ?, to_timestamp(?), ?) RETURNING id";
+          + "VALUES ($1, $2, $3, $4, $5, CAST($6 AS JSONB), $7, to_timestamp($8), $9) RETURNING id";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
       "SELECT id, tenant_id, project_id, name, description, "
@@ -32,7 +32,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
           + "EXTRACT(EPOCH FROM last_audience_updated_at)::BIGINT AS last_audience_updated_at, "
           + "user_count, custom_audience_config, type, verified, "
           + "EXTRACT(EPOCH FROM expiry_date)::BIGINT AS expiry_date, sinks, created_by "
-          + "FROM audiences WHERE id = ? AND tenant_id = ? AND project_id = ?";
+          + "FROM audiences WHERE id = $1 AND tenant_id = $2 AND project_id = $3";
 
   @Override
   public Single<Long> createAudience(AudienceMeta audienceMeta) {
@@ -209,6 +209,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
       Integer offset) {
 
     StringBuilder sql = new StringBuilder();
+    int paramIndex = 1;
 
     sql.append("WITH filtered_audiences AS ( ");
     sql.append("  SELECT a.id, a.name, a.description, a.type, a.verified, a.user_count, ");
@@ -216,35 +217,39 @@ public class AudienceRepositoryImpl implements AudienceRepository {
     sql.append("  EXTRACT(EPOCH FROM a.updated_at)::BIGINT AS updated_at, ");
     sql.append("  EXTRACT(EPOCH FROM a.expire_date)::BIGINT AS expire_date");
 
+    List<Object> params = new ArrayList<>();
+
     if (nameSearch != null && !nameSearch.isBlank()) {
-      sql.append(", ts_rank(a.name_vector, plainto_tsquery('english', ?)) AS fts_rank ");
+      sql.append(", ts_rank(a.name_vector, plainto_tsquery('english', $")
+          .append(paramIndex++)
+          .append(")) AS fts_rank ");
+      params.add(nameSearch); // for ts_rank in SELECT
     }
 
     sql.append("  FROM audiences a ");
-    sql.append("  WHERE a.tenant_id = ? AND a.project_id = ? ");
-
-    List<Object> params = new ArrayList<>();
-
-    // Add tenantId and projectId as first parameters
-    if (nameSearch != null && !nameSearch.isBlank()) {
-      params.add(nameSearch); // for ts_rank in SELECT
-    }
+    sql.append("  WHERE a.tenant_id = $")
+        .append(paramIndex++)
+        .append(" AND a.project_id = $")
+        .append(paramIndex++)
+        .append(" ");
     params.add(tenantId);
     params.add(projectId);
 
     // Add filters
     if (nameSearch != null && !nameSearch.isBlank()) {
-      sql.append("  AND a.name_vector @@ plainto_tsquery('english', ?) ");
+      sql.append("  AND a.name_vector @@ plainto_tsquery('english', $")
+          .append(paramIndex++)
+          .append(") ");
       params.add(nameSearch);
     }
 
     if (createdBy != null && !createdBy.isBlank()) {
-      sql.append("  AND a.created_by = ? ");
+      sql.append("  AND a.created_by = $").append(paramIndex++).append(" ");
       params.add(createdBy);
     }
 
     if (verified != null) {
-      sql.append("  AND a.verified = ? ");
+      sql.append("  AND a.verified = $").append(paramIndex++).append(" ");
       params.add(verified);
     }
 
@@ -253,7 +258,11 @@ public class AudienceRepositoryImpl implements AudienceRepository {
       sql.append("fts_rank DESC, ");
     }
     sql.append("a.created_at DESC ");
-    sql.append("  LIMIT ? OFFSET ? ");
+    sql.append("  LIMIT $")
+        .append(paramIndex++)
+        .append(" OFFSET $")
+        .append(paramIndex++)
+        .append(" ");
     params.add(limit);
     params.add(offset);
     sql.append(") ");

@@ -12,7 +12,9 @@ import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
@@ -20,22 +22,22 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
   private final PostgresWriterClient postgresWriterClient;
 
   private static final String SQL_LIST_TYPES =
-      "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE kind = ? AND is_active = TRUE ORDER BY display_name";
+      "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE kind = $1 AND is_active = TRUE ORDER BY display_name";
 
   private static final String SQL_GET_TYPE_BY_ID =
-      "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE id = ?";
+      "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE id = $1";
 
   private static final String SQL_CREATE_SOURCE =
-      "INSERT INTO data_sources (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSONB), ?) RETURNING id";
+      "INSERT INTO data_sources (name, type_id, config, created_by) VALUES ($1, $2, CAST($3 AS JSONB), $4) RETURNING id";
 
   private static final String SQL_CREATE_SINK =
-      "INSERT INTO data_sinks (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSONB), ?) RETURNING id";
+      "INSERT INTO data_sinks (name, type_id, config, created_by) VALUES ($1, $2, CAST($3 AS JSONB), $4) RETURNING id";
 
   private static final String SQL_LIST_SOURCES =
-      "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sources s JOIN data_connector_types t ON s.type_id = t.id ORDER BY s.id DESC LIMIT ? OFFSET ?";
+      "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sources s JOIN data_connector_types t ON s.type_id = t.id ORDER BY s.id DESC LIMIT $1 OFFSET $2";
 
   private static final String SQL_LIST_SINKS =
-      "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sinks s JOIN data_connector_types t ON s.type_id = t.id ORDER BY s.id DESC LIMIT ? OFFSET ?";
+      "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sinks s JOIN data_connector_types t ON s.type_id = t.id ORDER BY s.id DESC LIMIT $1 OFFSET $2";
 
   private static final String SQL_GET_SOURCES_BY_IDS =
       "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sources s JOIN data_connector_types t ON s.type_id = t.id WHERE s.id IN (%s)";
@@ -44,18 +46,32 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
       "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sinks s JOIN data_connector_types t ON s.type_id = t.id WHERE s.id IN (%s)";
 
   private static final String SQL_CREATE_CONNECTOR_TYPE =
-      "INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active) VALUES (?, ?, ?, CAST(? AS JSONB), TRUE) RETURNING id";
+      "INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active) VALUES ($1, $2, $3, CAST($4 AS JSONB), TRUE) RETURNING id";
 
   @Override
   public Single<List<DataConnectorType>> listConnectorTypes(String kind) {
-    return postgresReaderClient.fetchAll(
-        SQL_LIST_TYPES, Tuple.of(kind), DataConnectorType::mapTypeRow);
+    return postgresReaderClient
+        .fetchAll(SQL_LIST_TYPES, Tuple.of(kind), DataConnectorType::mapTypeRow)
+        .doOnError(
+            error ->
+                log.error(
+                    "Error listing connector types for kind: {}. Query: {}",
+                    kind,
+                    SQL_LIST_TYPES,
+                    error));
   }
 
   @Override
   public Single<DataConnectorType> getConnectorTypeById(Long id) {
-    return postgresReaderClient.fetchOne(
-        SQL_GET_TYPE_BY_ID, Tuple.of(id), DataConnectorType::mapTypeRow);
+    return postgresReaderClient
+        .fetchOne(SQL_GET_TYPE_BY_ID, Tuple.of(id), DataConnectorType::mapTypeRow)
+        .doOnError(
+            error ->
+                log.error(
+                    "Error getting connector type by id: {}. Query: {}",
+                    id,
+                    SQL_GET_TYPE_BY_ID,
+                    error));
   }
 
   @Override
@@ -68,6 +84,15 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
                     .executeAndGenerateId(
                         conn, SQL_CREATE_SOURCE, Tuple.of(name, typeId, configJson, createdBy))
                     .toMaybe())
+        .doOnError(
+            error ->
+                log.error(
+                    "Error creating data source. name: {}, typeId: {}, createdBy: {}. Query: {}",
+                    name,
+                    typeId,
+                    createdBy,
+                    SQL_CREATE_SOURCE,
+                    error))
         .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to create data source")))
         .toSingle();
   }
@@ -82,6 +107,15 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
                     .executeAndGenerateId(
                         conn, SQL_CREATE_SINK, Tuple.of(name, typeId, configJson, createdBy))
                     .toMaybe())
+        .doOnError(
+            error ->
+                log.error(
+                    "Error creating data sink. name: {}, typeId: {}, createdBy: {}. Query: {}",
+                    name,
+                    typeId,
+                    createdBy,
+                    SQL_CREATE_SINK,
+                    error))
         .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to create data sink")))
         .toSingle();
   }
@@ -89,15 +123,33 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
   @Override
   public Single<List<DataSourceDetails>> listDataSources(int page, int pageSize) {
     int offset = page * pageSize;
-    return postgresReaderClient.fetchAll(
-        SQL_LIST_SOURCES, Tuple.of(pageSize, offset), DataSourceDetails::mapSourceRow);
+    return postgresReaderClient
+        .fetchAll(SQL_LIST_SOURCES, Tuple.of(pageSize, offset), DataSourceDetails::mapSourceRow)
+        .doOnError(
+            error ->
+                log.error(
+                    "Error listing data sources. page: {}, pageSize: {}, offset: {}. Query: {}",
+                    page,
+                    pageSize,
+                    offset,
+                    SQL_LIST_SOURCES,
+                    error));
   }
 
   @Override
   public Single<List<DataSinkDetails>> listDataSinks(int page, int pageSize) {
     int offset = page * pageSize;
-    return postgresReaderClient.fetchAll(
-        SQL_LIST_SINKS, Tuple.of(pageSize, offset), DataSinkDetails::mapSinkRow);
+    return postgresReaderClient
+        .fetchAll(SQL_LIST_SINKS, Tuple.of(pageSize, offset), DataSinkDetails::mapSinkRow)
+        .doOnError(
+            error ->
+                log.error(
+                    "Error listing data sinks. page: {}, pageSize: {}, offset: {}. Query: {}",
+                    page,
+                    pageSize,
+                    offset,
+                    SQL_LIST_SINKS,
+                    error));
   }
 
   @Override
@@ -106,17 +158,16 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
       return Single.just(List.of());
     }
 
-    // Build placeholders for IN clause
-    String placeholders = String.join(",", sourceIds.stream().map(id -> "?").toList());
-    String query = String.format(SQL_GET_SOURCES_BY_IDS, placeholders);
+    String commaSeparatedIds =
+        String.join(",", sourceIds.stream().map(String::valueOf).toArray(String[]::new));
+    String query = String.format(SQL_GET_SOURCES_BY_IDS, commaSeparatedIds);
 
-    // Build tuple with all IDs
-    Tuple tuple = Tuple.tuple();
-    for (Long sourceId : sourceIds) {
-      tuple.addValue(sourceId);
-    }
-
-    return postgresReaderClient.fetchAll(query, tuple, DataSourceDetails::mapSourceRow);
+    return postgresReaderClient
+        .fetchAll(query, DataSourceDetails::mapSourceRow)
+        .doOnError(
+            error ->
+                log.error(
+                    "Error getting data sources by ids: {}. Query: {}", sourceIds, query, error));
   }
 
   /**
@@ -129,17 +180,15 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
       return Single.just(List.of());
     }
 
-    // Build placeholders for IN clause
-    String placeholders = String.join(",", sinkIds.stream().map(id -> "?").toList());
-    String query = String.format(SQL_GET_SINKS_BY_IDS, placeholders);
+    String commaSeparatedIds =
+        String.join(",", sinkIds.stream().map(String::valueOf).toArray(String[]::new));
+    String query = String.format(SQL_GET_SINKS_BY_IDS, commaSeparatedIds);
 
-    // Build tuple with all IDs
-    Tuple tuple = Tuple.tuple();
-    for (Long sinkId : sinkIds) {
-      tuple.addValue(sinkId);
-    }
-
-    return postgresReaderClient.fetchAll(query, tuple, DataSinkDetails::mapSinkRow);
+    return postgresReaderClient
+        .fetchAll(query, DataSinkDetails::mapSinkRow)
+        .doOnError(
+            error ->
+                log.error("Error getting data sinks by ids: {}. Query: {}", sinkIds, query, error));
   }
 
   @Override
@@ -154,6 +203,16 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
                         SQL_CREATE_CONNECTOR_TYPE,
                         Tuple.of(kind, type, displayName, configSchemaJson))
                     .toMaybe())
+        .doOnError(
+            error ->
+                log.error(
+                    "Error creating connector type. kind: {}, type: {}, displayName: {}, createdBy: {}. Query: {}",
+                    kind,
+                    type,
+                    displayName,
+                    createdBy,
+                    SQL_CREATE_CONNECTOR_TYPE,
+                    error))
         .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to create connector type")))
         .toSingle();
   }

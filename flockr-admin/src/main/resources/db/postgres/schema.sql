@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS data_connector_types (
     kind VARCHAR(10) NOT NULL CHECK (kind IN ('SOURCE', 'SINK')),
     type VARCHAR(64) NOT NULL,
     display_name VARCHAR(128) NOT NULL,
-    config_schema JSONB,
+    config_schema JSONB NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

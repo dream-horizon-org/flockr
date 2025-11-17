@@ -37,6 +37,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                 throw new IllegalArgumentException("Provided typeId is not a SOURCE");
               }
               configValidatorRegistry.validate(request.getConfig(), type.getType(), type.getKind());
+              request.getConfig().put("connectorType", type.getType());
               return type;
             })
         .flatMap(
@@ -121,8 +122,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
       return Single.error(new IllegalArgumentException("Kind must be either 'SOURCE' or 'SINK'"));
     }
 
-    String configSchemaJson =
-        request.getConfigSchema() != null ? request.getConfigSchema().encode() : null;
+    String configSchemaJson = request.getConfigSchema().encode();
 
     return repository
         .createConnectorType(

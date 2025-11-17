@@ -10,6 +10,7 @@ import com.ascend.flockr.io.request.OnboardDataSourceRequest;
 import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.service.DataConnectorService;
 import com.ascend.flockr.util.ErrorHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,6 +29,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 
@@ -36,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataSourcesController {
   private final DataConnectorService service;
+  private final ObjectMapper mapper;
 
   @POST
   @Path("/v1/connectors/types/onboard")
@@ -57,12 +60,16 @@ public class DataSourcesController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<DataConnectorType>> onboardConnectorType(
-      OnboardConnectorTypeRequest request,
+      Map<String, Object> request,
       @Parameter(description = "User email for authentication", required = true)
           @HeaderParam("email")
           String userEmail) {
+
+    System.out.println(request.toString());
     return ErrorHandler.handleAsync(
-        service.onboardConnectorType(request, userEmail), "onboardConnectorType");
+        service.onboardConnectorType(
+            mapper.convertValue(request, OnboardConnectorTypeRequest.class), userEmail),
+        "onboardConnectorType");
   }
 
   @GET
