@@ -8,8 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * POJO for Kafka sink connector configuration.
- * Used to parse JsonObject config retrieved from database.
+ * POJO for Kafka sink connector configuration. Used to parse JsonObject config retrieved from
+ * database.
  */
 @Data
 @Builder
@@ -36,4 +36,3 @@ public class KafkaSinkConfig implements SinkConfig {
     return connectorType;
   }
 }
-

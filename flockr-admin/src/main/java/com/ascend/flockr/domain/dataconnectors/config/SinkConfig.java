@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
- * Base interface for all sink connector configurations.
- * Uses JsonSubTypes for polymorphic deserialization based on connectorType property.
+ * Base interface for all sink connector configurations. Uses JsonSubTypes for polymorphic
+ * deserialization based on connectorType property.
  */
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -17,4 +17,3 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
   @JsonSubTypes.Type(value = S3FolderSinkConfig.class, name = "S3_FOLDER")
 })
 public interface SinkConfig extends ConnectorConfig {}
-

@@ -8,8 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * POJO for S3 folder sink configuration.
- * Used to parse JsonObject config retrieved from database.
+ * POJO for S3 folder sink configuration. Used to parse JsonObject config retrieved from database.
  */
 @Data
 @Builder
@@ -52,4 +51,3 @@ public class S3FolderSinkConfig implements SinkConfig {
     return connectorType;
   }
 }
-

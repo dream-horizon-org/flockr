@@ -21,9 +21,9 @@ public final class ConfigParser {
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
   /**
-   * Parses JsonObject to SourceConfig implementation using JsonSubTypes.
-   * Automatically detects the correct implementation (AthenaSourceConfig, KafkaSourceConfig, etc.)
-   * based on connectorType property.
+   * Parses JsonObject to SourceConfig implementation using JsonSubTypes. Automatically detects the
+   * correct implementation (AthenaSourceConfig, KafkaSourceConfig, etc.) based on connectorType
+   * property.
    *
    * @param configJson the JsonObject config from database
    * @return parsed SourceConfig implementation
@@ -45,9 +45,9 @@ public final class ConfigParser {
   }
 
   /**
-   * Parses JsonObject to SinkConfig implementation using JsonSubTypes.
-   * Automatically detects the correct implementation (KafkaSinkConfig, S3FolderSinkConfig, etc.)
-   * based on connectorType property.
+   * Parses JsonObject to SinkConfig implementation using JsonSubTypes. Automatically detects the
+   * correct implementation (KafkaSinkConfig, S3FolderSinkConfig, etc.) based on connectorType
+   * property.
    *
    * @param configJson the JsonObject config from database
    * @return parsed SinkConfig implementation
@@ -63,14 +63,13 @@ public final class ConfigParser {
       throw e;
     } catch (Exception e) {
       log.error("Failed to parse sink config: {}", configJson, e);
-      throw new ConfigParsingException(
-          "SINK", "Failed to parse sink config: " + e.getMessage(), e);
+      throw new ConfigParsingException("SINK", "Failed to parse sink config: " + e.getMessage(), e);
     }
   }
 
   /**
-   * Parses JsonObject to ConnectorConfig implementation using JsonSubTypes.
-   * Automatically detects whether it's a SourceConfig or SinkConfig based on connectorKind.
+   * Parses JsonObject to ConnectorConfig implementation using JsonSubTypes. Automatically detects
+   * whether it's a SourceConfig or SinkConfig based on connectorKind.
    *
    * @param configJson the JsonObject config from database
    * @param connectorKind the connector kind ("SOURCE" or "SINK")
@@ -79,8 +78,7 @@ public final class ConfigParser {
    */
   public static ConnectorConfig parseConfig(JsonObject configJson, String connectorKind) {
     if (configJson == null) {
-      throw new ConfigParsingException(
-          connectorKind, "Config JsonObject cannot be null");
+      throw new ConfigParsingException(connectorKind, "Config JsonObject cannot be null");
     }
     if (connectorKind == null) {
       throw new ConfigParsingException("Connector kind cannot be null");
@@ -107,4 +105,3 @@ public final class ConfigParser {
     }
   }
 }
-

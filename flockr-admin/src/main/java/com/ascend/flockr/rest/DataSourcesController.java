@@ -4,6 +4,7 @@ import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
 import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
 import com.ascend.flockr.io.ResponseEntity;
+import com.ascend.flockr.io.request.OnboardConnectorTypeRequest;
 import com.ascend.flockr.io.request.OnboardDataSinkRequest;
 import com.ascend.flockr.io.request.OnboardDataSourceRequest;
 import com.ascend.flockr.io.response.PaginatedResponse;
@@ -35,6 +36,34 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataSourcesController {
   private final DataConnectorService service;
+
+  @POST
+  @Path("/v1/connectors/types/onboard")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Onboard a connector type",
+      description = "Onboards a new data connector type (SOURCE or SINK)")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Connector type onboarded successfully",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid/missing body params",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  public CompletionStage<ResponseEntity.Success<DataConnectorType>> onboardConnectorType(
+      OnboardConnectorTypeRequest request,
+      @Parameter(description = "User email for authentication", required = true)
+          @HeaderParam("email")
+          String userEmail) {
+    return ErrorHandler.handleAsync(
+        service.onboardConnectorType(request, userEmail), "onboardConnectorType");
+  }
 
   @GET
   @Path("/v1/connectors/types")

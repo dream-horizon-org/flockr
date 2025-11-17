@@ -20,16 +20,16 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
   private final PostgresWriterClient postgresWriterClient;
 
   private static final String SQL_LIST_TYPES =
-      "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE kind = ? AND is_active = 1 ORDER BY display_name";
+      "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE kind = ? AND is_active = TRUE ORDER BY display_name";
 
   private static final String SQL_GET_TYPE_BY_ID =
       "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE id = ?";
 
   private static final String SQL_CREATE_SOURCE =
-      "INSERT INTO data_sources (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSON), ?)";
+      "INSERT INTO data_sources (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSONB), ?)";
 
   private static final String SQL_CREATE_SINK =
-      "INSERT INTO data_sinks (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSON), ?)";
+      "INSERT INTO data_sinks (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSONB), ?)";
 
   private static final String SQL_LIST_SOURCES =
       "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sources s JOIN data_connector_types t ON s.type_id = t.id ORDER BY s.id DESC LIMIT ? OFFSET ?";
@@ -42,6 +42,9 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
   private static final String SQL_GET_SINKS_BY_IDS =
       "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sinks s JOIN data_connector_types t ON s.type_id = t.id WHERE s.id IN (%s)";
+
+  private static final String SQL_CREATE_CONNECTOR_TYPE =
+      "INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active) VALUES (?, ?, ?, CAST(? AS JSONB), TRUE)";
 
   @Override
   public Single<List<DataConnectorType>> listConnectorTypes(String kind) {
@@ -137,5 +140,21 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
     }
 
     return postgresReaderClient.fetchAll(query, tuple, DataSinkDetails::mapSinkRow);
+  }
+
+  @Override
+  public Single<Long> createConnectorType(
+      String kind, String type, String displayName, String createdBy, String configSchemaJson) {
+    return postgresWriterClient
+        .executeWithTransaction(
+            conn ->
+                postgresWriterClient
+                    .executeAndGenerateId(
+                        conn,
+                        SQL_CREATE_CONNECTOR_TYPE,
+                        Tuple.of(kind, type, displayName, configSchemaJson))
+                    .toMaybe())
+        .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to create connector type")))
+        .toSingle();
   }
 }

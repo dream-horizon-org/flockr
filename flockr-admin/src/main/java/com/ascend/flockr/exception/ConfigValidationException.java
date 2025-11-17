@@ -1,8 +1,8 @@
 package com.ascend.flockr.exception;
 
 /**
- * Exception thrown when connector configuration validation fails.
- * This exception should be caught and converted to RestException in REST layer.
+ * Exception thrown when connector configuration validation fails. This exception should be caught
+ * and converted to RestException in REST layer.
  */
 public class ConfigValidationException extends RuntimeException {
 
@@ -24,8 +24,7 @@ public class ConfigValidationException extends RuntimeException {
     this.errorCode = "CONFIG_VALIDATION_FAILED";
   }
 
-  public ConfigValidationException(
-      String connectorType, String connectorKind, String message) {
+  public ConfigValidationException(String connectorType, String connectorKind, String message) {
     super(message);
     this.connectorType = connectorType;
     this.connectorKind = connectorKind;
@@ -59,4 +58,3 @@ public class ConfigValidationException extends RuntimeException {
     return errorCode;
   }
 }
-

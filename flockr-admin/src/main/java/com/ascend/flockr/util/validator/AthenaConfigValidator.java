@@ -19,18 +19,14 @@ public class AthenaConfigValidator implements ConfigValidator {
     // Minimum requirement: query string
     if (isBlank(config.getString("query"))) {
       throw new ConfigValidationException(
-          getConnectorType(),
-          getConnectorKind(),
-          "Athena config requires 'query' field");
+          getConnectorType(), getConnectorKind(), "Athena config requires 'query' field");
     }
 
     // Optional: validate query is not empty
     String query = config.getString("query");
     if (query != null && query.trim().isEmpty()) {
       throw new ConfigValidationException(
-          getConnectorType(),
-          getConnectorKind(),
-          "Athena config 'query' field cannot be empty");
+          getConnectorType(), getConnectorKind(), "Athena config 'query' field cannot be empty");
     }
 
     // Optional: validate database field if present

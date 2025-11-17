@@ -1,8 +1,8 @@
 package com.ascend.flockr.exception;
 
 /**
- * Exception thrown when connector configuration parsing fails.
- * This exception should be caught and converted to RestException in REST layer.
+ * Exception thrown when connector configuration parsing fails. This exception should be caught and
+ * converted to RestException in REST layer.
  */
 public class ConfigParsingException extends RuntimeException {
 
@@ -41,4 +41,3 @@ public class ConfigParsingException extends RuntimeException {
     return errorCode;
   }
 }
-

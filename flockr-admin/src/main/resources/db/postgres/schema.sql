@@ -3,39 +3,43 @@
 -- Create schema if it doesn't exist
 CREATE SCHEMA IF NOT EXISTS flockr;
 
-CREATE TABLE data_connectors (
-	tenant_id VARCHAR(255) NOT NULL,
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    type VARCHAR(50) NOT NULL,
-    config JSONB,
-    status VARCHAR(50) DEFAULT 'ACTIVE',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Data connector master table: supported data sources and sinks
+CREATE TABLE IF NOT EXISTS data_connector_types (
+    id BIGSERIAL PRIMARY KEY,
+    kind VARCHAR(10) NOT NULL CHECK (kind IN ('SOURCE', 'SINK')),
+    type VARCHAR(64) NOT NULL,
+    display_name VARCHAR(128) NOT NULL,
+    config_schema JSONB,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (kind, type)
 );
 
-
-CREATE TABLE data_sinks (
-	tenant_id VARCHAR(255) NOT NULL,
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    type VARCHAR(50) NOT NULL,
-    config JSONB,
-    status VARCHAR(50) DEFAULT 'ACTIVE',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Onboarded data sources (instances configured by users)
+CREATE TABLE IF NOT EXISTS data_sources (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    type_id BIGINT NOT NULL,
+    config JSONB NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    created_by VARCHAR(128),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_data_sources_type FOREIGN KEY (type_id) REFERENCES data_connector_types(id)
 );
 
-
-CREATE TABLE data_sources (
-	tenant_id VARCHAR(255) NOT NULL,
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    type VARCHAR(50) NOT NULL,
-    config JSONB,
-    status VARCHAR(50) DEFAULT 'ACTIVE',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Onboarded data sinks (instances configured by users)
+CREATE TABLE IF NOT EXISTS data_sinks (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    type_id BIGINT NOT NULL,
+    config JSONB NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    created_by VARCHAR(128),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_data_sinks_type FOREIGN KEY (type_id) REFERENCES data_connector_types(id)
 );
 
 CREATE TABLE audiences (

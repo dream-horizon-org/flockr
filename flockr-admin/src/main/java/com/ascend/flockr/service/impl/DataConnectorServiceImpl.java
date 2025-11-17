@@ -3,6 +3,7 @@ package com.ascend.flockr.service.impl;
 import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
 import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
+import com.ascend.flockr.io.request.OnboardConnectorTypeRequest;
 import com.ascend.flockr.io.request.OnboardDataSinkRequest;
 import com.ascend.flockr.io.request.OnboardDataSourceRequest;
 import com.ascend.flockr.io.response.PaginatedResponse;
@@ -109,5 +110,23 @@ public class DataConnectorServiceImpl implements DataConnectorService {
             list ->
                 new PaginatedResponse<>(
                     new PaginatedResponse.PageInfo(page, pageSize, list.size() == pageSize), list));
+  }
+
+  @Override
+  public Single<DataConnectorType> onboardConnectorType(
+      OnboardConnectorTypeRequest request, String createdBy) {
+    // Validate kind is either SOURCE or SINK
+    String kind = request.getKind().toUpperCase();
+    if (!"SOURCE".equals(kind) && !"SINK".equals(kind)) {
+      return Single.error(new IllegalArgumentException("Kind must be either 'SOURCE' or 'SINK'"));
+    }
+
+    String configSchemaJson =
+        request.getConfigSchema() != null ? request.getConfigSchema().encode() : null;
+
+    return repository
+        .createConnectorType(
+            kind, request.getType(), request.getDisplayName(), createdBy, configSchemaJson)
+        .flatMap(repository::getConnectorTypeById);
   }
 }

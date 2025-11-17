@@ -8,8 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * POJO for Athena data source configuration.
- * Used to parse JsonObject config retrieved from database.
+ * POJO for Athena data source configuration. Used to parse JsonObject config retrieved from
+ * database.
  */
 @Data
 @Builder
@@ -52,4 +52,3 @@ public class AthenaSourceConfig implements SourceConfig {
     return connectorType;
   }
 }
-
