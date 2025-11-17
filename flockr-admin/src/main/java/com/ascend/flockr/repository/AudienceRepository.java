@@ -9,10 +9,11 @@ import java.util.List;
  * Repository interface for accessing audience data from the database.
  *
  * <p>This repository provides methods for:
+ *
  * <ul>
- *   <li>Creating new audiences</li>
- *   <li>Retrieving audience details by ID</li>
- *   <li>Querying audiences with filtering and pagination</li>
+ *   <li>Creating new audiences
+ *   <li>Retrieving audience details by ID
+ *   <li>Querying audiences with filtering and pagination
  * </ul>
  *
  * @author Flockr Team

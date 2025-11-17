@@ -15,11 +15,12 @@ import io.vertx.core.http.HttpServerOptions;
  * REST API verticle that handles HTTP requests for the Flockr application.
  *
  * <p>This verticle:
+ *
  * <ul>
- *   <li>Configures the HTTP server with settings from {@link HttpServerConfig}</li>
- *   <li>Integrates Guice dependency injection for REST controllers</li>
- *   <li>Provides Jackson-based JSON serialization/deserialization</li>
- *   <li>Scans for REST controllers in the {@link Constants#PACKAGE_NAME} package</li>
+ *   <li>Configures the HTTP server with settings from {@link HttpServerConfig}
+ *   <li>Integrates Guice dependency injection for REST controllers
+ *   <li>Provides Jackson-based JSON serialization/deserialization
+ *   <li>Scans for REST controllers in the {@link Constants#PACKAGE_NAME} package
  * </ul>
  *
  * @author Flockr Team

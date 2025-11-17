@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 /**
  * Configuration class for Resilience4j Circuit Breaker settings.
  *
- * <p>This configuration is loaded from {@code config/circuit-breaker/default.conf} and contains
- * all settings needed to configure circuit breakers, including failure thresholds, timeouts, and
+ * <p>This configuration is loaded from {@code config/circuit-breaker/default.conf} and contains all
+ * settings needed to configure circuit breakers, including failure thresholds, timeouts, and
  * sliding window settings.
  *
  * @author Flockr Team

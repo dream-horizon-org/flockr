@@ -12,10 +12,11 @@ import io.reactivex.rxjava3.core.Single;
  * Service interface for managing audiences and their associated rules.
  *
  * <p>This service provides operations for:
+ *
  * <ul>
- *   <li>Creating and retrieving audiences</li>
- *   <li>Creating and retrieving rules for audiences</li>
- *   <li>Listing audiences with filtering and pagination</li>
+ *   <li>Creating and retrieving audiences
+ *   <li>Creating and retrieving rules for audiences
+ *   <li>Listing audiences with filtering and pagination
  * </ul>
  *
  * @author Flockr Team

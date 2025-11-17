@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 /**
  * Configuration class for application-level settings.
  *
- * <p>This configuration is loaded from {@code config/application/default.conf} and contains
- * general application configuration settings.
+ * <p>This configuration is loaded from {@code config/application/default.conf} and contains general
+ * application configuration settings.
  *
  * @author Flockr Team
  * @since 1.0

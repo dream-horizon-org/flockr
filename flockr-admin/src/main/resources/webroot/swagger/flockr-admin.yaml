@@ -423,7 +423,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OnboardConnectorTypeRequest'
+              type: object
+              additionalProperties:
+                type: object
       responses:
         "200":
           description: Connector type onboarded successfully
@@ -899,22 +901,6 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/DataConnectorType'
-    OnboardConnectorTypeRequest:
-      required:
-      - configSchema
-      - displayName
-      - kind
-      - type
-      type: object
-      properties:
-        kind:
-          type: string
-        type:
-          type: string
-        displayName:
-          type: string
-        configSchema:
-          $ref: '#/components/schemas/JsonObject'
     SuccessDataSinkDetails:
       type: object
       properties:

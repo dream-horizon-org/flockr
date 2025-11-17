@@ -17,8 +17,8 @@ import lombok.RequiredArgsConstructor;
 /**
  * REST endpoint for health check monitoring.
  *
- * <p>This endpoint is hidden from Swagger documentation and is typically used by load balancers
- * and monitoring systems to verify the application is running and healthy.
+ * <p>This endpoint is hidden from Swagger documentation and is typically used by load balancers and
+ * monitoring systems to verify the application is running and healthy.
  *
  * @author Flockr Team
  * @since 1.0

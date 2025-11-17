@@ -37,10 +37,11 @@ import lombok.RequiredArgsConstructor;
  * REST controller for managing data connectors (sources and sinks).
  *
  * <p>This controller provides endpoints for:
+ *
  * <ul>
- *   <li>Onboarding connector types, data sources, and data sinks</li>
- *   <li>Listing available connector types</li>
- *   <li>Listing data sources and sinks with pagination</li>
+ *   <li>Onboarding connector types, data sources, and data sinks
+ *   <li>Listing available connector types
+ *   <li>Listing data sources and sinks with pagination
  * </ul>
  *
  * @author Flockr Team

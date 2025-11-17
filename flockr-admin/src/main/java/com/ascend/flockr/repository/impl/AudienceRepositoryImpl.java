@@ -19,10 +19,11 @@ import lombok.RequiredArgsConstructor;
  * Implementation of {@link AudienceRepository} using PostgreSQL as the data store.
  *
  * <p>This implementation handles:
+ *
  * <ul>
- *   <li>Creating audiences with JSONB field serialization</li>
- *   <li>Retrieving audience details with proper JSON deserialization</li>
- *   <li>Optimized paginated queries with full-text search support</li>
+ *   <li>Creating audiences with JSONB field serialization
+ *   <li>Retrieving audience details with proper JSON deserialization
+ *   <li>Optimized paginated queries with full-text search support
  * </ul>
  *
  * @author Flockr Team

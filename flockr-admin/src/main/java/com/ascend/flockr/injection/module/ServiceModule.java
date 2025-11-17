@@ -27,12 +27,13 @@ import io.vertx.rxjava3.core.Vertx;
  * Guice module that configures all service bindings for the Flockr application.
  *
  * <p>This module binds:
+ *
  * <ul>
- *   <li>Configuration providers (ApplicationConfig, CircuitBreakerConfig, etc.)</li>
- *   <li>Client implementations (WebClient, FlinkClient, PostgreSQL clients)</li>
- *   <li>Repository implementations</li>
- *   <li>Config validators (using Multibinder for extensibility)</li>
- *   <li>Service implementations</li>
+ *   <li>Configuration providers (ApplicationConfig, CircuitBreakerConfig, etc.)
+ *   <li>Client implementations (WebClient, FlinkClient, PostgreSQL clients)
+ *   <li>Repository implementations
+ *   <li>Config validators (using Multibinder for extensibility)
+ *   <li>Service implementations
  * </ul>
  *
  * @author Flockr Team
@@ -52,13 +53,14 @@ public class ServiceModule extends DefaultModule {
    * Configures all bindings for the application.
    *
    * <p>This method sets up bindings in the following order:
+   *
    * <ol>
-   *   <li>Configuration providers</li>
-   *   <li>Client implementations</li>
-   *   <li>Repository implementations</li>
-   *   <li>Config validators</li>
-   *   <li>Service implementations</li>
-   *   <li>Static injection for CircuitBreakerFactory</li>
+   *   <li>Configuration providers
+   *   <li>Client implementations
+   *   <li>Repository implementations
+   *   <li>Config validators
+   *   <li>Service implementations
+   *   <li>Static injection for CircuitBreakerFactory
    * </ol>
    */
   @Override

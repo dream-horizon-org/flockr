@@ -10,8 +10,8 @@ import lombok.Synchronized;
 /**
  * Singleton wrapper for Guice dependency injection container.
  *
- * <p>This class provides a thread-safe way to initialize and access the Guice injector. The injector
- * must be initialized once before use, typically during application startup.
+ * <p>This class provides a thread-safe way to initialize and access the Guice injector. The
+ * injector must be initialized once before use, typically during application startup.
  *
  * <p><strong>Thread Safety:</strong> All methods are synchronized to ensure thread-safe access to
  * the singleton instance.
@@ -36,8 +36,7 @@ public final class GuiceInjector {
   /**
    * Initializes the Guice injector with the provided modules.
    *
-   * <p>This method can only be called once. Subsequent calls will throw an
-   * IllegalStateException.
+   * <p>This method can only be called once. Subsequent calls will throw an IllegalStateException.
    *
    * @param modules the list of Guice modules to configure the injector
    * @throws IllegalStateException if the injector has already been initialized

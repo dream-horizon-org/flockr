@@ -9,9 +9,10 @@ import lombok.experimental.UtilityClass;
  * Utility class providing common helper methods used throughout the application.
  *
  * <p>This class provides utilities for:
+ *
  * <ul>
- *   <li>System resource detection (CPU cores)</li>
- *   <li>Circuit breaker metric and tag formatting</li>
+ *   <li>System resource detection (CPU cores)
+ *   <li>Circuit breaker metric and tag formatting
  * </ul>
  *
  * @author Flockr Team

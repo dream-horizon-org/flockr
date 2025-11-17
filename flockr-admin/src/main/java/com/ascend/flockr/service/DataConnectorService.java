@@ -14,10 +14,11 @@ import java.util.List;
  * Service interface for managing data connectors (sources and sinks).
  *
  * <p>This service provides operations for:
+ *
  * <ul>
- *   <li>Onboarding connector types, data sources, and data sinks</li>
- *   <li>Listing available connector types</li>
- *   <li>Listing data sources and sinks with pagination</li>
+ *   <li>Onboarding connector types, data sources, and data sinks
+ *   <li>Listing available connector types
+ *   <li>Listing data sources and sinks with pagination
  * </ul>
  *
  * @author Flockr Team

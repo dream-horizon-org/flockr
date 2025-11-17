@@ -6,11 +6,12 @@ import lombok.experimental.UtilityClass;
  * Utility class containing application-wide constants.
  *
  * <p>This class provides constants for:
+ *
  * <ul>
- *   <li>Package names for component scanning</li>
- *   <li>Application environment configuration keys</li>
- *   <li>Deployment configuration limits</li>
- *   <li>Common string delimiters</li>
+ *   <li>Package names for component scanning
+ *   <li>Application environment configuration keys
+ *   <li>Deployment configuration limits
+ *   <li>Common string delimiters
  * </ul>
  *
  * @author Flockr Team

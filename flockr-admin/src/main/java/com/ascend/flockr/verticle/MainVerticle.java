@@ -19,9 +19,10 @@ import lombok.extern.slf4j.Slf4j;
  * Main verticle that orchestrates the deployment of all other verticles in the application.
  *
  * <p>This verticle is responsible for:
+ *
  * <ul>
- *   <li>Deploying REST API verticles with appropriate instance counts and worker pool sizes</li>
- *   <li>Gracefully shutting down all clients (PostgreSQL readers/writers, WebClient) when stopped</li>
+ *   <li>Deploying REST API verticles with appropriate instance counts and worker pool sizes
+ *   <li>Gracefully shutting down all clients (PostgreSQL readers/writers, WebClient) when stopped
  * </ul>
  *
  * @author Flockr Team
@@ -33,10 +34,11 @@ public class MainVerticle extends AbstractVerticle {
   /**
    * Starts the main verticle by deploying all configured verticles.
    *
-   * <p>Deploys verticles sequentially and logs any deployment errors. The deployment completes
-   * when all verticles are successfully deployed.
+   * <p>Deploys verticles sequentially and logs any deployment errors. The deployment completes when
+   * all verticles are successfully deployed.
    *
-   * @return a Completable that completes when all verticles are deployed, or errors if deployment fails
+   * @return a Completable that completes when all verticles are deployed, or errors if deployment
+   *     fails
    */
   @Override
   public Completable rxStart() {

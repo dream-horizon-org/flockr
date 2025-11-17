@@ -11,10 +11,11 @@ import org.apache.http.HttpStatus;
  *
  * <p>This enum implements {@link RestError} to provide standardized error handling across the
  * application. Each error code includes:
+ *
  * <ul>
- *   <li>A unique error code string</li>
- *   <li>A human-readable error message</li>
- *   <li>An HTTP status code</li>
+ *   <li>A unique error code string
+ *   <li>A human-readable error message
+ *   <li>An HTTP status code
  * </ul>
  *
  * @author Flockr Team

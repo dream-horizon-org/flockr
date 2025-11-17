@@ -12,11 +12,12 @@ import java.util.function.Function;
  * Client interface for reading data from PostgreSQL database.
  *
  * <p>This client provides methods for:
+ *
  * <ul>
- *   <li>Executing queries and fetching results</li>
- *   <li>Mapping database rows to domain objects</li>
- *   <li>Fetching single rows or multiple rows</li>
- *   <li>Fetching results as maps</li>
+ *   <li>Executing queries and fetching results
+ *   <li>Mapping database rows to domain objects
+ *   <li>Fetching single rows or multiple rows
+ *   <li>Fetching results as maps
  * </ul>
  *
  * <p>All methods support both plain SQL queries and prepared statements with parameters.

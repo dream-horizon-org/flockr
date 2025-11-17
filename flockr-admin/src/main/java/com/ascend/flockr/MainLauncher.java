@@ -17,11 +17,12 @@ import lombok.extern.slf4j.Slf4j;
  * initialization logic for Vert.x options, Guice dependency injection, and verticle deployment.
  *
  * <p>This class handles:
+ *
  * <ul>
- *   <li>Configuring Vert.x event loop pool size based on available CPU cores</li>
- *   <li>Initializing Guice dependency injection after Vert.x starts</li>
- *   <li>Configuring verticle deployment options</li>
- *   <li>Handling deployment failures</li>
+ *   <li>Configuring Vert.x event loop pool size based on available CPU cores
+ *   <li>Initializing Guice dependency injection after Vert.x starts
+ *   <li>Configuring verticle deployment options
+ *   <li>Handling deployment failures
  * </ul>
  *
  * @author Flockr Team

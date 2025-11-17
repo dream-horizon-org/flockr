@@ -13,10 +13,11 @@ import io.vertx.rxjava3.ext.web.client.HttpResponse;
  * Client interface for making HTTP requests using Vert.x Web Client.
  *
  * <p>This client provides methods for:
+ *
  * <ul>
- *   <li>Preparing HTTP requests (GET, POST, PUT)</li>
- *   <li>Executing HTTP requests with optional request bodies</li>
- *   <li>Configuring circuit breaker for resilience</li>
+ *   <li>Preparing HTTP requests (GET, POST, PUT)
+ *   <li>Executing HTTP requests with optional request bodies
+ *   <li>Configuring circuit breaker for resilience
  * </ul>
  *
  * @author Flockr Team

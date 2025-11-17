@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
  * Configuration class for Vert.x Web Client settings.
  *
  * <p>This configuration is loaded from {@code config/webclient/default.conf} and contains all
- * settings needed to configure the HTTP client, including connection timeouts, pool sizes, keep-alive
- * settings, and HTTP pipelining options.
+ * settings needed to configure the HTTP client, including connection timeouts, pool sizes,
+ * keep-alive settings, and HTTP pipelining options.
  *
  * @author Flockr Team
  * @since 1.0

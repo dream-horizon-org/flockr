@@ -12,11 +12,12 @@ import java.util.function.Function;
  * Client interface for writing data to PostgreSQL database.
  *
  * <p>This client provides methods for:
+ *
  * <ul>
- *   <li>Executing write operations (INSERT, UPDATE, DELETE)</li>
- *   <li>Executing batch operations</li>
- *   <li>Managing database connections</li>
- *   <li>Executing operations within transactions</li>
+ *   <li>Executing write operations (INSERT, UPDATE, DELETE)
+ *   <li>Executing batch operations
+ *   <li>Managing database connections
+ *   <li>Executing operations within transactions
  * </ul>
  *
  * @author Flockr Team
