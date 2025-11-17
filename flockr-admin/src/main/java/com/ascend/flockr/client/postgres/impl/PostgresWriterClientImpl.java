@@ -8,7 +8,8 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.core.Vertx;
-import io.vertx.rxjava3.mysqlclient.MySQLClient;
+import io.vertx.rxjava3.sqlclient.Row;
+import io.vertx.rxjava3.sqlclient.RowSet;
 import io.vertx.rxjava3.sqlclient.SqlConnection;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.List;
@@ -41,7 +42,15 @@ public class PostgresWriterClientImpl extends AbstractPostgresClient
   public Single<Long> executeAndGenerateId(
       SqlConnection connection, String preparedQuery, Tuple tuple) {
     return rxExecute(connection, preparedQuery, tuple)
-        .map(res -> res.property(MySQLClient.LAST_INSERTED_ID));
+        .map(
+            (RowSet<Row> res) -> {
+              if (res.size() == 0) {
+                throw new IllegalStateException(
+                    "No rows returned from INSERT query. Ensure query includes RETURNING id");
+              }
+              Row row = res.iterator().next();
+              return row.getLong("id");
+            });
   }
 
   @Override

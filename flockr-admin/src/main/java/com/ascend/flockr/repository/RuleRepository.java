@@ -8,7 +8,8 @@ import java.util.List;
 public interface RuleRepository {
   Single<Boolean> createRules(List<RuleMeta<SourceInfoBasic>> ruleMetas);
 
-  Single<RuleMeta<SourceInfoBasic>> getRuleById(Long ruleId);
+  Single<RuleMeta<SourceInfoBasic>> getRuleById(String tenantId, String projectId, Long ruleId);
 
-  Single<List<RuleMeta<SourceInfoBasic>>> getRulesByAudienceId(Long Ids);
+  Single<List<RuleMeta<SourceInfoBasic>>> getRulesByAudienceId(
+      String tenantId, String projectId, Long audienceId);
 }

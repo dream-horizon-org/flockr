@@ -1,16 +1,25 @@
 package com.ascend.flockr.client.webclient.impl;
 
-import com.ascend.flockr.client.datadog.DDClient;
 import com.ascend.flockr.client.webclient.WebClient;
 import com.ascend.flockr.config.WebClientConfig;
 import com.ascend.flockr.constants.web.WebConstants;
 import com.ascend.flockr.util.CommonUtil;
 import com.google.inject.Inject;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.netty.handler.timeout.TimeoutException;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.functions.Consumer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.rxjava3.core.Vertx;
+import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.rxjava3.ext.web.client.HttpRequest;
+import io.vertx.rxjava3.ext.web.client.HttpResponse;
+import io.vertx.rxjava3.ext.web.client.predicate.ResponsePredicateResult;
+import java.net.ConnectException;
 import java.util.Objects;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -18,14 +27,56 @@ public class WebClientImpl implements WebClient {
 
   private final io.vertx.rxjava3.ext.web.client.WebClient webClient;
   private CircuitBreaker circuitBreaker;
-  private final DDClient ddClient;
 
   @Inject
-  public WebClientImpl(Vertx vertx, WebClientConfig webClientConfig, DDClient ddClient) {
+  public WebClientImpl(Vertx vertx, WebClientConfig webClientConfig) {
     this.webClient =
         io.vertx.rxjava3.ext.web.client.WebClient.create(
             vertx, getWebClientOptions(webClientConfig));
-    this.ddClient = ddClient;
+  }
+
+  @Override
+  public HttpRequest<Buffer> prepareHttpGETRequest(String host, Integer port, String apiEndPoint) {
+    return webClient.get(port, host, apiEndPoint).timeout(3000);
+    //            .expect(validateHttpResponse());
+  }
+
+  @Override
+  public HttpRequest<Buffer> prepareHttpPUTRequest(String host, Integer port, String apiEndPoint) {
+    return webClient.put(port, host, apiEndPoint).timeout(3000);
+    //        .expect(validateHttpResponse());
+  }
+
+  @Override
+  public HttpRequest<Buffer> prepareHttpPOSTRequest(String host, Integer port, String apiEndPoint) {
+    return webClient.post(port, host, apiEndPoint).timeout(3000);
+    //        .expect(validateHttpResponse());
+  }
+
+  @Override
+  public HttpRequest<Buffer> prepareHttpPostAbsRequest(String absUri) {
+    return webClient.postAbs(absUri).timeout(3000);
+    //        .expect(validateHttpResponse());
+  }
+
+  @Override
+  public Single<HttpResponse<Buffer>> execute(HttpRequest<Buffer> request, JsonObject jsonObject) {
+    return request
+        .rxSendJson(jsonObject)
+        .retry(1, this::retryable)
+        .doOnSuccess(httpSuccessResponseConsumer(request))
+        .doOnError(httpErrorResponseConsumer(request))
+        .map(httpResponse -> httpResponse);
+  }
+
+  @Override
+  public Single<HttpResponse<Buffer>> execute(HttpRequest<Buffer> request) {
+    return request
+        .rxSend()
+        .retry(2, this::retryable)
+        .doOnSuccess(httpSuccessResponseConsumer(request))
+        .doOnError(httpErrorResponseConsumer(request))
+        .map(httpResponse -> httpResponse);
   }
 
   @Override
@@ -85,7 +136,47 @@ public class WebClientImpl implements WebClient {
   }
 
   private <T extends Number> void pushGaugeMetricToDD(
-      String aspectName, T metricValue, String... tags) {
-    this.ddClient.gauge(CommonUtil.getCircuitBreakerAspect(aspectName), metricValue, tags);
+      String aspectName, T metricValue, String... tags) {}
+
+  private Function<HttpResponse<Void>, ResponsePredicateResult> validateHttpResponse() {
+    return httpResponse -> {
+      if (httpResponse.statusCode() < 200 || httpResponse.statusCode() > 299)
+        return ResponsePredicateResult.failure(
+            "HTTP Error from Remote Service "
+                + "Status Code: "
+                + httpResponse.statusCode()
+                + " Status Message: "
+                + httpResponse.statusMessage());
+      return ResponsePredicateResult.success();
+    };
+  }
+
+  private Consumer<Throwable> httpErrorResponseConsumer(HttpRequest<Buffer> request) {
+    return throwable -> {
+      log.error(
+          "Error while making request to resource: {}", request.host() + request.uri(), throwable);
+      printCircuitBreakerState();
+      pushCircuitBreakerMetricsToDD();
+    };
+  }
+
+  private Consumer<HttpResponse<Buffer>> httpSuccessResponseConsumer(HttpRequest<Buffer> request) {
+    return bufferHttpResponse -> {
+      log.info(
+          "Response of API - {} : {}",
+          request.host() + request.uri(),
+          bufferHttpResponse.bodyAsString());
+      printCircuitBreakerState();
+      pushCircuitBreakerMetricsToDD();
+    };
+  }
+
+  private boolean retryable(Throwable exception) {
+    if (exception instanceof ConnectException || exception instanceof TimeoutException) {
+      log.error("error occurred while attempting to connect a socket, retrying http request...");
+      return true;
+    } else {
+      return false;
+    }
   }
 }

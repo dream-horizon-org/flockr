@@ -1,7 +1,7 @@
 package com.ascend.flockr.client.flink.impl;
 
-import com.ascend.flockr.client.datadog.DDClient;
 import com.ascend.flockr.client.flink.FlinkClient;
+import com.ascend.flockr.client.webclient.WebClient;
 import com.ascend.flockr.config.FlinkConfig;
 import com.ascend.flockr.exception.FlinkApiException;
 import com.ascend.flockr.exception.FlinkConnectionException;
@@ -10,21 +10,16 @@ import com.ascend.flockr.exception.FlinkJobNotFoundException;
 import com.ascend.flockr.exception.FlinkJobSubmissionException;
 import com.ascend.flockr.exception.FlinkSavepointException;
 import com.google.inject.Inject;
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.ext.web.client.HttpRequest;
 import io.vertx.rxjava3.ext.web.client.HttpResponse;
-import io.vertx.rxjava3.ext.web.client.WebClient;
 import io.vertx.rxjava3.ext.web.multipart.MultipartForm;
 import java.nio.file.Paths;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,15 +40,11 @@ public class FlinkClientImpl implements FlinkClient {
 
   private final WebClient webClient;
   private final FlinkConfig flinkConfig;
-  private CircuitBreaker circuitBreaker;
-  private final DDClient ddClient;
 
   @Inject
-  public FlinkClientImpl(Vertx vertx, FlinkConfig flinkConfig, DDClient ddClient) {
+  public FlinkClientImpl(FlinkConfig flinkConfig, WebClient webClient) {
     this.flinkConfig = flinkConfig;
-    this.ddClient = ddClient;
-    this.webClient =
-        io.vertx.rxjava3.ext.web.client.WebClient.create(vertx, getWebClientOptions(flinkConfig));
+    this.webClient = webClient;
     log.info("FlinkClient initialized for {}:{}", flinkConfig.getHost(), flinkConfig.getPort());
   }
 
@@ -95,18 +86,14 @@ public class FlinkClientImpl implements FlinkClient {
             response -> {
               String jobId = response.bodyAsJsonObject().getString(JOB_ID_FIELD);
               log.info("Job submitted successfully with jobId: {}", jobId);
-              incrementMetric("flink.job.submit.success");
               return jobId;
             })
         .doOnError(
             error -> {
               log.error("Failed to submit job", error);
-              incrementMetric("flink.job.submit.failure");
             })
         .onErrorResumeNext(
-            error ->
-                Single.error(
-                    new FlinkJobSubmissionException(jarId, entryClass, error)));
+            error -> Single.error(new FlinkJobSubmissionException(jarId, entryClass, error)));
   }
 
   @Override
@@ -122,7 +109,7 @@ public class FlinkClientImpl implements FlinkClient {
                 APPLICATION_JSON);
 
     return webClient
-        .post(flinkConfig.getPort(), flinkConfig.getHost(), "/jars/upload")
+        .prepareHttpPOSTRequest(flinkConfig.getHost(), flinkConfig.getPort(), "/jars/upload")
         .timeout(flinkConfig.getRequestTimeout())
         .rxSendMultipartForm(form)
         .map(
@@ -133,18 +120,15 @@ public class FlinkClientImpl implements FlinkClient {
                 // Extract JAR ID from filename (format: /jars/jar-id_filename.jar)
                 String jarId = filename.substring(filename.lastIndexOf('/') + 1);
                 log.info("JAR uploaded successfully with ID: {}", jarId);
-                incrementMetric("flink.jar.upload.success");
                 return jarId;
-               } else {
-                 log.error("Failed to upload JAR. Status: {}", response.statusCode());
-                 incrementMetric("flink.jar.upload.failure");
-                 throw new FlinkJarUploadException(jarFilePath, response.statusCode());
-               }
-             })
+              } else {
+                log.error("Failed to upload JAR. Status: {}", response.statusCode());
+                throw new FlinkJarUploadException(jarFilePath, response.statusCode());
+              }
+            })
         .doOnError(
             error -> {
               log.error("Error uploading JAR", error);
-              incrementMetric("flink.jar.upload.failure");
             })
         .onErrorResumeNext(
             error -> {
@@ -173,12 +157,10 @@ public class FlinkClientImpl implements FlinkClient {
         .doOnSuccess(
             response -> {
               log.info("Job {} cancelled successfully", jobId);
-              incrementMetric("flink.job.cancel.success");
             })
         .doOnError(
             error -> {
               log.error("Failed to cancel job {}", jobId, error);
-              incrementMetric("flink.job.cancel.failure");
             })
         .ignoreElement();
   }
@@ -203,12 +185,10 @@ public class FlinkClientImpl implements FlinkClient {
         .doOnSuccess(
             savepointPath -> {
               log.info("Job {} cancelled with savepoint at: {}", jobId, savepointPath);
-              incrementMetric("flink.job.cancel.savepoint.success");
             })
         .doOnError(
             error -> {
               log.error("Failed to cancel job {} with savepoint", jobId, error);
-              incrementMetric("flink.job.cancel.savepoint.failure");
             })
         .onErrorResumeNext(
             error -> {
@@ -240,12 +220,10 @@ public class FlinkClientImpl implements FlinkClient {
         .doOnSuccess(
             savepointPath -> {
               log.info("Savepoint triggered successfully at: {}", savepointPath);
-              incrementMetric("flink.savepoint.trigger.success");
             })
         .doOnError(
             error -> {
               log.error("Failed to trigger savepoint for job {}", jobId, error);
-              incrementMetric("flink.savepoint.trigger.failure");
             })
         .onErrorResumeNext(
             error -> {
@@ -330,12 +308,10 @@ public class FlinkClientImpl implements FlinkClient {
         .doOnSuccess(
             savepointPath -> {
               log.info("Job {} stopped with savepoint at: {}", jobId, savepointPath);
-              incrementMetric("flink.job.stop.savepoint.success");
             })
         .doOnError(
             error -> {
               log.error("Failed to stop job {} with savepoint", jobId, error);
-              incrementMetric("flink.job.stop.savepoint.failure");
             })
         .onErrorResumeNext(
             error -> {
@@ -358,12 +334,10 @@ public class FlinkClientImpl implements FlinkClient {
         .doOnSuccess(
             response -> {
               log.info("Job {} rescaled successfully to parallelism: {}", jobId, parallelism);
-              incrementMetric("flink.job.rescale.success");
             })
         .doOnError(
             error -> {
               log.error("Failed to rescale job {}", jobId, error);
-              incrementMetric("flink.job.rescale.failure");
             })
         .ignoreElement();
   }
@@ -375,12 +349,10 @@ public class FlinkClientImpl implements FlinkClient {
         .doOnSuccess(
             response -> {
               log.info("JAR {} deleted successfully", jarId);
-              incrementMetric("flink.jar.delete.success");
             })
         .doOnError(
             error -> {
               log.error("Failed to delete JAR {}", jarId, error);
-              incrementMetric("flink.jar.delete.failure");
             })
         .ignoreElement();
   }
@@ -437,12 +409,12 @@ public class FlinkClientImpl implements FlinkClient {
                             .flatMap(
                                 tick ->
                                     pollSavepointStatusWithRetry(jobId, requestId, retryCount + 1));
-                       } else {
-                         // Failed state
-                         String failureCause = status.getString("failure-cause", "Unknown error");
-                         return Single.error(
-                             new FlinkSavepointException(jobId, state, failureCause));
-                       }
+                      } else {
+                        // Failed state
+                        String failureCause = status.getString("failure-cause", "Unknown error");
+                        return Single.error(
+                            new FlinkSavepointException(jobId, state, failureCause));
+                      }
                     }));
   }
 
@@ -450,10 +422,23 @@ public class FlinkClientImpl implements FlinkClient {
   private Single<HttpResponse<Buffer>> executeRequest(
       HttpMethod method, String path, JsonObject body, String errorMessage) {
 
-    HttpRequest<Buffer> request =
-        webClient
-            .request(method, flinkConfig.getPort(), flinkConfig.getHost(), path)
-            .timeout(flinkConfig.getRequestTimeout());
+    HttpRequest<Buffer> request;
+
+    // Prepare request based on HTTP method
+    if (method == HttpMethod.GET) {
+      request = webClient.prepareHttpGETRequest(flinkConfig.getHost(), flinkConfig.getPort(), path);
+    } else if (method == HttpMethod.POST) {
+      request =
+          webClient.prepareHttpPOSTRequest(flinkConfig.getHost(), flinkConfig.getPort(), path);
+    } else if (method == HttpMethod.PUT) {
+      request = webClient.prepareHttpPUTRequest(flinkConfig.getHost(), flinkConfig.getPort(), path);
+    } else {
+      // For PATCH and DELETE, we'll use POST as fallback
+      request =
+          webClient.prepareHttpPOSTRequest(flinkConfig.getHost(), flinkConfig.getPort(), path);
+    }
+
+    request.timeout(flinkConfig.getRequestTimeout());
 
     if (body != null) {
       request.putHeader(CONTENT_TYPE, APPLICATION_JSON);
@@ -474,9 +459,10 @@ public class FlinkClientImpl implements FlinkClient {
     } else {
       int statusCode = response.statusCode();
       String responseBody = response.bodyAsString();
-      
-      log.error("Flink API error: {}. Status: {}, Body: {}", errorMessage, statusCode, responseBody);
-      
+
+      log.error(
+          "Flink API error: {}. Status: {}, Body: {}", errorMessage, statusCode, responseBody);
+
       // Return specific exceptions based on status code
       if (statusCode == 404) {
         return Single.error(new FlinkJobNotFoundException(extractJobIdFromError(responseBody)));
@@ -489,41 +475,10 @@ public class FlinkClientImpl implements FlinkClient {
       }
     }
   }
-  
+
   /** Extract job ID from error response if available. */
   private String extractJobIdFromError(String responseBody) {
     // Simple extraction, can be enhanced with JSON parsing if needed
-    return responseBody.contains("job") ? "unknown" : "unknown";
-  }
-
-  /** Get WebClient options. */
-  private static WebClientOptions getWebClientOptions(FlinkConfig flinkConfig) {
-    return new WebClientOptions()
-        .setConnectTimeout(flinkConfig.getConnectTimeout())
-        .setIdleTimeout(flinkConfig.getRequestTimeout())
-        .setMaxPoolSize(flinkConfig.getMaxPoolSize())
-        .setKeepAlive(flinkConfig.isKeepAlive())
-        .setKeepAliveTimeout(flinkConfig.getKeepAliveTimeout())
-        .setLogActivity(flinkConfig.isLogActivity());
-  }
-
-  /** Set circuit breaker for resilience. */
-  public FlinkClient setCircuitBreaker(CircuitBreaker circuitBreaker) {
-    this.circuitBreaker = circuitBreaker;
-    return this;
-  }
-
-  /** Increment DataDog metric. */
-  private void incrementMetric(String metricName, String... tags) {
-    if (Objects.nonNull(ddClient)) {
-      ddClient.increment(metricName, tags);
-    }
-  }
-
-  /** Push gauge metric to DataDog. */
-  private <T extends Number> void pushGaugeMetric(String metricName, T value, String... tags) {
-    if (Objects.nonNull(ddClient)) {
-      ddClient.gauge(metricName, value, tags);
-    }
+    return "unknown";
   }
 }

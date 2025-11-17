@@ -14,9 +14,9 @@ public class FlinkJobSubmissionException extends FlinkClientException {
   public FlinkJobSubmissionException(String jarId, String entryClass, Throwable cause) {
     super(
         "FLINK_JOB_SUBMISSION_FAILED",
-        String.format("Failed to submit Flink job with jarId: %s, entryClass: %s", jarId, entryClass),
+        String.format(
+            "Failed to submit Flink job with jarId: %s, entryClass: %s", jarId, entryClass),
         500,
         cause);
   }
 }
-

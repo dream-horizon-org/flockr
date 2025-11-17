@@ -1,10 +1,7 @@
 package com.ascend.flockr.verticle;
 
-import com.ascend.flockr.client.aerospike.AerospikeClient;
-import com.ascend.flockr.client.datadog.DDClient;
-import com.ascend.flockr.client.kafka.KafkaProducerClient;
-import com.ascend.flockr.client.mysql.MySQLReaderClient;
-import com.ascend.flockr.client.mysql.MySQLWriterClient;
+import com.ascend.flockr.client.postgres.PostgresReaderClient;
+import com.ascend.flockr.client.postgres.PostgresWriterClient;
 import com.ascend.flockr.client.webclient.WebClient;
 import com.ascend.flockr.constants.Constants;
 import com.ascend.flockr.injection.GuiceInjector;
@@ -52,19 +49,11 @@ public class MainVerticle extends AbstractVerticle {
       Supplier<Verticle> verticleSupplier, DeploymentOptions deploymentOptions) {}
 
   private Completable stopClients() {
-    AerospikeClient aerospikeClient = GuiceInjector.getInstance(AerospikeClient.class);
-    DDClient ddClient = GuiceInjector.getInstance(DDClient.class);
-    KafkaProducerClient kafkaProducerClient = GuiceInjector.getInstance(KafkaProducerClient.class);
-    MySQLReaderClient mySQLReaderClient = GuiceInjector.getInstance(MySQLReaderClient.class);
-    MySQLWriterClient mySQLWriterClient = GuiceInjector.getInstance(MySQLWriterClient.class);
+    PostgresReaderClient mySQLReaderClient = GuiceInjector.getInstance(PostgresReaderClient.class);
+    PostgresWriterClient mySQLWriterClient = GuiceInjector.getInstance(PostgresWriterClient.class);
     WebClient webClient = GuiceInjector.getInstance(WebClient.class);
 
     return Completable.mergeArray(
-        aerospikeClient.close(),
-        kafkaProducerClient.close(),
-        mySQLReaderClient.close(),
-        mySQLWriterClient.close(),
-        webClient.close(),
-        ddClient.close());
+        mySQLReaderClient.close(), mySQLWriterClient.close(), webClient.close());
   }
 }

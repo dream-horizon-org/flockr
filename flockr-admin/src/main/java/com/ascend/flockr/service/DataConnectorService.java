@@ -3,6 +3,7 @@ package com.ascend.flockr.service;
 import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
 import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
+import com.ascend.flockr.io.request.OnboardConnectorTypeRequest;
 import com.ascend.flockr.io.request.OnboardDataSinkRequest;
 import com.ascend.flockr.io.request.OnboardDataSourceRequest;
 import com.ascend.flockr.io.response.PaginatedResponse;
@@ -19,4 +20,7 @@ public interface DataConnectorService {
   Single<PaginatedResponse<DataSourceDetails>> listSources(int page, int pageSize);
 
   Single<PaginatedResponse<DataSinkDetails>> listSinks(int page, int pageSize);
+
+  Single<DataConnectorType> onboardConnectorType(
+      OnboardConnectorTypeRequest request, String createdBy);
 }

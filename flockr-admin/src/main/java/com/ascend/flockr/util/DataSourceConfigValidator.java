@@ -2,6 +2,12 @@ package com.ascend.flockr.util;
 
 import io.vertx.core.json.JsonObject;
 
+/**
+ * @deprecated Use {@link ConfigValidatorRegistry} with {@link ConfigValidator} implementations
+ *     instead. This class is kept for backward compatibility but will be removed in a future
+ *     version.
+ */
+@Deprecated
 public final class DataSourceConfigValidator {
 
   private DataSourceConfigValidator() {}

@@ -1,7 +1,9 @@
 package com.ascend.flockr.rest;
 
+import com.ascend.flockr.io.ResponseEntity;
 import com.ascend.flockr.io.response.HealthCheckResponse;
 import com.ascend.flockr.service.HealthCheckService;
+import com.ascend.flockr.util.ErrorHandler;
 import com.google.inject.Inject;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.ws.rs.Consumes;
@@ -22,7 +24,7 @@ public class HealthCheck {
   @GET
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public CompletionStage<HealthCheckResponse> healthCheckHandle() {
-    return healthCheckService.healthCheck().toCompletionStage();
+  public CompletionStage<ResponseEntity.Success<HealthCheckResponse>> healthCheckHandle() {
+    return ErrorHandler.handleAsync(healthCheckService.healthCheck(), "healthcheck");
   }
 }

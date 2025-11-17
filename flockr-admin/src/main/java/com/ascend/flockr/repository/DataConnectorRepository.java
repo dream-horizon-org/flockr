@@ -23,4 +23,7 @@ public interface DataConnectorRepository {
   Single<List<DataSourceDetails>> getDataSourcesByIds(List<Long> sourceIds);
 
   Single<List<DataSinkDetails>> getDataSinksByIds(List<Long> sinkIds);
+
+  Single<Long> createConnectorType(
+      String kind, String type, String displayName, String createdBy, String configSchemaJson);
 }

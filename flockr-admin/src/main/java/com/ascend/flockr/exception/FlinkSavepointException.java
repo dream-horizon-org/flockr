@@ -14,9 +14,7 @@ public class FlinkSavepointException extends FlinkClientException {
   public FlinkSavepointException(String jobId, String operation, String failureCause) {
     super(
         "FLINK_SAVEPOINT_FAILED",
-        String.format(
-            "Savepoint %s failed for job %s. Reason: %s", operation, jobId, failureCause),
+        String.format("Savepoint %s failed for job %s. Reason: %s", operation, jobId, failureCause),
         500);
   }
 }
-

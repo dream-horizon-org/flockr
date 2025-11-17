@@ -12,6 +12,36 @@ public enum ErrorEnum implements RestError {
   REST_HEALTH_CHECK_FAILED(
       "flockr_REST_HEALTH_CHECK_FAILED",
       "HealthCheck Failed for flockr service",
+      HttpStatus.SC_INTERNAL_SERVER_ERROR),
+
+  AUDIENCE_NOT_FOUND("AUDIENCE_NOT_FOUND", "Audience not found", HttpStatus.SC_NOT_FOUND),
+
+  RULE_NOT_FOUND("RULE_NOT_FOUND", "Rule not found", HttpStatus.SC_NOT_FOUND),
+
+  INVALID_REQUEST_BODY(
+      "INVALID_REQUEST_BODY", "Invalid request body parameters", HttpStatus.SC_BAD_REQUEST),
+
+  CONFIG_VALIDATION_FAILED(
+      "CONFIG_VALIDATION_FAILED",
+      "Connector configuration validation failed",
+      HttpStatus.SC_BAD_REQUEST),
+
+  CONFIG_PARSING_FAILED(
+      "CONFIG_PARSING_FAILED",
+      "Failed to parse connector configuration",
+      HttpStatus.SC_BAD_REQUEST),
+
+  CONFIG_VALIDATOR_NOT_FOUND(
+      "CONFIG_VALIDATOR_NOT_FOUND",
+      "No validator found for the specified connector type",
+      HttpStatus.SC_BAD_REQUEST),
+
+  DATABASE_ERROR(
+      "DATABASE_ERROR", "Database operation failed", HttpStatus.SC_INTERNAL_SERVER_ERROR),
+
+  INTERNAL_ERROR(
+      "INTERNAL_ERROR",
+      "An unexpected internal error occurred",
       HttpStatus.SC_INTERNAL_SERVER_ERROR);
 
   private final String errorCode;
