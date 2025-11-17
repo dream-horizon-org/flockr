@@ -4,6 +4,7 @@ import com.ascend.flockr.io.ResponseEntity;
 import com.ascend.flockr.io.request.CreateAudienceRequest;
 import com.ascend.flockr.io.request.CreateRulesRequest;
 import com.ascend.flockr.io.response.AudienceDetailsResponse;
+import com.ascend.flockr.io.response.AudienceMetaResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
 import com.ascend.flockr.service.AudienceService;
 import com.ascend.flockr.util.ErrorHandler;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import java.util.List;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 
@@ -46,8 +48,13 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Long>> createAudience(
+      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
+          String tenantId,
+      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
+          String projectId,
       CreateAudienceRequest requestBody) {
-    return ErrorHandler.handleAsync(audienceService.createAudience(requestBody), "createAudience");
+    return ErrorHandler.handleAsync(
+        audienceService.createAudience(tenantId, projectId, requestBody), "createAudience");
   }
 
   @GET
@@ -71,11 +78,15 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<AudienceDetailsResponse>> getAudienceDetails(
+      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
+          String tenantId,
+      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
+          String projectId,
       @Parameter(description = "ID of the audience to retrieve", required = true)
           @PathParam("audienceId")
           Long audienceId) {
     return ErrorHandler.handleAsync(
-        audienceService.getAudienceDetails(audienceId), "getAudienceDetails");
+        audienceService.getAudienceDetails(tenantId, projectId, audienceId), "getAudienceDetails");
   }
 
   @POST
@@ -98,12 +109,17 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Boolean>> createRules(
+      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
+          String tenantId,
+      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
+          String projectId,
       @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
           Long audienceId,
       CreateRulesRequest requestBody) {
 
     requestBody.setAudienceId(audienceId);
-    return ErrorHandler.handleAsync(audienceService.createRules(requestBody), "createRules");
+    return ErrorHandler.handleAsync(
+        audienceService.createRules(tenantId, projectId, requestBody), "createRules");
   }
 
   @GET
@@ -130,11 +146,57 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<RuleDetailsResponse>> getRuleDetails(
+      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
+          String tenantId,
+      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
+          String projectId,
       @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
           Long audienceId,
       @Parameter(description = "ID of the rule to retrieve", required = true) @PathParam("ruleId")
           Long ruleId) {
     return ErrorHandler.handleAsync(
-        audienceService.getRuleDetails(audienceId, ruleId), "getRuleDetails");
+        audienceService.getRuleDetails(tenantId, projectId, audienceId, ruleId), "getRuleDetails");
+  }
+
+  @GET
+  @Path("/v1/audiences")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "List audiences with filters",
+      description =
+          "Retrieves a list of audiences with basic metadata including rule counts. Supports filtering by name, creator, and verification status.")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successfully retrieved audiences list",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid query parameters",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  public CompletionStage<ResponseEntity.Success<List<AudienceMetaResponse>>> getAudiencesList(
+      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
+          String tenantId,
+      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
+          String projectId,
+      @Parameter(description = "Search audiences by name (partial match)") @QueryParam("nameSearch")
+          String nameSearch,
+      @Parameter(description = "Filter by creator username") @QueryParam("createdBy")
+          String createdBy,
+      @Parameter(description = "Filter by verification status") @QueryParam("verified")
+          Boolean verified,
+      @Parameter(description = "Maximum number of results to return", example = "20")
+          @QueryParam("limit")
+          Integer limit,
+      @Parameter(description = "Number of results to skip for pagination", example = "0")
+          @QueryParam("offset")
+          Integer offset) {
+    return ErrorHandler.handleAsync(
+        audienceService.getAudiencesList(
+            tenantId, projectId, nameSearch, createdBy, verified, limit, offset),
+        "getAudiencesList");
   }
 }

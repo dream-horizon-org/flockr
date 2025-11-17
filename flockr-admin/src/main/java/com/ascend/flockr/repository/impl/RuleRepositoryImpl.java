@@ -22,32 +22,32 @@ public class RuleRepositoryImpl implements RuleRepository {
   private final ObjectMapper objectMapper;
 
   private static final String SQL_CREATE_RULE =
-      "INSERT INTO rules (audience_id, tenant_id, name, description, start_time, end_time, "
+      "INSERT INTO rules (audience_id, tenant_id, project_id, name, description, start_time, end_time, "
           + "rule_action, rule_type, configuration, created_by) "
-          + "VALUES (?, ?, ?, ?, FROM_UNIXTIME(?), FROM_UNIXTIME(?), ?, ?, CAST(? AS JSON), ?)";
+          + "VALUES (?, ?, ?, ?, ?, to_timestamp(?), to_timestamp(?), ?, ?, CAST(? AS JSON), ?)";
 
   private static final String SQL_GET_RULE_BY_ID =
-      "SELECT id, audience_id, tenant_id, name, description, "
-          + "UNIX_TIMESTAMP(start_time) as start_time, UNIX_TIMESTAMP(end_time) as end_time, "
+      "SELECT id, audience_id, tenant_id, project_id, name, description, "
+          + "EXTRACT(EPOCH FROM start_time)::BIGINT as start_time, EXTRACT(EPOCH FROM end_time)::BIGINT as end_time, "
           + "rule_action, rule_type, status, configuration, "
-          + "created_by, updated_by, UNIX_TIMESTAMP(created_at) as created_at, "
-          + "UNIX_TIMESTAMP(updated_at) as updated_at "
-          + "FROM rules WHERE id = ?";
+          + "created_by, updated_by, EXTRACT(EPOCH FROM created_at)::BIGINT as created_at, "
+          + "EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at "
+          + "FROM rules WHERE id = ? AND tenant_id = ? AND project_id = ?";
 
   private static final String SQL_GET_RULES_BY_AUDIENCE =
-      "SELECT id, audience_id, tenant_id, name, description, "
-          + "UNIX_TIMESTAMP(start_time) as start_time, UNIX_TIMESTAMP(end_time) as end_time, "
+      "SELECT id, audience_id, tenant_id, project_id, name, description, "
+          + "EXTRACT(EPOCH FROM start_time)::BIGINT as start_time, EXTRACT(EPOCH FROM end_time)::BIGINT as end_time, "
           + "rule_action, rule_type, status, configuration, "
-          + "created_by, updated_by, UNIX_TIMESTAMP(created_at) as created_at, "
-          + "UNIX_TIMESTAMP(updated_at) as updated_at "
-          + "FROM rules WHERE audience_id = ? ORDER BY created_at DESC";
+          + "created_by, updated_by, EXTRACT(EPOCH FROM created_at)::BIGINT as created_at, "
+          + "EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at "
+          + "FROM rules WHERE audience_id = ? AND tenant_id = ? AND project_id = ? ORDER BY created_at DESC";
 
   private static final String SQL_GET_RULE_META_AND_SINK_DETAILS =
       "SELECT r.id, r.audience_id, r.tenant_id, r.name, r.description, "
-          + "UNIX_TIMESTAMP(r.start_time) as start_time, UNIX_TIMESTAMP(r.end_time) as end_time, "
+          + "EXTRACT(EPOCH FROM r.start_time)::BIGINT as start_time, EXTRACT(EPOCH FROM r.end_time)::BIGINT as end_time, "
           + "r.rule_action, r.rule_type, r.status, r.configuration, "
-          + "r.created_by, r.updated_by, UNIX_TIMESTAMP(r.created_at) as created_at, "
-          + "UNIX_TIMESTAMP(r.updated_at) as updated_at, "
+          + "r.created_by, r.updated_by, EXTRACT(EPOCH FROM r.created_at)::BIGINT as created_at, "
+          + "EXTRACT(EPOCH FROM r.updated_at)::BIGINT as updated_at, "
           + "ds.id as sink_id, ds.name as sink_name, ds.type_id as sink_type_id, dct.type as sink_type, ds.config as sink_config, ds.status as sink_status, ds.created_by as sink_created_by "
           + "FROM rules r JOIN data_sinks ds ON r.audience_id = ds.audience_id JOIN data_connector_types dct ON ds.type_id = dct.id WHERE r.id = ?";
 
@@ -60,6 +60,7 @@ public class RuleRepositoryImpl implements RuleRepository {
           Tuple.tuple()
               .addValue(ruleMeta.getAudienceId())
               .addValue(ruleMeta.getTenantId())
+              .addValue(ruleMeta.getProjectId())
               .addValue(ruleMeta.getName())
               .addValue(ruleMeta.getDescription())
               .addValue(ruleMeta.getStartTime())
@@ -81,14 +82,18 @@ public class RuleRepositoryImpl implements RuleRepository {
   }
 
   @Override
-  public Single<RuleMeta<SourceInfoBasic>> getRuleById(Long ruleId) {
+  public Single<RuleMeta<SourceInfoBasic>> getRuleById(
+      String tenantId, String projectId, Long ruleId) {
     return postgresReaderClient.fetchOne(
-        SQL_GET_RULE_BY_ID, Tuple.of(ruleId), RuleHelpers::mapRuleRow);
+        SQL_GET_RULE_BY_ID, Tuple.of(ruleId, tenantId, projectId), RuleHelpers::mapRuleRow);
   }
 
   @Override
-  public Single<List<RuleMeta<SourceInfoBasic>>> getRulesByAudienceId(Long Ids) {
+  public Single<List<RuleMeta<SourceInfoBasic>>> getRulesByAudienceId(
+      String tenantId, String projectId, Long audienceId) {
     return postgresReaderClient.fetchAll(
-        SQL_GET_RULES_BY_AUDIENCE, Tuple.of(Ids), RuleHelpers::mapRuleRow);
+        SQL_GET_RULES_BY_AUDIENCE,
+        Tuple.of(audienceId, tenantId, projectId),
+        RuleHelpers::mapRuleRow);
   }
 }

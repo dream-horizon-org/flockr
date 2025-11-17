@@ -27,6 +27,7 @@ public class PostgresConfig {
     private String user;
     private String password;
     private String database;
+    private String metricsName;
     private Integer connectTimeout;
     private Boolean useAffectedRows;
     private Boolean cachePreparedStatements;

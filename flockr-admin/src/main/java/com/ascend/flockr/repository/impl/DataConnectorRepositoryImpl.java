@@ -1,7 +1,7 @@
 package com.ascend.flockr.repository.impl;
 
-import com.ascend.flockr.client.mysql.MySQLReaderClient;
-import com.ascend.flockr.client.mysql.MySQLWriterClient;
+import com.ascend.flockr.client.postgres.PostgresReaderClient;
+import com.ascend.flockr.client.postgres.PostgresWriterClient;
 import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
 import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
@@ -16,8 +16,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
-  private final MySQLReaderClient mySQLReaderClient;
-  private final MySQLWriterClient mySQLWriterClient;
+  private final PostgresReaderClient postgresReaderClient;
+  private final PostgresWriterClient postgresWriterClient;
 
   private static final String SQL_LIST_TYPES =
       "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE kind = ? AND is_active = 1 ORDER BY display_name";
@@ -45,23 +45,23 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
   @Override
   public Single<List<DataConnectorType>> listConnectorTypes(String kind) {
-    return mySQLReaderClient.fetchAll(
+    return postgresReaderClient.fetchAll(
         SQL_LIST_TYPES, Tuple.of(kind), DataConnectorType::mapTypeRow);
   }
 
   @Override
   public Single<DataConnectorType> getConnectorTypeById(Long id) {
-    return mySQLReaderClient.fetchOne(
+    return postgresReaderClient.fetchOne(
         SQL_GET_TYPE_BY_ID, Tuple.of(id), DataConnectorType::mapTypeRow);
   }
 
   @Override
   public Single<Long> createDataSource(
       String name, Long typeId, String createdBy, String configJson) {
-    return mySQLWriterClient
+    return postgresWriterClient
         .executeWithTransaction(
             conn ->
-                mySQLWriterClient
+                postgresWriterClient
                     .executeAndGenerateId(
                         conn, SQL_CREATE_SOURCE, Tuple.of(name, typeId, configJson, createdBy))
                     .toMaybe())
@@ -72,10 +72,10 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
   @Override
   public Single<Long> createDataSink(
       String name, Long typeId, String createdBy, String configJson) {
-    return mySQLWriterClient
+    return postgresWriterClient
         .executeWithTransaction(
             conn ->
-                mySQLWriterClient
+                postgresWriterClient
                     .executeAndGenerateId(
                         conn, SQL_CREATE_SINK, Tuple.of(name, typeId, configJson, createdBy))
                     .toMaybe())
@@ -86,14 +86,14 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
   @Override
   public Single<List<DataSourceDetails>> listDataSources(int page, int pageSize) {
     int offset = page * pageSize;
-    return mySQLReaderClient.fetchAll(
+    return postgresReaderClient.fetchAll(
         SQL_LIST_SOURCES, Tuple.of(pageSize, offset), DataSourceDetails::mapSourceRow);
   }
 
   @Override
   public Single<List<DataSinkDetails>> listDataSinks(int page, int pageSize) {
     int offset = page * pageSize;
-    return mySQLReaderClient.fetchAll(
+    return postgresReaderClient.fetchAll(
         SQL_LIST_SINKS, Tuple.of(pageSize, offset), DataSinkDetails::mapSinkRow);
   }
 
@@ -113,7 +113,7 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
       tuple.addValue(sourceId);
     }
 
-    return mySQLReaderClient.fetchAll(query, tuple, DataSourceDetails::mapSourceRow);
+    return postgresReaderClient.fetchAll(query, tuple, DataSourceDetails::mapSourceRow);
   }
 
   /**
@@ -136,6 +136,6 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
       tuple.addValue(sinkId);
     }
 
-    return mySQLReaderClient.fetchAll(query, tuple, DataSinkDetails::mapSinkRow);
+    return postgresReaderClient.fetchAll(query, tuple, DataSinkDetails::mapSinkRow);
   }
 }

@@ -228,6 +228,3 @@ logs/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-
-### Swagger/OpenAPI auto-generated files ###
-**/webroot/swagger/*.yaml

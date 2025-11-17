@@ -14,6 +14,7 @@ import com.ascend.flockr.domain.rule.StreamConfiguration;
 import com.ascend.flockr.io.request.CreateAudienceRequest;
 import com.ascend.flockr.io.request.CreateRulesRequest;
 import com.ascend.flockr.io.response.AudienceDetailsResponse;
+import com.ascend.flockr.io.response.AudienceMetaResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
 import com.ascend.flockr.repository.AudienceRepository;
 import com.ascend.flockr.repository.DataConnectorRepository;
@@ -32,26 +33,27 @@ public class AudienceServiceImpl implements AudienceService {
   private final AudienceRepository audienceRepository;
   private final RuleRepository ruleRepository;
   private final DataConnectorRepository dataConnectorRepository;
-  private static final String DEFAULT_TENANT = "dummy_org";
-  private static final String DEFAULT_PROJECT = "dummy_project";
   private static final String DEFAULT_CREATOR = "dummy_user";
 
   /**
    * Creates a new audience using the data provided in the request.
    *
-   * <p>Default tenant, project and creator identifiers are applied before the audience metadata is
-   * persisted via the {@link AudienceRepository}.
+   * <p>Tenant and project identifiers are applied before the audience metadata is persisted via the
+   * {@link AudienceRepository}.
    *
+   * @param tenantId the tenant identifier from the request header
+   * @param projectId the project identifier from the request header
    * @param request the request payload containing audience metadata and configuration
    * @return a {@link Single} emitting the generated audience identifier
    */
   @Override
-  public Single<Long> createAudience(CreateAudienceRequest request) {
+  public Single<Long> createAudience(
+      String tenantId, String projectId, CreateAudienceRequest request) {
 
     AudienceMeta audienceMeta =
         AudienceMeta.builder()
-            .tenantId(DEFAULT_TENANT)
-            .projectId(DEFAULT_PROJECT)
+            .tenantId(tenantId)
+            .projectId(projectId)
             .name(request.getName())
             .description(request.getDescription())
             .customAudienceConfig(request.getCustomAudienceConfig())
@@ -72,21 +74,26 @@ public class AudienceServiceImpl implements AudienceService {
    * rules for the given audience. Rule configurations are transformed from {@link SourceInfoBasic}
    * to {@link SourceInfoEnriched} using the corresponding {@link DataSourceDetails}.
    *
+   * @param tenantId the tenant identifier from the request header
+   * @param projectId the project identifier from the request header
    * @param audienceId the unique identifier of the audience
    * @return a {@link Single} emitting an {@link AudienceDetailsResponse} with enriched audience
    *     details
    */
   @Override
-  public Single<AudienceDetailsResponse> getAudienceDetails(Long audienceId) {
+  public Single<AudienceDetailsResponse> getAudienceDetails(
+      String tenantId, String projectId, Long audienceId) {
 
     Single<AudienceMeta> audienceMetaSingle =
-        audienceRepository.getAudienceById(audienceId).cache();
+        audienceRepository.getAudienceById(tenantId, projectId, audienceId).cache();
 
     Single<List<DataSinkDetails>> sinkDetailsListSingle =
         audienceMetaSingle.map(AudienceMeta::getSinks).flatMap(this::getDataSinksInBatch);
 
     Single<List<RuleMeta<SourceInfoBasic>>> ruleMetaListSingle =
-        audienceMetaSingle.flatMap(meta -> ruleRepository.getRulesByAudienceId(audienceId)).cache();
+        audienceMetaSingle
+            .flatMap(meta -> ruleRepository.getRulesByAudienceId(tenantId, projectId, audienceId))
+            .cache();
 
     Single<List<DataSourceDetails>> dataSourceDetailsSingle =
         ruleMetaListSingle
@@ -174,21 +181,24 @@ public class AudienceServiceImpl implements AudienceService {
    * Creates rules for a given audience using the data from the request.
    *
    * <p>Each rule in the request is converted to a {@link RuleMeta} with {@link SourceInfoBasic}
-   * configuration and default tenant, project, creator and status values before being persisted via
-   * the {@link RuleRepository}.
+   * configuration and tenant, project, creator and status values before being persisted via the
+   * {@link RuleRepository}.
    *
+   * @param tenantId the tenant identifier from the request header
+   * @param projectId the project identifier from the request header
    * @param request the request containing the audience identifier and rule definitions
    * @return a {@link Single} emitting {@code true} if the rules were created successfully,
    *     otherwise propagating an error
    */
   @Override
-  public Single<Boolean> createRules(CreateRulesRequest request) {
+  public Single<Boolean> createRules(
+      String tenantId, String projectId, CreateRulesRequest request) {
     List<RuleMeta<SourceInfoBasic>> list = new ArrayList<>();
     for (CreateRulesRequest.Rule rule : request.getRules()) {
       RuleMeta<SourceInfoBasic> ruleMeta =
           RuleMeta.<SourceInfoBasic>builder()
-              .tenantId(DEFAULT_TENANT)
-              .projectId(DEFAULT_PROJECT)
+              .tenantId(tenantId)
+              .projectId(projectId)
               .audienceId(request.getAudienceId())
               .name(rule.getName())
               .description(rule.getDescription())
@@ -221,13 +231,17 @@ public class AudienceServiceImpl implements AudienceService {
    * <p>The rule configuration is enriched by replacing {@link SourceInfoBasic} entries with {@link
    * SourceInfoEnriched} using the corresponding {@link DataSourceDetails}.
    *
+   * @param tenantId the tenant identifier from the request header
+   * @param projectId the project identifier from the request header
    * @param audienceId the identifier of the audience to which the rule belongs
    * @param ruleId the identifier of the rule whose details are to be retrieved
    * @return a {@link Single} emitting a {@link RuleDetailsResponse} with enriched rule details
    */
   @Override
-  public Single<RuleDetailsResponse> getRuleDetails(Long audienceId, Long ruleId) {
-    Single<RuleMeta<SourceInfoBasic>> ruleMetaSingle = ruleRepository.getRuleById(ruleId).cache();
+  public Single<RuleDetailsResponse> getRuleDetails(
+      String tenantId, String projectId, Long audienceId, Long ruleId) {
+    Single<RuleMeta<SourceInfoBasic>> ruleMetaSingle =
+        ruleRepository.getRuleById(tenantId, projectId, ruleId).cache();
 
     Single<List<DataSourceDetails>> sourceDetails =
         ruleMetaSingle
@@ -505,5 +519,36 @@ public class AudienceServiceImpl implements AudienceService {
         .type(details != null ? details.getType() : null)
         .active(details != null && "ACTIVE".equals(details.getStatus()))
         .build();
+  }
+
+  /**
+   * Retrieves a list of audiences with basic metadata and rule counts.
+   *
+   * <p>This method supports filtering by name search, creator, and verification status. Results can
+   * be paginated using limit and offset parameters.
+   *
+   * @param tenantId the tenant identifier from the request header
+   * @param projectId the project identifier from the request header
+   * @param nameSearch optional name search filter (partial match)
+   * @param createdBy optional creator filter (exact match)
+   * @param verified optional verification status filter
+   * @param limit optional maximum number of results to return
+   * @param offset optional number of results to skip for pagination
+   * @return a {@link Single} emitting a list of {@link AudienceMetaResponse} with basic metadata
+   *     and rule counts
+   */
+  @Override
+  public Single<List<AudienceMetaResponse>> getAudiencesList(
+      String tenantId,
+      String projectId,
+      String nameSearch,
+      String createdBy,
+      Boolean verified,
+      Integer limit,
+      Integer offset) {
+    return audienceRepository
+        .getAudiencesList(tenantId, projectId, nameSearch, createdBy, verified, limit, offset)
+        .doOnSuccess(audiences -> log.info("Successfully fetched {} audiences", audiences.size()))
+        .doOnError(error -> log.error("Failed to fetch audiences list: {}", error.getMessage()));
   }
 }
