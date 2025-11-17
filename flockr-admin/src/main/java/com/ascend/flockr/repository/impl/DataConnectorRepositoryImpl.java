@@ -26,10 +26,10 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
       "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE id = ?";
 
   private static final String SQL_CREATE_SOURCE =
-      "INSERT INTO data_sources (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSONB), ?)";
+      "INSERT INTO data_sources (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSONB), ?) RETURNING id";
 
   private static final String SQL_CREATE_SINK =
-      "INSERT INTO data_sinks (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSONB), ?)";
+      "INSERT INTO data_sinks (name, type_id, config, created_by) VALUES (?, ?, CAST(? AS JSONB), ?) RETURNING id";
 
   private static final String SQL_LIST_SOURCES =
       "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sources s JOIN data_connector_types t ON s.type_id = t.id ORDER BY s.id DESC LIMIT ? OFFSET ?";
@@ -44,7 +44,7 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
       "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sinks s JOIN data_connector_types t ON s.type_id = t.id WHERE s.id IN (%s)";
 
   private static final String SQL_CREATE_CONNECTOR_TYPE =
-      "INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active) VALUES (?, ?, ?, CAST(? AS JSONB), TRUE)";
+      "INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active) VALUES (?, ?, ?, CAST(? AS JSONB), TRUE) RETURNING id";
 
   @Override
   public Single<List<DataConnectorType>> listConnectorTypes(String kind) {

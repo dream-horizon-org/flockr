@@ -22,17 +22,17 @@ public class AudienceRepositoryImpl implements AudienceRepository {
   private final ObjectMapper objectMapper;
 
   private static final String SQL_CREATE_AUDIENCE =
-      "INSERT INTO audience (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expiry_date) "
-          + "VALUES (?, ?, ?, ?, ?, CAST(? AS JSON), ?, to_timestamp(?))";
+      "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expiry_date, created_by) "
+          + "VALUES (?, ?, ?, ?, ?, CAST(? AS JSONB), ?, to_timestamp(?), ?) RETURNING id";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
       "SELECT id, tenant_id, project_id, name, description, "
           + "EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at, "
           + "EXTRACT(EPOCH FROM updated_at)::BIGINT AS updated_at, "
           + "EXTRACT(EPOCH FROM last_audience_updated_at)::BIGINT AS last_audience_updated_at, "
-          + "user_count, custom_audience_config, type, verified, rules_count, "
-          + "EXTRACT(EPOCH FROM expiry_date)::BIGINT AS expiry_date, sinks "
-          + "FROM audience WHERE id = ? AND tenant_id = ? AND project_id = ?";
+          + "user_count, custom_audience_config, type, verified, "
+          + "EXTRACT(EPOCH FROM expiry_date)::BIGINT AS expiry_date, sinks, created_by "
+          + "FROM audiences WHERE id = ? AND tenant_id = ? AND project_id = ?";
 
   @Override
   public Single<Long> createAudience(AudienceMeta audienceMeta) {
@@ -40,12 +40,13 @@ public class AudienceRepositoryImpl implements AudienceRepository {
         Tuple.tuple()
             .addValue(audienceMeta.getTenantId())
             .addValue(audienceMeta.getProjectId())
-            .addValue(audienceMeta.getCreatedAt())
+            .addValue(audienceMeta.getName())
             .addValue(audienceMeta.getDescription())
             .addValue(audienceMeta.getSinks())
             .addValue(audienceMeta.getCustomAudienceConfig())
             .addValue(audienceMeta.getType())
-            .addValue(audienceMeta.getExpireDate());
+            .addValue(audienceMeta.getExpireDate())
+            .addValue(audienceMeta.getCreatedBy());
 
     return postgresWriterClient
         .executeWithTransaction(
@@ -75,7 +76,8 @@ public class AudienceRepositoryImpl implements AudienceRepository {
                   .expireDate(row.getLong("expiry_date"))
                   .lastAudienceUpdatedAt(row.getLong("last_audience_updated_at"))
                   .createdAt(row.getLong("created_at"))
-                  .updatedAt(row.getLong("updated_at"));
+                  .updatedAt(row.getLong("updated_at"))
+                  .createdBy(row.getString("created_by"));
 
           // Map JSON fields
           String configJson = row.getString("custom_audience_config");
@@ -127,12 +129,11 @@ public class AudienceRepositoryImpl implements AudienceRepository {
    * capabilities:
    *
    * <ul>
-   *   <li>Searches against the pre-indexed {@code name_search_vector} column (includes name and
-   *       description)
+   *   <li>Searches against the pre-indexed {@code name_vector} column (includes name)
    *   <li>Uses {@code plainto_tsquery} for stemming and language-aware parsing
    *   <li>Calculates relevance scores using {@code ts_rank()}
    *   <li>Results are sorted by FTS rank (most relevant first), then by creation date
-   *   <li>Leverages GIN index {@code idx_audiences_name_search_vector} for fast lookups
+   *   <li>Leverages GIN index {@code idx_audiences_name_vector} for fast lookups
    * </ul>
    *
    * <p><strong>Sorting Behavior:</strong>
@@ -155,8 +156,8 @@ public class AudienceRepositoryImpl implements AudienceRepository {
    * <p><strong>Index Dependencies:</strong>
    *
    * <ul>
-   *   <li>{@code idx_audiences_name_search_vector} - GIN index for full-text search
-   *   <li>{@code idx_audience_rules_audience_id} - B-tree index for efficient rule counting
+   *   <li>{@code idx_audiences_name_vector} - GIN index for full-text search
+   *   <li>{@code idx_rules_audience_id} - B-tree index for efficient rule counting
    *   <li>Primary key index on {@code audiences.id} for grouping
    * </ul>
    *
@@ -216,7 +217,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
     sql.append("  EXTRACT(EPOCH FROM a.expire_date)::BIGINT AS expire_date");
 
     if (nameSearch != null && !nameSearch.isBlank()) {
-      sql.append(", ts_rank(a.name_search_vector, plainto_tsquery('english', ?)) AS fts_rank ");
+      sql.append(", ts_rank(a.name_vector, plainto_tsquery('english', ?)) AS fts_rank ");
     }
 
     sql.append("  FROM audiences a ");
@@ -233,7 +234,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
 
     // Add filters
     if (nameSearch != null && !nameSearch.isBlank()) {
-      sql.append("  AND a.name_search_vector @@ plainto_tsquery('english', ?) ");
+      sql.append("  AND a.name_vector @@ plainto_tsquery('english', ?) ");
       params.add(nameSearch);
     }
 
