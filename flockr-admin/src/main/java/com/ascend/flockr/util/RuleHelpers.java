@@ -1,5 +1,6 @@
 package com.ascend.flockr.util;
 
+import com.ascend.flockr.constants.rule.RuleConstants;
 import com.ascend.flockr.domain.rule.BatchConfiguration;
 import com.ascend.flockr.domain.rule.RuleAction;
 import com.ascend.flockr.domain.rule.RuleConfiguration;
@@ -44,25 +45,25 @@ public final class RuleHelpers {
   }
 
   public static RuleMeta<SourceInfoBasic> mapRuleRow(Row row) {
-    String configJson = row.getString("configuration");
+    String configJson = row.getString(RuleConstants.CONFIGURATION);
     RuleConfiguration<SourceInfoBasic> configuration =
         RuleHelpers.deserializeRuleConfiguration(configJson);
 
     return RuleMeta.<SourceInfoBasic>builder()
-        .ruleId(row.getLong("id"))
-        .audienceId(row.getLong("audience_id"))
-        .tenantId(row.getString("tenant_id"))
-        .name(row.getString("name"))
-        .description(row.getString("description"))
-        .startTime(row.getLong("start_time"))
-        .endTime(row.getLong("end_time"))
-        .ruleAction(RuleAction.valueOf(row.getString("rule_action")))
-        .ruleType(RuleType.valueOf(row.getString("rule_type")))
-        .status(RuleStatus.valueOf(row.getString("status")))
+        .ruleId(row.getLong(RuleConstants.ID))
+        .audienceId(row.getLong(RuleConstants.AUDIENCE_ID))
+        .tenantId(row.getString(RuleConstants.TENANT_ID))
+        .name(row.getString(RuleConstants.NAME))
+        .description(row.getString(RuleConstants.DESCRIPTION))
+        .startTime(row.getLong(RuleConstants.START_TIME))
+        .endTime(row.getLong(RuleConstants.END_TIME))
+        .ruleAction(RuleAction.valueOf(row.getString(RuleConstants.RULE_ACTION)))
+        .ruleType(RuleType.valueOf(row.getString(RuleConstants.RULE_TYPE)))
+        .status(RuleStatus.valueOf(row.getString(RuleConstants.STATUS)))
         .configuration(configuration)
-        .createdBy(row.getString("created_by"))
-        .createdAt(row.getLong("created_at"))
-        .updatedAt(row.getLong("updated_at"))
+        .createdBy(row.getString(RuleConstants.CREATED_BY))
+        .createdAt(row.getLong(RuleConstants.CREATED_AT))
+        .updatedAt(row.getLong(RuleConstants.UPDATED_AT))
         .build();
   }
 

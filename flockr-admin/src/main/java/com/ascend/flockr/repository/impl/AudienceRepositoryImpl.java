@@ -2,6 +2,7 @@ package com.ascend.flockr.repository.impl;
 
 import com.ascend.flockr.client.postgres.PostgresReaderClient;
 import com.ascend.flockr.client.postgres.PostgresWriterClient;
+import com.ascend.flockr.constants.audience.AudienceConstants;
 import com.ascend.flockr.domain.audience.AudienceMeta;
 import com.ascend.flockr.io.response.AudienceMetaResponse;
 import com.ascend.flockr.repository.AudienceRepository;
@@ -91,22 +92,22 @@ public class AudienceRepositoryImpl implements AudienceRepository {
         row -> {
           AudienceMeta.AudienceMetaBuilder builder =
               AudienceMeta.builder()
-                  .audienceId(row.getLong("id"))
-                  .tenantId(row.getString("tenant_id"))
-                  .projectId(row.getString("project_id"))
-                  .name(row.getString("name"))
-                  .description(row.getString("description"))
-                  .type(row.getString("type"))
-                  .verified(row.getBoolean("verified"))
-                  .userCount(row.getLong("user_count"))
-                  .expireDate(row.getLong("expiry_date"))
-                  .lastAudienceUpdatedAt(row.getLong("last_audience_updated_at"))
-                  .createdAt(row.getLong("created_at"))
-                  .updatedAt(row.getLong("updated_at"))
-                  .createdBy(row.getString("created_by"));
+                  .audienceId(row.getLong(AudienceConstants.ID))
+                  .tenantId(row.getString(AudienceConstants.TENANT_ID))
+                  .projectId(row.getString(AudienceConstants.PROJECT_ID))
+                  .name(row.getString(AudienceConstants.NAME))
+                  .description(row.getString(AudienceConstants.DESCRIPTION))
+                  .type(row.getString(AudienceConstants.TYPE))
+                  .verified(row.getBoolean(AudienceConstants.VERIFIED))
+                  .userCount(row.getLong(AudienceConstants.USER_COUNT))
+                  .expireDate(row.getLong(AudienceConstants.EXPIRY_DATE))
+                  .lastAudienceUpdatedAt(row.getLong(AudienceConstants.LAST_AUDIENCE_UPDATED_AT))
+                  .createdAt(row.getLong(AudienceConstants.CREATED_AT))
+                  .updatedAt(row.getLong(AudienceConstants.UPDATED_AT))
+                  .createdBy(row.getString(AudienceConstants.CREATED_BY));
 
           // Map JSON fields
-          String configJson = row.getString("custom_audience_config");
+          String configJson = row.getString(AudienceConstants.CUSTOM_AUDIENCE_CONFIG);
           if (configJson != null) {
             try {
               JsonNode configNode = objectMapper.readTree(configJson);
@@ -117,7 +118,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
             }
           }
 
-          String sinksJson = row.getString("sinks");
+          String sinksJson = row.getString(AudienceConstants.SINKS);
           if (sinksJson != null && !sinksJson.isBlank()) {
             try {
               List<Long> sinks = objectMapper.readValue(sinksJson, new TypeReference<>() {});
@@ -317,17 +318,17 @@ public class AudienceRepositoryImpl implements AudienceRepository {
         tuple,
         row ->
             AudienceMetaResponse.builder()
-                .audienceId(row.getLong("id"))
-                .name(row.getString("name"))
-                .description(row.getString("description"))
-                .type(row.getString("type"))
-                .verified(row.getBoolean("verified"))
-                .userCount(row.getLong("user_count"))
+                .audienceId(row.getLong(AudienceConstants.ID))
+                .name(row.getString(AudienceConstants.NAME))
+                .description(row.getString(AudienceConstants.DESCRIPTION))
+                .type(row.getString(AudienceConstants.TYPE))
+                .verified(row.getBoolean(AudienceConstants.VERIFIED))
+                .userCount(row.getLong(AudienceConstants.USER_COUNT))
                 .ruleCount(row.getLong("rule_count"))
-                .expireDate(row.getLong("expire_date"))
-                .createdAt(row.getLong("created_at"))
-                .updatedAt(row.getLong("updated_at"))
-                .createdBy(row.getString("created_by"))
+                .expireDate(row.getLong(AudienceConstants.EXPIRE_DATE))
+                .createdAt(row.getLong(AudienceConstants.CREATED_AT))
+                .updatedAt(row.getLong(AudienceConstants.UPDATED_AT))
+                .createdBy(row.getString(AudienceConstants.CREATED_BY))
                 .build());
   }
 }
