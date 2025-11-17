@@ -405,6 +405,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Failure'
+  /v1/connectors/types/onboard:
+    post:
+      tags:
+      - Data Connectors
+      summary: Onboard a connector type
+      description: Onboards a new data connector type (SOURCE or SINK)
+      operationId: onboardConnectorType
+      parameters:
+      - name: email
+        in: header
+        description: User email for authentication
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardConnectorTypeRequest'
+      responses:
+        "200":
+          description: Connector type onboarded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid/missing body params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
   /v1/datasinks/onboard:
     post:
       tags:
@@ -856,6 +894,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DataConnectorType'
+    SuccessDataConnectorType:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DataConnectorType'
+    OnboardConnectorTypeRequest:
+      required:
+      - configSchema
+      - displayName
+      - kind
+      - type
+      type: object
+      properties:
+        kind:
+          type: string
+        type:
+          type: string
+        displayName:
+          type: string
+        configSchema:
+          $ref: '#/components/schemas/JsonObject'
     SuccessDataSinkDetails:
       type: object
       properties:
