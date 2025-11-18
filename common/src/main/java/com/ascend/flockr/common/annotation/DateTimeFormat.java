@@ -1,6 +1,7 @@
 package com.ascend.flockr.common.annotation;
 
-import com.dream11.usercohorts.common.annotation.validators.DateTimeFormatValidator;
+
+import com.ascend.flockr.common.annotation.validators.DateTimeFormatValidator;
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 import java.lang.annotation.ElementType;

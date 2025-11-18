@@ -246,7 +246,8 @@ public class UserCohortServiceImpl implements UserCohortsService {
   private Flowable<String> openFileAsFlowable(Path path) {
     return Flowable.create(
         emitter ->
-            vertx
+                // Handle file open errors
+                vertx
                 .fileSystem()
                 .open(path.toString(), new OpenOptions().setRead(true))
                 .subscribe(
@@ -293,10 +294,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
                       // Start reading the file
                       asyncFile.resume();
                     },
-                    error -> {
-                      // Handle file open errors
-                      emitter.onError(error);
-                    }),
+                        emitter::onError),
         BackpressureStrategy.BUFFER);
   }
 

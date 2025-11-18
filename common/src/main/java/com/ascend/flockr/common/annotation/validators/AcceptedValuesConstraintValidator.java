@@ -1,6 +1,7 @@
 package com.ascend.flockr.common.annotation.validators;
 
-import com.dream11.usercohorts.common.annotation.AcceptedValues;
+
+import com.ascend.flockr.common.annotation.AcceptedValues;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import java.util.Arrays;
