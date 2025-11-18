@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
@@ -25,11 +26,11 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 
@@ -74,16 +75,13 @@ public class DataSourcesController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<DataConnectorType>> onboardConnectorType(
-      Map<String, Object> request,
+      @Valid OnboardConnectorTypeRequest request,
       @Parameter(description = "User email for authentication", required = true)
           @HeaderParam("email")
           String userEmail) {
 
-    System.out.println(request.toString());
     return ErrorHandler.handleAsync(
-        service.onboardConnectorType(
-            mapper.convertValue(request, OnboardConnectorTypeRequest.class), userEmail),
-        "onboardConnectorType");
+        service.onboardConnectorType(request, userEmail), "onboardConnectorType");
   }
 
   @GET
@@ -108,6 +106,35 @@ public class DataSourcesController {
     return ErrorHandler.handleAsync(service.listTypes(kind), "listTypes");
   }
 
+  @GET
+  @Path("/v1/connectors/types/{typeId}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Get connector type by ID",
+      description = "Retrieves all details of an onboarded source or sink connector type by typeId")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successful Response",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "Connector type not found",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid typeId",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  public CompletionStage<ResponseEntity.Success<DataConnectorType>> getConnectorTypeById(
+      @Parameter(description = "ID of the connector type", required = true, example = "1")
+          @PathParam("typeId")
+          Long typeId) {
+    return ErrorHandler.handleAsync(service.getConnectorTypeById(typeId), "getConnectorTypeById");
+  }
+
   @POST
   @Path("/v1/datasources/onboard")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -128,7 +155,7 @@ public class DataSourcesController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<DataSourceDetails>> onboardSource(
-      OnboardDataSourceRequest request,
+      @Valid OnboardDataSourceRequest request,
       @Parameter(description = "User email for authentication", required = true)
           @HeaderParam("email")
           String userEmail) {
@@ -153,7 +180,7 @@ public class DataSourcesController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<DataSinkDetails>> onboardSink(
-      OnboardDataSinkRequest request,
+      @Valid OnboardDataSinkRequest request,
       @Parameter(description = "User email for authentication", required = true)
           @HeaderParam("email")
           String userEmail) {

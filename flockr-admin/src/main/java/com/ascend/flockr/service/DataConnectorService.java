@@ -78,4 +78,12 @@ public interface DataConnectorService {
    */
   Single<DataConnectorType> onboardConnectorType(
       OnboardConnectorTypeRequest request, String createdBy);
+
+  /**
+   * Gets a connector type by its ID.
+   *
+   * @param typeId the ID of the connector type to retrieve
+   * @return a Single emitting the connector type details
+   */
+  Single<DataConnectorType> getConnectorTypeById(Long typeId);
 }

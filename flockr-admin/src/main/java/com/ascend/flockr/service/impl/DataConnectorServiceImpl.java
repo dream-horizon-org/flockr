@@ -129,4 +129,9 @@ public class DataConnectorServiceImpl implements DataConnectorService {
             kind, request.getType(), request.getDisplayName(), createdBy, configSchemaJson)
         .flatMap(repository::getConnectorTypeById);
   }
+
+  @Override
+  public Single<DataConnectorType> getConnectorTypeById(Long typeId) {
+    return repository.getConnectorTypeById(typeId);
+  }
 }

@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -69,7 +70,7 @@ public class AudienceController {
           String tenantId,
       @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
           String projectId,
-      CreateAudienceRequest requestBody) {
+      @Valid CreateAudienceRequest requestBody) {
     return ErrorHandler.handleAsync(
         audienceService.createAudience(tenantId, projectId, requestBody), "createAudience");
   }
@@ -132,7 +133,7 @@ public class AudienceController {
           String projectId,
       @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
           Long audienceId,
-      CreateRulesRequest requestBody) {
+      @Valid CreateRulesRequest requestBody) {
 
     requestBody.setAudienceId(audienceId);
     return ErrorHandler.handleAsync(

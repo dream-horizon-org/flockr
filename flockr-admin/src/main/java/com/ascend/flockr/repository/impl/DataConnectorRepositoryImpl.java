@@ -22,10 +22,10 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
   private final PostgresWriterClient postgresWriterClient;
 
   private static final String SQL_LIST_TYPES =
-      "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE kind = $1 AND is_active = TRUE ORDER BY display_name";
+      "SELECT id, kind, type, display_name, config_schema, is_active FROM data_connector_types WHERE kind = $1 AND is_active = TRUE ORDER BY display_name";
 
   private static final String SQL_GET_TYPE_BY_ID =
-      "SELECT id, kind, type, display_name, is_active FROM data_connector_types WHERE id = $1";
+      "SELECT id, kind, type, display_name, config_schema, is_active FROM data_connector_types WHERE id = $1";
 
   private static final String SQL_CREATE_SOURCE =
       "INSERT INTO data_sources (name, type_id, config, created_by) VALUES ($1, $2, CAST($3 AS JSONB), $4) RETURNING id";
@@ -194,6 +194,13 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
   @Override
   public Single<Long> createConnectorType(
       String kind, String type, String displayName, String createdBy, String configSchemaJson) {
+    log.info(
+        "Creating connector type. kind: {}, type: {}, displayName: {}, createdBy: {}, configSchemaJson: {}",
+        kind,
+        type,
+        displayName,
+        createdBy,
+        configSchemaJson);
     return postgresWriterClient
         .executeWithTransaction(
             conn ->

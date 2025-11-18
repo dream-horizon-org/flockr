@@ -6,6 +6,9 @@ import com.ascend.flockr.domain.rule.RuleType;
 import com.ascend.flockr.domain.rule.SourceInfoBasic;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.*;
 
@@ -14,7 +17,7 @@ import lombok.*;
 @NoArgsConstructor
 public class CreateRulesRequest {
   private Long audienceId;
-  private List<Rule> rules;
+  @Valid @NotEmpty private List<Rule> rules;
 
   @Data
   @AllArgsConstructor
@@ -36,6 +39,6 @@ public class CreateRulesRequest {
     @JsonProperty("rule_action")
     private RuleAction ruleAction;
 
-    private RuleConfiguration<SourceInfoBasic> configuration;
+    @Valid @NotNull private RuleConfiguration<SourceInfoBasic> configuration;
   }
 }

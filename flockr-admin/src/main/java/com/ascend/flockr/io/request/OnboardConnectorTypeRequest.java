@@ -1,8 +1,8 @@
 package com.ascend.flockr.io.request;
 
+import com.ascend.flockr.validation.NotEmptyJsonObject;
 import io.vertx.core.json.JsonObject;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 @Data
@@ -16,5 +16,5 @@ public class OnboardConnectorTypeRequest {
   @NotBlank(message = "Display name is required")
   private String displayName;
 
-  @NotEmpty private JsonObject configSchema;
+  @NotEmptyJsonObject private JsonObject configSchema;
 }
