@@ -14,9 +14,10 @@ import com.ascend.flockr.repository.impl.*;
 import com.ascend.flockr.service.*;
 import com.ascend.flockr.service.impl.*;
 import com.ascend.flockr.util.CircuitBreakerFactory;
-import com.ascend.flockr.util.ConfigValidator;
-import com.ascend.flockr.util.ConfigValidatorRegistry;
+import com.ascend.flockr.util.json.JsonSchemaValidationUtil;
 import com.ascend.flockr.util.validator.AthenaConfigValidator;
+import com.ascend.flockr.util.validator.ConfigValidator;
+import com.ascend.flockr.util.validator.ConfigValidatorRegistry;
 import com.ascend.flockr.util.validator.KafkaConfigValidator;
 import com.ascend.flockr.util.validator.S3FolderSinkValidator;
 import com.google.inject.Singleton;
@@ -72,8 +73,8 @@ public class ServiceModule extends DefaultModule {
     bindClients();
     /* Bind DAOs */
     bindDAOs();
-    /* Bind Validators */
-    bindValidators();
+    /* Bind Utilities */
+    bindUtilities();
     /* Bind Services */
     bindServices();
     /* Static Binding */
@@ -144,6 +145,15 @@ public class ServiceModule extends DefaultModule {
 
     // Bind registry (will automatically receive Set<ConfigValidator> via injection)
     bind(ConfigValidatorRegistry.class).in(Singleton.class);
+  }
+
+  /**
+   * Binds utility classes as singletons.
+   *
+   * <p>Binds JSON schema validation utilities.
+   */
+  private void bindUtilities() {
+    bind(JsonSchemaValidationUtil.class).in(Singleton.class);
   }
 
   /**

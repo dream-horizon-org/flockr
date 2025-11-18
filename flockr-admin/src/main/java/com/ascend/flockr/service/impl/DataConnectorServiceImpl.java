@@ -9,17 +9,20 @@ import com.ascend.flockr.io.request.OnboardDataSourceRequest;
 import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.repository.DataConnectorRepository;
 import com.ascend.flockr.service.DataConnectorService;
-import com.ascend.flockr.util.ConfigValidatorRegistry;
+import com.ascend.flockr.util.json.JsonSchemaValidationUtil;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonObject;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataConnectorServiceImpl implements DataConnectorService {
 
   private final DataConnectorRepository repository;
-  private final ConfigValidatorRegistry configValidatorRegistry;
+  private final JsonSchemaValidationUtil schemaValidator;
 
   @Override
   public Single<List<DataConnectorType>> listTypes(String kind) {
@@ -36,7 +39,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
               if (!"SOURCE".equalsIgnoreCase(type.getKind())) {
                 throw new IllegalArgumentException("Provided typeId is not a SOURCE");
               }
-              configValidatorRegistry.validate(request.getConfig(), type.getType(), type.getKind());
+              validateConfigAgainstSchema(request.getConfig(), type);
               request.getConfig().put("connectorType", type.getType());
               return type;
             })
@@ -70,7 +73,8 @@ public class DataConnectorServiceImpl implements DataConnectorService {
               if (!"SINK".equalsIgnoreCase(type.getKind())) {
                 throw new IllegalArgumentException("Provided typeId is not a SINK");
               }
-              configValidatorRegistry.validate(request.getConfig(), type.getType(), type.getKind());
+              validateConfigAgainstSchema(request.getConfig(), type);
+              request.getConfig().put("connectorType", type.getType());
               return type;
             })
         .flatMap(
@@ -133,5 +137,27 @@ public class DataConnectorServiceImpl implements DataConnectorService {
   @Override
   public Single<DataConnectorType> getConnectorTypeById(Long typeId) {
     return repository.getConnectorTypeById(typeId);
+  }
+
+  /**
+   * Validates a configuration JsonObject against the connector type's JSON Schema.
+   *
+   * @param config the configuration to validate
+   * @param connectorType the connector type containing the schema
+   */
+  private void validateConfigAgainstSchema(JsonObject config, DataConnectorType connectorType) {
+    JsonObject schema = connectorType.getConfigSchema();
+
+    if (schema != null && !schema.isEmpty()) {
+      log.debug(
+          "Validating config against schema for connector type: {} (ID: {})",
+          connectorType.getType(),
+          connectorType.getId());
+      schemaValidator.validate(config, schema);
+    } else {
+      log.warn(
+          "No schema found for connector type ID: {}, skipping schema validation",
+          connectorType.getId());
+    }
   }
 }

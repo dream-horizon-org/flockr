@@ -1,10 +1,10 @@
 package com.ascend.flockr.util.validator;
 
 import com.ascend.flockr.exception.ConfigValidationException;
-import com.ascend.flockr.util.ConfigValidator;
 import com.google.inject.Singleton;
 import io.vertx.core.json.JsonObject;
 
+@Deprecated
 /** Validator for Athena data source configurations. */
 @Singleton
 public class AthenaConfigValidator implements ConfigValidator {

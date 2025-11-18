@@ -11,9 +11,6 @@ VALUES
       "type": "KAFKA",
       "displayName": "ApacheKafkaSource",
       "configSchema": {
-        "query": {
-          "type": "string"
-        },
         "database": {
           "type": "string"
         },

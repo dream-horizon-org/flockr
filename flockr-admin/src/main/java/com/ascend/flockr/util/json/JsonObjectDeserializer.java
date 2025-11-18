@@ -1,4 +1,4 @@
-package com.ascend.flockr.io;
+package com.ascend.flockr.util.json;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;

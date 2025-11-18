@@ -1,8 +1,9 @@
-package com.ascend.flockr.util;
+package com.ascend.flockr.util.validator;
 
 import com.ascend.flockr.exception.ConfigValidationException;
 import io.vertx.core.json.JsonObject;
 
+@Deprecated
 /**
  * Interface for validating connector-specific configuration JsonObjects. Implementations should
  * validate configurations for specific connector types.

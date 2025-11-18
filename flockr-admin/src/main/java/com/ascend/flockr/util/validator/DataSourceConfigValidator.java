@@ -1,4 +1,4 @@
-package com.ascend.flockr.util;
+package com.ascend.flockr.util.validator;
 
 import io.vertx.core.json.JsonObject;
 

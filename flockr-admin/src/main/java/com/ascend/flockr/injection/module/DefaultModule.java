@@ -1,6 +1,6 @@
 package com.ascend.flockr.injection.module;
 
-import com.ascend.flockr.io.JsonObjectDeserializer;
+import com.ascend.flockr.util.json.JsonObjectDeserializer;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

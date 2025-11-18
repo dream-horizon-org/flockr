@@ -19,9 +19,16 @@
         <!-- Swagger overrides for this module -->
         <swagger.outputFileName>flockr-admin</swagger.outputFileName>
         <swagger.resourcePackage>com.ascend.flockr.rest</swagger.resourcePackage>
+        <networknt-json-schema.version>1.0.76</networknt-json-schema.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${networknt-json-schema.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.javatuples</groupId>
             <artifactId>javatuples</artifactId>

@@ -1,4 +1,4 @@
-package com.ascend.flockr.util;
+package com.ascend.flockr.util.validator;
 
 import com.ascend.flockr.exception.ConfigValidationException;
 import com.google.inject.Inject;
@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Singleton
+@Deprecated
 public class ConfigValidatorRegistry {
 
   private final Map<String, ConfigValidator> validators = new ConcurrentHashMap<>();
