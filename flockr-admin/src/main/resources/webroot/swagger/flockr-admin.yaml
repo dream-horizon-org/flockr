@@ -596,7 +596,7 @@ components:
         description:
           type: string
         customAudienceConfig:
-          $ref: '#/components/schemas/JsonNode'
+          $ref: '#/components/schemas/JsonObject'
         type:
           type: string
         expiryDate:
@@ -608,20 +608,30 @@ components:
           items:
             type: integer
             format: int64
-    JsonNode:
+    JsonObject:
       type: object
+      properties:
+        map:
+          type: object
+          additionalProperties:
+            type: object
+        empty:
+          type: boolean
     BatchConfiguration:
+      required:
+      - query
+      - source
       type: object
       allOf:
       - $ref: '#/components/schemas/RuleConfigurationSourceInfoBasic'
       - type: object
         properties:
-          cronExpression:
-            type: string
-          query:
-            type: string
           source:
             $ref: '#/components/schemas/SourceInfo'
+          query:
+            type: string
+          cronExpression:
+            type: string
     CohortFilter:
       type: object
       properties:
@@ -661,6 +671,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Rule'
+    DataSourceDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        typeId:
+          type: integer
+          format: int64
+        type:
+          type: string
+        config:
+          $ref: '#/components/schemas/JsonObject'
+        status:
+          type: string
+        createdBy:
+          type: string
     EventCondition:
       type: object
       properties:
@@ -775,12 +804,14 @@ components:
           - ADD
           - REMOVE
     RuleConfigurationSourceInfoBasic:
+      required:
+      - configuration_type
       type: object
       properties:
-        type:
+        configuration_type:
           type: string
       discriminator:
-        propertyName: type
+        propertyName: configuration_type
     SingleValueOperator:
       required:
       - conditionValue
@@ -792,7 +823,14 @@ components:
           conditionValue:
             type: string
     SourceInfo:
+      required:
+      - type
       type: object
+      properties:
+        type:
+          type: string
+      discriminator:
+        propertyName: type
     SourceInfoBasic:
       required:
       - id
@@ -810,15 +848,8 @@ components:
       - $ref: '#/components/schemas/SourceInfo'
       - type: object
         properties:
-          id:
-            type: integer
-            format: int64
-          name:
-            type: string
-          type:
-            type: string
-          active:
-            type: boolean
+          details:
+            $ref: '#/components/schemas/DataSourceDetails'
     StepDataSourceInfo:
       type: object
       properties:
@@ -851,15 +882,6 @@ components:
         configSchema:
           $ref: '#/components/schemas/JsonObject'
         active:
-          type: boolean
-    JsonObject:
-      type: object
-      properties:
-        map:
-          type: object
-          additionalProperties:
-            type: object
-        empty:
           type: boolean
     SuccessDataConnectorType:
       type: object
@@ -910,25 +932,6 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/PaginatedResponseDataSinkDetails'
-    DataSourceDetails:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        typeId:
-          type: integer
-          format: int64
-        type:
-          type: string
-        config:
-          $ref: '#/components/schemas/JsonObject'
-        status:
-          type: string
-        createdBy:
-          type: string
     PaginatedResponseDataSourceDetails:
       type: object
       properties:

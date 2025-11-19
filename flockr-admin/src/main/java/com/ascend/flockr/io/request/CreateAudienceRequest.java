@@ -1,6 +1,6 @@
 package com.ascend.flockr.io.request;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import io.vertx.core.json.JsonObject;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotEmpty;
@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 public class CreateAudienceRequest {
   @NotEmpty private String name;
   @NotEmpty private String description;
-  private JsonNode customAudienceConfig;
+  private JsonObject customAudienceConfig;
   @NotEmpty private String type;
 
   @Max(2177452799000L)

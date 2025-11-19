@@ -23,12 +23,18 @@ public class DataSinkDetails {
   private String createdBy;
 
   public static DataSinkDetails mapSinkRow(Row row) {
+    JsonObject config = null;
+    String configStr = row.getString(DataSinkConstants.CONFIG);
+    if (configStr != null && !configStr.isBlank()) {
+      config = new JsonObject(configStr);
+    }
+
     return DataSinkDetails.builder()
         .id(row.getLong(DataSinkConstants.ID))
         .name(row.getString(DataSinkConstants.NAME))
         .typeId(row.getLong(DataSinkConstants.TYPE_ID))
         .type(row.getString(DataConnectorTypeConstants.TYPE))
-        .config(row.getJsonObject(DataSinkConstants.CONFIG))
+        .config(config)
         .status(row.getString(DataSinkConstants.STATUS))
         .createdBy(row.getString(DataSinkConstants.CREATED_BY))
         .build();

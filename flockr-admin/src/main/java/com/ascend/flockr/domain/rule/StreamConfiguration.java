@@ -1,6 +1,7 @@
 package com.ascend.flockr.domain.rule;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import jakarta.validation.constraints.Min;
@@ -17,16 +18,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties()
 public class StreamConfiguration<T extends SourceInfo> implements RuleConfiguration<T> {
-  @Builder.Default private String type = "STREAM";
-
   private PatternDefinition<T> pattern;
 
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
-  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonIgnoreProperties()
   public static class PatternDefinition<T extends SourceInfo> {
     private List<String> groupBy;
     private List<PatternStep<T>> pattern;
@@ -35,14 +36,16 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
   }
 
   @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonIgnoreProperties()
   public static class CohortFilter {
     private List<String> belongsTo;
     private List<String> notBelongsTo;
   }
 
   @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonIgnoreProperties()
   public static class Constraint {
     @NotNull private Temporal temporal;
     @NotNull private String timeUnit;
@@ -56,7 +59,8 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
-  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonIgnoreProperties()
   public static class PatternStep<T extends SourceInfo> {
     @Min(1)
     private Integer order;
@@ -68,7 +72,8 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
-  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonIgnoreProperties()
   public static class StepData<T extends SourceInfo> {
     private Quantifier quantifier;
     private List<EventDefinition<T>> event;
@@ -77,7 +82,8 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
-  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonIgnoreProperties()
   public static class Quantifier {
     private String conditionOperator; // e.g., "=", ">"
     private Integer conditionValue;
@@ -86,7 +92,8 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
-  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonIgnoreProperties()
   public static class EventDefinition<T extends SourceInfo> {
     private T sourceInfo;
     private String eventName;
@@ -95,7 +102,6 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
 
   @Data
   @NoArgsConstructor
-  @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonTypeInfo(
       use = JsonTypeInfo.Id.NAME,
       include = JsonTypeInfo.As.EXISTING_PROPERTY,
@@ -114,6 +120,8 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
     @JsonSubTypes.Type(value = EventCondition.SingleValueOperator.class, name = ">="),
     @JsonSubTypes.Type(value = EventCondition.SingleValueOperator.class, name = "<=")
   })
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonIgnoreProperties()
   public static class EventCondition {
     private String filterType; // e.g., "event"
     private String propertyName;
@@ -122,24 +130,26 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
 
     @Data
     @EqualsAndHashCode(callSuper = true)
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties()
     public static class SingleValueOperator extends EventCondition {
       @NotEmpty private String conditionValue;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties()
     public static class ListOperator extends EventCondition {
       @NotEmpty private List<String> conditionValues;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties()
     public static class RangeOperator extends EventCondition {
       @NotEmpty private String conditionStartValue;
-
       @NotEmpty private String conditionEndValue;
     }
   }

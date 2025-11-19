@@ -107,6 +107,9 @@
   <!-- Metrics -->
   <logger name="io.dropwizard.metrics" level="WARN"/>
 
+  <!-- Json Validator -->
+  <logger name="com.networknt" level="WARN"/>
+
   <!-- =================================================================== -->
   <!-- Root Logger - Default for all other packages                       -->
   <!-- =================================================================== -->

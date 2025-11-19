@@ -4,10 +4,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonTypeInfo(
-    use = JsonTypeInfo.Id.DEDUCTION // Auto-detect based on available fields
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.EXISTING_PROPERTY,
+    property = "type",
+    defaultImpl = SourceInfoBasic.class // Default to SourceInfoBasic if type is missing
     )
 @JsonSubTypes({
-  @JsonSubTypes.Type(value = SourceInfoEnriched.class), // Try this first (more fields)
-  @JsonSubTypes.Type(value = SourceInfoBasic.class) // Fallback to this
+  @JsonSubTypes.Type(value = SourceInfoEnriched.class, name = "ENRICHED"),
+  @JsonSubTypes.Type(value = SourceInfoBasic.class, name = "BASIC")
 })
 public interface SourceInfo {}

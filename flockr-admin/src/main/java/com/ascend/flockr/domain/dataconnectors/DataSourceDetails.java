@@ -23,12 +23,18 @@ public class DataSourceDetails {
   private String createdBy;
 
   public static DataSourceDetails mapSourceRow(Row row) {
+    JsonObject config = null;
+    String configStr = row.getString(DataSourceConstants.CONFIG);
+    if (configStr != null && !configStr.isBlank()) {
+      config = new JsonObject(configStr);
+    }
+
     return DataSourceDetails.builder()
         .id(row.getLong(DataSourceConstants.ID))
         .name(row.getString(DataSourceConstants.NAME))
         .typeId(row.getLong(DataSourceConstants.TYPE_ID))
         .type(row.getString(DataConnectorTypeConstants.TYPE))
-        .config(row.getJsonObject(DataSourceConstants.CONFIG))
+        .config(config)
         .status(row.getString(DataSourceConstants.STATUS))
         .createdBy(row.getString(DataSourceConstants.CREATED_BY))
         .build();

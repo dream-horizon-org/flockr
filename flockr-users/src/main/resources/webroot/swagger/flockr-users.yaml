@@ -596,7 +596,7 @@ components:
         description:
           type: string
         customAudienceConfig:
-          $ref: '#/components/schemas/JsonNode'
+          $ref: '#/components/schemas/JsonObject'
         type:
           type: string
         expiryDate:
@@ -608,8 +608,15 @@ components:
           items:
             type: integer
             format: int64
-    JsonNode:
+    JsonObject:
       type: object
+      properties:
+        map:
+          type: object
+          additionalProperties:
+            type: object
+        empty:
+          type: boolean
     BatchConfiguration:
       type: object
       allOf:
@@ -851,15 +858,6 @@ components:
         configSchema:
           $ref: '#/components/schemas/JsonObject'
         active:
-          type: boolean
-    JsonObject:
-      type: object
-      properties:
-        map:
-          type: object
-          additionalProperties:
-            type: object
-        empty:
           type: boolean
     SuccessDataConnectorType:
       type: object

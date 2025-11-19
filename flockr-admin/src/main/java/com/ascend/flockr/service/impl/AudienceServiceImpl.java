@@ -357,10 +357,10 @@ public class AudienceServiceImpl implements AudienceService {
       Map<Long, DataSourceDetails> sourceDetailsMap) {
 
     SourceInfoBasic basicSource = basicConfig.getSource();
-    SourceInfoEnriched enrichedSource = enrichSourceInfo(basicSource, sourceDetailsMap);
+    SourceInfoEnriched enrichedSource =
+        SourceInfoEnriched.builder().details(sourceDetailsMap.get(basicSource.getId())).build();
 
     return BatchConfiguration.<SourceInfoEnriched>builder()
-        .type(basicConfig.getType())
         .cronExpression(basicConfig.getCronExpression())
         .query(basicConfig.getQuery())
         .source(enrichedSource)
@@ -386,10 +386,7 @@ public class AudienceServiceImpl implements AudienceService {
     StreamConfiguration.PatternDefinition<SourceInfoEnriched> enrichedPattern =
         buildEnrichedPatternDefinition(basicPattern, sourceDetailsMap);
 
-    return StreamConfiguration.<SourceInfoEnriched>builder()
-        .type(basicConfig.getType())
-        .pattern(enrichedPattern)
-        .build();
+    return StreamConfiguration.<SourceInfoEnriched>builder().pattern(enrichedPattern).build();
   }
 
   /**
@@ -483,7 +480,9 @@ public class AudienceServiceImpl implements AudienceService {
       Map<Long, DataSourceDetails> sourceDetailsMap) {
 
     SourceInfoEnriched enrichedSource =
-        enrichSourceInfo(basicEvent.getSourceInfo(), sourceDetailsMap);
+        SourceInfoEnriched.builder()
+            .details(sourceDetailsMap.get(basicEvent.getSourceInfo().getId()))
+            .build();
 
     StreamConfiguration.EventDefinition<SourceInfoEnriched> enrichedEvent =
         new StreamConfiguration.EventDefinition<>();
@@ -492,36 +491,6 @@ public class AudienceServiceImpl implements AudienceService {
     enrichedEvent.setCondition(basicEvent.getCondition());
 
     return enrichedEvent;
-  }
-
-  /**
-   * Enriches a single {@link SourceInfoBasic} instance with {@link DataSourceDetails}.
-   *
-   * <p>If the basic source is {@code null}, this method returns {@code null}. If no details are
-   * found for the given source identifier, the enriched source will contain only the identifier and
-   * default values for other fields.
-   *
-   * @param basicSource the basic source information to be enriched
-   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
-   *     enrichment
-   * @return an instance of {@link SourceInfoEnriched} with merged details, or {@code null} if the
-   *     input source is {@code null}
-   */
-  private SourceInfoEnriched enrichSourceInfo(
-      SourceInfoBasic basicSource, Map<Long, DataSourceDetails> sourceDetailsMap) {
-
-    if (basicSource == null) {
-      return null;
-    }
-
-    DataSourceDetails details = sourceDetailsMap.get(basicSource.getId());
-
-    return SourceInfoEnriched.builder()
-        .id(basicSource.getId())
-        .name(details != null ? details.getName() : null)
-        .type(details != null ? details.getType() : null)
-        .active(details != null && "ACTIVE".equals(details.getStatus()))
-        .build();
   }
 
   /**

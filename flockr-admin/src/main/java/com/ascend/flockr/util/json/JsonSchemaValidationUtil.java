@@ -7,6 +7,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import io.vertx.core.json.JsonObject;
 import java.util.Set;
@@ -31,7 +32,9 @@ public class JsonSchemaValidationUtil {
   @Inject
   public JsonSchemaValidationUtil(ObjectMapper objectMapper) {
     // Use Draft 7 (most common) or Draft 2020-12
-    this.schemaFactory = JsonSchemaFactory.builder().build();
+    this.schemaFactory =
+        JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4))
+            .build();
     this.objectMapper = objectMapper;
   }
 
@@ -57,10 +60,8 @@ public class JsonSchemaValidationUtil {
       // Convert Vert.x JsonObject to Jackson JsonNode for NetworkNT validator
       JsonNode schemaNode = objectMapper.readTree(schema.encode());
       JsonNode dataNode = objectMapper.readTree(data.encode());
-
       // Load schema
       JsonSchema jsonSchema = schemaFactory.getSchema(schemaNode);
-
       // Validate
       Set<ValidationMessage> errors = jsonSchema.validate(dataNode);
 

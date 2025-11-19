@@ -91,6 +91,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                                 .id(id)
                                 .name(request.getName())
                                 .typeId(request.getTypeId())
+                                .type(type.getType())
                                 .config(request.getConfig())
                                 .status("ACTIVE")
                                 .createdBy(createdBy)

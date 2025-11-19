@@ -31,6 +31,11 @@ public enum ErrorEnum implements RestError {
 
   AUDIENCE_NOT_FOUND("AUDIENCE_NOT_FOUND", "Audience not found", HttpStatus.SC_NOT_FOUND),
 
+  AUDIENCE_ALREADY_EXISTS(
+      "AUDIENCE_ALREADY_EXISTS",
+      "An audience with the same name already exists in this project",
+      HttpStatus.SC_CONFLICT),
+
   RULE_NOT_FOUND("RULE_NOT_FOUND", "Rule not found", HttpStatus.SC_NOT_FOUND),
 
   INVALID_REQUEST_BODY(

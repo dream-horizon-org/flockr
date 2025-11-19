@@ -7,14 +7,16 @@ import com.ascend.flockr.domain.audience.AudienceMeta;
 import com.ascend.flockr.io.response.AudienceMetaResponse;
 import com.ascend.flockr.repository.AudienceRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of {@link AudienceRepository} using PostgreSQL as the data store.
@@ -30,6 +32,7 @@ import lombok.RequiredArgsConstructor;
  * @author Flockr Team
  * @since 1.0
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class AudienceRepositoryImpl implements AudienceRepository {
   private final PostgresReaderClient postgresReaderClient;
@@ -37,8 +40,8 @@ public class AudienceRepositoryImpl implements AudienceRepository {
   private final ObjectMapper objectMapper;
 
   private static final String SQL_CREATE_AUDIENCE =
-      "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expiry_date, created_by) "
-          + "VALUES ($1, $2, $3, $4, $5, CAST($6 AS JSONB), $7, to_timestamp($8), $9) RETURNING id";
+      "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expire_date, created_by, name_vector) "
+          + "VALUES ($1, $2, $3, $4, $5::BIGINT[], CAST($6 AS JSONB), $7, to_timestamp($8), $9, to_tsvector('english', $3)) RETURNING id";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
       "SELECT id, tenant_id, project_id, name, description, "
@@ -46,7 +49,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
           + "EXTRACT(EPOCH FROM updated_at)::BIGINT AS updated_at, "
           + "EXTRACT(EPOCH FROM last_audience_updated_at)::BIGINT AS last_audience_updated_at, "
           + "user_count, custom_audience_config, type, verified, "
-          + "EXTRACT(EPOCH FROM expiry_date)::BIGINT AS expiry_date, sinks, created_by "
+          + "EXTRACT(EPOCH FROM expire_date)::BIGINT AS expire_date, sinks, created_by "
           + "FROM audiences WHERE id = $1 AND tenant_id = $2 AND project_id = $3";
 
   /**
@@ -57,17 +60,31 @@ public class AudienceRepositoryImpl implements AudienceRepository {
    */
   @Override
   public Single<Long> createAudience(AudienceMeta audienceMeta) {
+    JsonObject customConfig = audienceMeta.getCustomAudienceConfig();
+    String customConfigJson = customConfig != null ? customConfig.encode() : null;
+
+    List<Long> sinksList = audienceMeta.getSinks();
+    Long[] sinksArray =
+        (sinksList != null && !sinksList.isEmpty()) ? sinksList.toArray(new Long[0]) : new Long[0];
+
     Tuple params =
         Tuple.tuple()
             .addValue(audienceMeta.getTenantId())
             .addValue(audienceMeta.getProjectId())
             .addValue(audienceMeta.getName())
             .addValue(audienceMeta.getDescription())
-            .addValue(audienceMeta.getSinks())
-            .addValue(audienceMeta.getCustomAudienceConfig())
+            .addValue(sinksArray)
+            .addValue(customConfigJson)
             .addValue(audienceMeta.getType())
             .addValue(audienceMeta.getExpireDate())
             .addValue(audienceMeta.getCreatedBy());
+
+    log.info(
+        "Creating audience: tenantId={}, projectId={}, name={}, type={}",
+        audienceMeta.getTenantId(),
+        audienceMeta.getProjectId(),
+        audienceMeta.getName(),
+        audienceMeta.getType());
 
     return postgresWriterClient
         .executeWithTransaction(
@@ -75,6 +92,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
                 postgresWriterClient
                     .executeAndGenerateId(conn, SQL_CREATE_AUDIENCE, params)
                     .toMaybe())
+        .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to create audience")))
         .toSingle();
   }
 
@@ -110,8 +128,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
           String configJson = row.getString(AudienceConstants.CUSTOM_AUDIENCE_CONFIG);
           if (configJson != null) {
             try {
-              JsonNode configNode = objectMapper.readTree(configJson);
-              builder.customAudienceConfig(configNode);
+              builder.customAudienceConfig(objectMapper.convertValue(configJson, JsonObject.class));
             } catch (Exception e) {
               throw new RuntimeException(
                   "Failed to deserialize custom_audience_config for audience id " + id, e);

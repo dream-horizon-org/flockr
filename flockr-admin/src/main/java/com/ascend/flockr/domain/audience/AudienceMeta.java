@@ -1,6 +1,6 @@
 package com.ascend.flockr.domain.audience;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import io.vertx.core.json.JsonObject;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -42,7 +42,7 @@ public class AudienceMeta {
   private String type;
 
   /** Custom configuration for the audience as a JSON object. */
-  private JsonNode customAudienceConfig;
+  private JsonObject customAudienceConfig;
 
   /** List of data sink identifiers associated with this audience. */
   private List<Long> sinks;
