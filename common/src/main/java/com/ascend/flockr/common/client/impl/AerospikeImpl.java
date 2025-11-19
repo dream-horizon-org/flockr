@@ -52,6 +52,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AerospikeImpl implements Aerospike {
   private final AerospikeClient flockrAerospikeClient;
   private final AerospikeConfig aerospikeConfig;
+
   /** Maximum number of retries for write operations. */
   private static final int MAX_RETRIES = 3;
 
@@ -117,6 +118,7 @@ public class AerospikeImpl implements Aerospike {
    * {@inheritDoc}
    *
    * <p>This implementation performs atomic map operations to update three bins:
+   *
    * <ul>
    *   <li>Expiry bin: Updates the cohort expiry timestamp
    *   <li>UpdatedAt bin: Sets the current timestamp (always updates)
@@ -152,6 +154,7 @@ public class AerospikeImpl implements Aerospike {
    * {@inheritDoc}
    *
    * <p>This implementation performs atomic map operations to remove the cohort from three bins:
+   *
    * <ul>
    *   <li>Expiry bin: Removes the cohort entry
    *   <li>CreatedAt bin: Removes the cohort entry
@@ -214,6 +217,7 @@ public class AerospikeImpl implements Aerospike {
    * Creates an array of map operations for appending a cohort.
    *
    * <p>Creates three operations:
+   *
    * <ul>
    *   <li>Update expiry bin with cohortExpiry timestamp
    *   <li>Update updatedAt bin with current timestamp
@@ -245,6 +249,7 @@ public class AerospikeImpl implements Aerospike {
    * Creates a read policy for Aerospike operations.
    *
    * <p>Configures the policy to:
+   *
    * <ul>
    *   <li>Read from master and prole replicas (MASTER_PROLES)
    *   <li>Send the key with the request (for debugging/monitoring)
@@ -263,6 +268,7 @@ public class AerospikeImpl implements Aerospike {
    * Creates a write policy for Aerospike operations.
    *
    * <p>Configures the policy to:
+   *
    * <ul>
    *   <li>Retry up to {@value #MAX_RETRIES} times on failure
    *   <li>Send the key with the request (for debugging/monitoring)

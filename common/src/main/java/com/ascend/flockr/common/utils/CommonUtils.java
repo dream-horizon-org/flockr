@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
  * Utility class providing common helper methods used across the Flockr platform.
  *
  * <p>This class contains static utility methods for:
+ *
  * <ul>
  *   <li>System information (CPU cores)
  *   <li>User key generation (userId/guestId handling)
@@ -32,7 +33,8 @@ public class CommonUtils {
   /**
    * DateTimeFormatter instance configured with the standard date pattern used across the platform.
    *
-   * <p>The pattern follows: {@code "yyyy-MM-dd HH:mm:ss"} as defined in {@link Constants#DATE_PATTERN}.
+   * <p>The pattern follows: {@code "yyyy-MM-dd HH:mm:ss"} as defined in {@link
+   * Constants#DATE_PATTERN}.
    */
   @Getter
   private static final DateTimeFormatter formatter =
@@ -66,6 +68,7 @@ public class CommonUtils {
    * representation of userId. Otherwise, it returns the guestId.
    *
    * <p><strong>Usage:</strong>
+   *
    * <pre>{@code
    * String key = CommonUtils.getUserKey(12345L, "guest-abc");
    * // Returns "12345"
@@ -90,6 +93,7 @@ public class CommonUtils {
    * separated by a hyphen.
    *
    * <p><strong>Examples:</strong>
+   *
    * <pre>{@code
    * getAerospikeSetNameFromSource("users", "Dream11")
    * // Returns "users"
@@ -113,18 +117,19 @@ public class CommonUtils {
   /**
    * Converts an expiry date string to epoch milliseconds, with validation.
    *
-   * <p>This method parses the expiry date string using the standard date format and converts it
-   * to epoch milliseconds (UTC). It validates that the expiry time is not in the past.
+   * <p>This method parses the expiry date string using the standard date format and converts it to
+   * epoch milliseconds (UTC). It validates that the expiry time is not in the past.
    *
    * <p><strong>Validation Rules:</strong>
+   *
    * <ul>
    *   <li>If action is {@link Constants#ACTION_APPEND} and expiry is in the past, throws {@link
    *       DefinedErrors#INVALID_EXPIRY_TIME}
    *   <li>If action is {@link Constants#ACTION_REMOVE} and expiry is in the past, returns 0L
    * </ul>
    *
-   * <p><strong>Date Format:</strong> The expiry date must follow the pattern {@code
-   * "yyyy-MM-dd HH:mm:ss"} as defined in {@link Constants#DATE_PATTERN}.
+   * <p><strong>Date Format:</strong> The expiry date must follow the pattern {@code "yyyy-MM-dd
+   * HH:mm:ss"} as defined in {@link Constants#DATE_PATTERN}.
    *
    * @param expireAt the expiry date string in format "yyyy-MM-dd HH:mm:ss"
    * @param action the action being performed ("append" or "remove")

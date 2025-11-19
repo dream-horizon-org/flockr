@@ -1,8 +1,6 @@
 package com.ascend.flockr.common.annotation.validators;
 
 import com.ascend.flockr.common.annotation.DateTimeFormat;
-
-
 import com.ascend.flockr.common.utils.CommonUtils;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
@@ -11,8 +9,8 @@ import jakarta.validation.ConstraintValidatorContext;
  * Validator implementation for {@link DateTimeFormat} annotation.
  *
  * <p>This validator checks that a string value matches the date-time format defined in {@link
- * com.ascend.flockr.common.constants.Constants#DATE_PATTERN} ("yyyy-MM-dd HH:mm:ss"). It uses
- * the {@link com.ascend.flockr.common.utils.CommonUtils#getFormatter()} to parse the value.
+ * com.ascend.flockr.common.constants.Constants#DATE_PATTERN} ("yyyy-MM-dd HH:mm:ss"). It uses the
+ * {@link com.ascend.flockr.common.utils.CommonUtils#getFormatter()} to parse the value.
  *
  * <p><strong>Validation Rules:</strong>
  *

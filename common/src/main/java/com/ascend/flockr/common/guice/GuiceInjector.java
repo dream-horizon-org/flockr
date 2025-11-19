@@ -21,8 +21,8 @@ public class GuiceInjector implements ClassInjector {
   /**
    * Retrieves an instance of the specified class from the Guice application context.
    *
-   * <p>This method delegates to {@link AppContext#getInstance(Class)} to resolve the instance
-   * using Guice dependency injection.
+   * <p>This method delegates to {@link AppContext#getInstance(Class)} to resolve the instance using
+   * Guice dependency injection.
    *
    * @param <T> the type of instance to retrieve
    * @param clazz the class of the instance to retrieve

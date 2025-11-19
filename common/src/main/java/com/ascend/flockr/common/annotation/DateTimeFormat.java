@@ -1,6 +1,5 @@
 package com.ascend.flockr.common.annotation;
 
-
 import com.ascend.flockr.common.annotation.validators.DateTimeFormatValidator;
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
@@ -19,6 +18,7 @@ import java.lang.annotation.Target;
  * <p><strong>Format:</strong> {@code "yyyy-MM-dd HH:mm:ss"}
  *
  * <p><strong>Examples:</strong>
+ *
  * <ul>
  *   <li>Valid: {@code "2024-01-15 14:30:00"}
  *   <li>Invalid: {@code "2024-01-15"} (missing time)
@@ -35,8 +35,8 @@ import java.lang.annotation.Target;
  *
  * <p><strong>Null Handling:</strong>
  *
- * <p>Null values are considered valid (validation passes). To require non-null values, combine
- * with {@code @NotNull}.
+ * <p>Null values are considered valid (validation passes). To require non-null values, combine with
+ * {@code @NotNull}.
  *
  * @author Flockr Team
  * @since 1.0

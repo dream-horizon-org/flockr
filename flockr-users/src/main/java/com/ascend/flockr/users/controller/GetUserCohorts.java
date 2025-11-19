@@ -51,8 +51,6 @@ public class GetUserCohorts {
   public CompletionStage<Response> handle(
       @QueryParam("userId") Long userId,
       @QueryParam("guestId") String guestId,
-      //            @AcceptedValues(values = {Constants.SOURCE_DREAM11, Constants.SOURCE_FANCODE})
-      //      @QueryParam("source") String source)
       @QueryParam("projectId") Long projectId) {
 
     validate(userId, guestId, projectId);

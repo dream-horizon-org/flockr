@@ -73,8 +73,8 @@ public class Validator {
    * @param <T> the type of object to validate
    * @param object the object containing the property to validate
    * @param propertyName the name of the property to validate
-   * @throws ConstraintViolationException if validation fails (contains violations for the
-   *     specified property)
+   * @throws ConstraintViolationException if validation fails (contains violations for the specified
+   *     property)
    */
   public static <T> void validateConstraint(T object, String propertyName) {
     Set<ConstraintViolation<T>> violations =
@@ -93,8 +93,8 @@ public class Validator {
    * @param <T> the type of object to validate
    * @param object the object to validate
    * @param group the validation groups to validate (varargs)
-   * @throws ConstraintViolationException if validation fails (contains violations for the
-   *     specified groups)
+   * @throws ConstraintViolationException if validation fails (contains violations for the specified
+   *     groups)
    */
   public static <T> void validateConstraint(T object, Class<?>... group) {
     Set<ConstraintViolation<T>> violations = validateProperty.validate(object, group);

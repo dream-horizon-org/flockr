@@ -1,6 +1,5 @@
 package com.ascend.flockr.common.annotation.validators;
 
-
 import com.ascend.flockr.common.annotation.AcceptedValues;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
@@ -50,8 +49,8 @@ public class AcceptedValuesConstraintValidator
   /**
    * Initializes the validator with the accepted values from the annotation.
    *
-   * <p>This method is called once when the validator is created. It converts the array of
-   * accepted values from the annotation into a set for efficient lookup.
+   * <p>This method is called once when the validator is created. It converts the array of accepted
+   * values from the annotation into a set for efficient lookup.
    *
    * @param annotation the AcceptedValues annotation instance
    */

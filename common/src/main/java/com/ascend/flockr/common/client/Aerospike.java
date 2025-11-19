@@ -7,6 +7,7 @@ import java.util.Map;
  * Client interface for interacting with Aerospike database for cohort management operations.
  *
  * <p>This interface provides reactive (RxJava) methods for:
+ *
  * <ul>
  *   <li>Checking connection status
  *   <li>Retrieving cohort expiry information
@@ -20,13 +21,12 @@ import java.util.Map;
  * <p><strong>Key Concepts:</strong>
  *
  * <ul>
- *   <li><strong>Set Name:</strong> Aerospike set (similar to a table) where user records are
- *       stored
+ *   <li><strong>Set Name:</strong> Aerospike set (similar to a table) where user records are stored
  *   <li><strong>Cohort:</strong> A named group that users can belong to
  *   <li><strong>Source:</strong> The origin/platform that created the cohort assignment (e.g.,
  *       "Dream11", "FanCode")
- *   <li><strong>Cohort Expiry:</strong> Timestamp (epoch milliseconds) when the cohort
- *       membership expires
+ *   <li><strong>Cohort Expiry:</strong> Timestamp (epoch milliseconds) when the cohort membership
+ *       expires
  * </ul>
  *
  * <p><strong>Implementation:</strong>
@@ -74,6 +74,7 @@ public interface Aerospike {
    * Adds a user to a cohort with the specified expiry time.
    *
    * <p>This method performs an append operation that:
+   *
    * <ul>
    *   <li>Adds or updates the cohort in the expiry bin with the provided expiry timestamp
    *   <li>Updates the cohort's "updatedAt" timestamp to the current time
@@ -83,6 +84,7 @@ public interface Aerospike {
    * <p><strong>Operation Details:</strong>
    *
    * <p>The operation uses Aerospike map operations to atomically update multiple bins:
+   *
    * <ul>
    *   <li>{@code cohortExpiryBin}: Maps cohort name to expiry timestamp
    *   <li>{@code cohortUpdatedAtBin}: Maps cohort name to last update timestamp
@@ -115,6 +117,7 @@ public interface Aerospike {
    * Removes a user from a cohort.
    *
    * <p>This method performs a remove operation that deletes the cohort from all relevant bins:
+   *
    * <ul>
    *   <li>Removes the cohort from the expiry bin
    *   <li>Removes the cohort from the "createdAt" bin

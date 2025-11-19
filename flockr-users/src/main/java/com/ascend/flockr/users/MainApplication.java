@@ -4,11 +4,9 @@ import com.ascend.flockr.common.AbstractMainApplication;
 import com.ascend.flockr.users.module.AerospikeModule;
 import com.ascend.flockr.users.module.DefaultModule;
 import com.google.inject.Module;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Main entry point for the flockr-users application.
@@ -31,10 +29,8 @@ public class MainApplication extends AbstractMainApplication {
     app.dispatch(args);
   }
 
-    @Override
-    protected List<Module> getGuiceModules(Vertx vertx) {
-        return List.of(
-                new DefaultModule(vertx),
-                new AerospikeModule(vertx));
-    }
+  @Override
+  protected List<Module> getGuiceModules(Vertx vertx) {
+    return List.of(new DefaultModule(vertx), new AerospikeModule(vertx));
+  }
 }

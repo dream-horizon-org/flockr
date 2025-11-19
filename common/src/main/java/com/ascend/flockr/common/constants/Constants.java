@@ -4,6 +4,7 @@ package com.ascend.flockr.common.constants;
  * Centralized constants used across the Flockr platform.
  *
  * <p>This class contains application-wide constants including:
+ *
  * <ul>
  *   <li>Configuration limits (max verticles)
  *   <li>Date/time patterns
@@ -56,8 +57,8 @@ public class Constants {
    * Source identifier for Dream11 platform.
    *
    * <p>This is the default source identifier. When used with {@link
-   * com.ascend.flockr.common.utils.CommonUtils#getAerospikeSetNameFromSource(String, String)},
-   * it does not modify the base set name.
+   * com.ascend.flockr.common.utils.CommonUtils#getAerospikeSetNameFromSource(String, String)}, it
+   * does not modify the base set name.
    */
   public static final String SOURCE_DREAM11 = "Dream11";
 
@@ -65,8 +66,8 @@ public class Constants {
    * Source identifier for FanCode platform.
    *
    * <p>When used with {@link
-   * com.ascend.flockr.common.utils.CommonUtils#getAerospikeSetNameFromSource(String, String)},
-   * it appends "-fancode" to the base set name.
+   * com.ascend.flockr.common.utils.CommonUtils#getAerospikeSetNameFromSource(String, String)}, it
+   * appends "-fancode" to the base set name.
    */
   public static final String SOURCE_FANCODE = "FanCode";
 

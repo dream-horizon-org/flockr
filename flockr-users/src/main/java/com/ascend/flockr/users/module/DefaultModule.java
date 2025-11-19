@@ -1,6 +1,7 @@
 package com.ascend.flockr.users.module;
 
 import com.google.inject.AbstractModule;
+import io.vertx.core.Vertx;
 
 /**
  * Guice module for flockr-users dependency injection configuration.
@@ -10,4 +11,7 @@ import com.google.inject.AbstractModule;
  *
  * @since 1.0
  */
-public class DefaultModule extends AbstractModule {}
+public class DefaultModule extends AbstractModule {
+    public DefaultModule(Vertx vertx) {
+    }
+}
