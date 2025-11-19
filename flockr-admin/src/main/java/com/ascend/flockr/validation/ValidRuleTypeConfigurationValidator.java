@@ -26,7 +26,7 @@ public class ValidRuleTypeConfigurationValidator
     }
 
     RuleType ruleType = rule.getRuleType();
-    RuleConfiguration<SourceInfoBasic> configuration = rule.getConfiguration();
+    RuleConfiguration<SourceInfo> configuration = rule.getConfiguration();
 
     // Check if ruleType matches configuration type
     boolean isValid = false;

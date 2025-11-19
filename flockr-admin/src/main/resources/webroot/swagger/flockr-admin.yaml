@@ -623,7 +623,7 @@ components:
       - source
       type: object
       allOf:
-      - $ref: '#/components/schemas/RuleConfigurationSourceInfoBasic'
+      - $ref: '#/components/schemas/RuleConfigurationSourceInfo'
       - type: object
         properties:
           source:
@@ -671,25 +671,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Rule'
-    DataSourceDetails:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        typeId:
-          type: integer
-          format: int64
-        type:
-          type: string
-        config:
-          $ref: '#/components/schemas/JsonObject'
-        status:
-          type: string
-        createdBy:
-          type: string
     EventCondition:
       type: object
       properties:
@@ -779,6 +760,12 @@ components:
     Rule:
       required:
       - configuration
+      - description
+      - end_time
+      - name
+      - rule_action
+      - rule_type
+      - start_time
       type: object
       properties:
         name:
@@ -786,7 +773,7 @@ components:
         description:
           type: string
         configuration:
-          $ref: '#/components/schemas/RuleConfigurationSourceInfoBasic'
+          $ref: '#/components/schemas/RuleConfigurationSourceInfo'
         start_time:
           type: integer
           format: int64
@@ -803,7 +790,7 @@ components:
           enum:
           - ADD
           - REMOVE
-    RuleConfigurationSourceInfoBasic:
+    RuleConfigurationSourceInfo:
       required:
       - configuration_type
       type: object
@@ -823,33 +810,11 @@ components:
           conditionValue:
             type: string
     SourceInfo:
-      required:
-      - type
       type: object
       properties:
-        type:
-          type: string
-      discriminator:
-        propertyName: type
-    SourceInfoBasic:
-      required:
-      - id
-      type: object
-      allOf:
-      - $ref: '#/components/schemas/SourceInfo'
-      - type: object
-        properties:
-          id:
-            type: integer
-            format: int64
-    SourceInfoEnriched:
-      type: object
-      allOf:
-      - $ref: '#/components/schemas/SourceInfo'
-      - type: object
-        properties:
-          details:
-            $ref: '#/components/schemas/DataSourceDetails'
+        id:
+          type: integer
+          format: int64
     StepDataSourceInfo:
       type: object
       properties:
@@ -862,7 +827,7 @@ components:
     StreamConfiguration:
       type: object
       allOf:
-      - $ref: '#/components/schemas/RuleConfigurationSourceInfoBasic'
+      - $ref: '#/components/schemas/RuleConfigurationSourceInfo'
       - type: object
         properties:
           pattern:
@@ -932,6 +897,25 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/PaginatedResponseDataSinkDetails'
+    DataSourceDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        typeId:
+          type: integer
+          format: int64
+        type:
+          type: string
+        config:
+          $ref: '#/components/schemas/JsonObject'
+        status:
+          type: string
+        createdBy:
+          type: string
     PaginatedResponseDataSourceDetails:
       type: object
       properties:

@@ -1,15 +1,16 @@
 package com.ascend.flockr.domain.rule;
 
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class SourceInfoEnriched implements SourceInfo {
+@SuperBuilder
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class SourceInfoEnriched extends SourceInfo {
   private DataSourceDetails details;
 }

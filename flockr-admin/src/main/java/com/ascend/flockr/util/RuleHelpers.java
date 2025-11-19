@@ -1,14 +1,7 @@
 package com.ascend.flockr.util;
 
 import com.ascend.flockr.constants.rule.RuleConstants;
-import com.ascend.flockr.domain.rule.BatchConfiguration;
-import com.ascend.flockr.domain.rule.RuleAction;
-import com.ascend.flockr.domain.rule.RuleConfiguration;
-import com.ascend.flockr.domain.rule.RuleMeta;
-import com.ascend.flockr.domain.rule.RuleStatus;
-import com.ascend.flockr.domain.rule.RuleType;
-import com.ascend.flockr.domain.rule.SourceInfoBasic;
-import com.ascend.flockr.domain.rule.StreamConfiguration;
+import com.ascend.flockr.domain.rule.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.rxjava3.sqlclient.Row;
@@ -22,10 +15,10 @@ public final class RuleHelpers {
   private static final ObjectMapper mapper = new ObjectMapper();
 
   /**
-   * Deserialize JSON string to RuleConfiguration with SourceInfoBasic. Uses TypeReference for
+   * Deserialize JSON string to RuleConfiguration with SourceInfo. Uses TypeReference for
    * proper generic handling.
    */
-  public static RuleConfiguration<SourceInfoBasic> deserializeRuleConfiguration(String configJson) {
+  public static RuleConfiguration<SourceInfo> deserializeRuleConfiguration(String configJson) {
     try {
       // TypeReference preserves generic type information at runtime
       return mapper.readValue(configJson, new TypeReference<>() {});
@@ -34,9 +27,8 @@ public final class RuleHelpers {
     }
   }
 
-  /** Serialize RuleConfiguration with SourceInfoBasic to JSON string. */
-  public static String serializeRuleConfiguration(
-      RuleConfiguration<SourceInfoBasic> configuration) {
+  /** Serialize RuleConfiguration with SourceInfo to JSON string. */
+  public static String serializeRuleConfiguration(RuleConfiguration<SourceInfo> configuration) {
     try {
       return mapper.writeValueAsString(configuration);
     } catch (Exception e) {
@@ -44,12 +36,12 @@ public final class RuleHelpers {
     }
   }
 
-  public static RuleMeta<SourceInfoBasic> mapRuleRow(Row row) {
+  public static RuleMeta<SourceInfo> mapRuleRow(Row row) {
     String configJson = row.getString(RuleConstants.CONFIGURATION);
-    RuleConfiguration<SourceInfoBasic> configuration =
+    RuleConfiguration<SourceInfo> configuration =
         RuleHelpers.deserializeRuleConfiguration(configJson);
 
-    return RuleMeta.<SourceInfoBasic>builder()
+    return RuleMeta.builder()
         .ruleId(row.getLong(RuleConstants.ID))
         .audienceId(row.getLong(RuleConstants.AUDIENCE_ID))
         .tenantId(row.getString(RuleConstants.TENANT_ID))
@@ -67,24 +59,24 @@ public final class RuleHelpers {
         .build();
   }
 
-  public static List<Long> extractSourceIdFromRuleMeta(RuleMeta<SourceInfoBasic> ruleMeta) {
+  public static List<Long> extractSourceIdFromRuleMeta(RuleMeta<SourceInfo> ruleMeta) {
     List<Long> sourceIds = new ArrayList<>();
     if (ruleMeta.getRuleType() == RuleType.STREAM) {
-      StreamConfiguration<SourceInfoBasic> streamConfiguration =
-          (StreamConfiguration<SourceInfoBasic>) ruleMeta.getConfiguration();
+      StreamConfiguration<SourceInfo> streamConfiguration =
+          (StreamConfiguration<SourceInfo>) ruleMeta.getConfiguration();
       sourceIds =
           streamConfiguration.getPattern().getPattern().parallelStream()
               .flatMap(
                   step -> {
-                    StreamConfiguration.StepData<SourceInfoBasic> stepData = step.getData();
+                    StreamConfiguration.StepData<SourceInfo> stepData = step.getData();
                     return stepData.getEvent().parallelStream()
                         .map(eventDefinition -> eventDefinition.getSourceInfo().getId());
                   })
               .distinct()
               .toList();
     } else {
-      BatchConfiguration<SourceInfoBasic> batchConfiguration =
-          (BatchConfiguration<SourceInfoBasic>) ruleMeta.getConfiguration();
+      BatchConfiguration<SourceInfo> batchConfiguration =
+          (BatchConfiguration<SourceInfo>) ruleMeta.getConfiguration();
       sourceIds.add(batchConfiguration.getSource().getId());
     }
     return sourceIds;

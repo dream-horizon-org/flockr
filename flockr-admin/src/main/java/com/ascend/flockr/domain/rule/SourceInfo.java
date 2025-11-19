@@ -1,16 +1,16 @@
 package com.ascend.flockr.domain.rule;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
-@JsonTypeInfo(
-    use = JsonTypeInfo.Id.NAME,
-    include = JsonTypeInfo.As.EXISTING_PROPERTY,
-    property = "type",
-    defaultImpl = SourceInfoBasic.class // Default to SourceInfoBasic if type is missing
-    )
-@JsonSubTypes({
-  @JsonSubTypes.Type(value = SourceInfoEnriched.class, name = "ENRICHED"),
-  @JsonSubTypes.Type(value = SourceInfoBasic.class, name = "BASIC")
-})
-public interface SourceInfo {}
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@SuperBuilder
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class SourceInfo {
+  private Long id;
+}

@@ -3,7 +3,7 @@ package com.ascend.flockr.repository.impl;
 import com.ascend.flockr.client.postgres.PostgresReaderClient;
 import com.ascend.flockr.client.postgres.PostgresWriterClient;
 import com.ascend.flockr.domain.rule.RuleMeta;
-import com.ascend.flockr.domain.rule.SourceInfoBasic;
+import com.ascend.flockr.domain.rule.SourceInfo;
 import com.ascend.flockr.repository.RuleRepository;
 import com.ascend.flockr.util.RuleHelpers;
 import com.google.inject.Inject;
@@ -41,9 +41,9 @@ public class RuleRepositoryImpl implements RuleRepository {
           + "FROM rules WHERE audience_id = $1 AND tenant_id = $2 AND project_id = $3 ORDER BY created_at DESC";
 
   @Override
-  public Single<Boolean> createRules(List<RuleMeta<SourceInfoBasic>> ruleMetas) {
+  public Single<Boolean> createRules(List<RuleMeta<SourceInfo>> ruleMetas) {
     List<Tuple> batchParams = new ArrayList<>(ruleMetas.size());
-    for (RuleMeta<SourceInfoBasic> ruleMeta : ruleMetas) {
+    for (RuleMeta<SourceInfo> ruleMeta : ruleMetas) {
       String configJson = RuleHelpers.serializeRuleConfiguration(ruleMeta.getConfiguration());
       Tuple params =
           Tuple.tuple()
@@ -71,14 +71,13 @@ public class RuleRepositoryImpl implements RuleRepository {
   }
 
   @Override
-  public Single<RuleMeta<SourceInfoBasic>> getRuleById(
-      String tenantId, String projectId, Long ruleId) {
+  public Single<RuleMeta<SourceInfo>> getRuleById(String tenantId, String projectId, Long ruleId) {
     return postgresReaderClient.fetchOne(
         SQL_GET_RULE_BY_ID, Tuple.of(ruleId, tenantId, projectId), RuleHelpers::mapRuleRow);
   }
 
   @Override
-  public Single<List<RuleMeta<SourceInfoBasic>>> getRulesByAudienceId(
+  public Single<List<RuleMeta<SourceInfo>>> getRulesByAudienceId(
       String tenantId, String projectId, Long audienceId) {
     return postgresReaderClient.fetchAll(
         SQL_GET_RULES_BY_AUDIENCE,
