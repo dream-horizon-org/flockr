@@ -13,7 +13,8 @@ import lombok.NoArgsConstructor;
  * Request DTO for mapping a user to a cohort.
  *
  * <p>Contains all information needed to assign or remove a user from a cohort, including user
- * identifier, cohort name, action type, and expiry information.
+ * identifier, tenant and project identifiers for multi-tenant isolation, cohort name, action type,
+ * and expiry information.
  *
  * @since 1.0
  */
@@ -21,14 +22,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MapUserCohortsRequest {
-  /** User ID (optional if guestId is provided). */
+  /** User ID (required). */
   @Positive private Long userId;
 
-  /** Guest ID (optional if userId is provided). */
-  private String guestId;
+  /** Tenant ID (required for multi-tenant isolation). */
+  @NotBlank private String tenantId;
 
-  /** Project ID (optional). */
-  private Long projectId;
+  /** Project ID (required for multi-tenant isolation). */
+  @Positive private Long projectId;
 
   /** Cohort name to assign/remove user from. */
   @NotBlank private String cohortKey;

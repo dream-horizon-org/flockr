@@ -12,6 +12,5 @@ import io.vertx.core.Vertx;
  * @since 1.0
  */
 public class DefaultModule extends AbstractModule {
-    public DefaultModule(Vertx vertx) {
-    }
+  public DefaultModule(Vertx vertx) {}
 }

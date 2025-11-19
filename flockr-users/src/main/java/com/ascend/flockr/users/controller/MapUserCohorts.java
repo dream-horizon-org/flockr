@@ -38,13 +38,17 @@ public class MapUserCohorts {
    * <p>Request body should contain:
    *
    * <ul>
-   *   <li>{@code userId} or {@code guestId} - User identifier
+   *   <li>{@code userId} - User identifier (required)
+   *   <li>{@code tenantId} - Tenant ID (required)
+   *   <li>{@code projectId} - Project ID (required)
    *   <li>{@code cohortKey} - Cohort name
    *   <li>{@code source} - Source identifier
    *   <li>{@code action} - "append" or "remove"
    *   <li>{@code expireAt} - Expiry time (for append action)
-   *   <li>{@code projectId} - Project ID (optional)
    * </ul>
+   *
+   * <p>The set name used for Aerospike operations is generated as "{tenantId}_{projectId}" to
+   * ensure multi-tenant isolation.
    *
    * @param request the mapping request
    * @return CompletionStage resolving to HTTP 200 with success status, or 400 if validation fails
@@ -57,8 +61,8 @@ public class MapUserCohorts {
   public CompletionStage<Response> handle(MapUserCohortsRequest request) {
     request.validate();
 
-    if (request.getUserId() == null && request.getGuestId() == null) {
-      log.error("userId and guestId provided are null");
+    if (request.getUserId() == null || request.getUserId() <= 0) {
+      log.error("userId is required and must be positive");
       throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
     }
 

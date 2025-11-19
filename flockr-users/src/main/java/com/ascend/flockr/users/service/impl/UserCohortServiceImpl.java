@@ -6,11 +6,11 @@ import com.ascend.flockr.common.client.Aerospike;
 import com.ascend.flockr.common.config.AerospikeConfig;
 import com.ascend.flockr.common.constants.Constants;
 import com.ascend.flockr.common.exception.errors.DefinedErrors;
-import com.ascend.flockr.common.utils.CommonUtils;
 import com.ascend.flockr.users.constants.BulkCohortAssignmentConstants;
 import com.ascend.flockr.users.dto.BulkOperationResult;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import com.ascend.flockr.users.service.UserCohortsService;
+import com.ascend.flockr.users.util.SetNameUtil;
 import com.dream11.rest.exception.RestException;
 import com.dream11.rest.util.ExceptionUtil;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
@@ -63,12 +63,13 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * {@inheritDoc}
    *
    * <p>Implementation retrieves cohort data from Aerospike and filters for active cohorts (those
-   * with expiry time greater than current time).
+   * with expiry time greater than current time). Uses set name generated from tenantId and
+   * projectId for multi-tenant isolation.
    */
   @Override
-  public Single<List<String>> getCohorts(Long userId, String guestId, Long projectId) {
-    String userKey = CommonUtils.getUserKey(userId, guestId);
-    String setName = String.valueOf(projectId);
+  public Single<List<String>> getCohorts(Long userId, String tenantId, Long projectId) {
+    String userKey = String.valueOf(userId);
+    String setName = SetNameUtil.generateSetName(tenantId, projectId);
     return aerospikeClient.getCohortExpiryBin(userKey, setName).map(this::getActiveCohortsFromMap);
   }
 
@@ -76,13 +77,14 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * {@inheritDoc}
    *
    * <p>Implementation handles both append and remove actions. For append operations, validates
-   * expiry time. Returns {@code false} if Aerospike key is not found.
+   * expiry time. Returns {@code false} if Aerospike key is not found. Uses set name generated from
+   * tenantId and projectId for multi-tenant isolation.
    */
   @Override
   public Single<Boolean> mapUserCohorts(MapUserCohortsRequest request) {
-    String userKey = CommonUtils.getUserKey(request.getUserId(), request.getGuestId());
+    String userKey = String.valueOf(request.getUserId());
     String source = request.getSource();
-    String setName = request.getProjectId() != null ? String.valueOf(request.getProjectId()) : null;
+    String setName = SetNameUtil.generateSetName(request.getTenantId(), request.getProjectId());
 
     Single<Boolean> single;
     try {
@@ -136,12 +138,14 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * <p>Implementation saves the CSV file to disk temporarily, then processes it with streaming to
    * avoid loading entire file into memory. The temp file is automatically cleaned up after
-   * processing.
+   * processing. Uses set name generated from tenantId and projectId for multi-tenant isolation.
    */
   @Override
-  public Single<BulkOperationResult> assignUsersToCohort(String cohortName, InputPart csvFilePart) {
+  public Single<BulkOperationResult> assignUsersToCohort(
+      String cohortName, String tenantId, Long projectId, InputPart csvFilePart) {
+    String setName = SetNameUtil.generateSetName(tenantId, projectId);
     return Single.fromCallable(() -> persistCsvToTempFile(csvFilePart))
-        .flatMap(tempPath -> processCsvAndAssign(tempPath, cohortName));
+        .flatMap(tempPath -> processCsvAndAssign(tempPath, cohortName, setName));
   }
 
   /**
@@ -177,9 +181,11 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * @param csvFile path to the CSV file on disk
    * @param cohortName name of the cohort to assign users to
+   * @param setName the Aerospike set name (generated from tenantId and projectId)
    * @return Single emitting bulk operation result
    */
-  public Single<BulkOperationResult> processCsvAndAssign(Path csvFile, String cohortName) {
+  public Single<BulkOperationResult> processCsvAndAssign(
+      Path csvFile, String cohortName, String setName) {
     final AtomicInteger total = new AtomicInteger();
     final AtomicInteger success = new AtomicInteger();
     final AtomicInteger failed = new AtomicInteger();
@@ -201,7 +207,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
                     .runOn(Schedulers.io())
                     .flatMap(
                         userId ->
-                            assignSingleUser(userId, cohortName)
+                            assignSingleUser(userId, cohortName, setName)
                                 .retryWhen(errors -> applyRetryPolicy(errors, userId, cohortName))
                                 .doOnSuccess(
                                     ok -> {
@@ -306,12 +312,12 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * @param userUuid the user UUID to assign
    * @param cohortName the cohort name to assign user to
+   * @param setName the Aerospike set name (generated from tenantId and projectId)
    * @return Single emitting {@code true} if assignment succeeded, {@code false} otherwise
    */
-  private Single<Boolean> assignSingleUser(String userUuid, String cohortName) {
-    String userKey = CommonUtils.getUserKey(null, userUuid);
+  private Single<Boolean> assignSingleUser(String userUuid, String cohortName, String setName) {
+    String userKey = userUuid; // UUID is used directly as userKey
     long expiry = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(365); // 1-year default expiry
-    String setName = aerospikeConfig.getNamespace(); // adjust if set differs per project
 
     return aerospikeClient
         .appendCohort(userKey, cohortName, Constants.SOURCE_DREAM11, expiry, setName)
