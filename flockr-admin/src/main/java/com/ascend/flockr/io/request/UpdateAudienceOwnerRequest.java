@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class UpdateCohortOwnerRequest {
+public class UpdateAudienceOwnerRequest {
 
-  @NotNull private UpdateCohortOwnerAction action;
+  @NotNull private UpdateAudienceOwnerAction action;
   @NotEmpty private String email;
 }

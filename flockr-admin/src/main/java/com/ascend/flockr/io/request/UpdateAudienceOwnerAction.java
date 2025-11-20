@@ -1,6 +1,6 @@
 package com.ascend.flockr.io.request;
 
-public enum UpdateCohortOwnerAction {
+public enum UpdateAudienceOwnerAction {
   add,
   remove,
 }

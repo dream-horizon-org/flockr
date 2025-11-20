@@ -2,7 +2,7 @@ package com.ascend.flockr.repository.impl;
 
 import com.ascend.flockr.client.postgres.PostgresReaderClient;
 import com.ascend.flockr.client.postgres.PostgresWriterClient;
-import com.ascend.flockr.domain.cohort.Cohort;
+import com.ascend.flockr.domain.audience.AudienceMeta;
 import com.ascend.flockr.domain.cohort.CohortOwner;
 import com.ascend.flockr.repository.CohortRepository;
 import com.google.inject.Inject;
@@ -20,29 +20,29 @@ public class CohortRepositoryImpl implements CohortRepository {
   private final PostgresWriterClient postgresWriterClient;
 
     private static final String FIND_COHORT_BY_ID =
-            "SELECT id, name, fts_name, description, is_expired AS expired, "
-                    + "UNIX_TIMESTAMP(expiration_date) AS expiration_date, "
-                    + "client, created_by, verified, "
-                    + "UNIX_TIMESTAMP(created_at) AS created_at, "
-                    + "UNIX_TIMESTAMP(updated_at) AS updated_at, "
-                    + "UNIX_TIMESTAMP(last_batch_execution_time) AS last_batch_execution_time, "
-                    + "user_count, dynamic_expire_config, cohort_type "
-                    + "FROM cohort_master WHERE id = ?";
+            "SELECT id, name, description, verified, "
+                    + "EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at, "
+                    + "EXTRACT(EPOCH FROM updated_at)::BIGINT AS updated_at, "
+                    + "EXTRACT(EPOCH FROM expire_date)::BIGINT AS expire_date, "
+                    + "user_count, created_by "
+                    + "FROM audiences WHERE id = ?";
 
     private static final String FIND_OWNERS_BY_COHORT_ID =
-            "SELECT id, cohort_id, owner, is_removed, removed_by, added_by, "
-                    + "UNIX_TIMESTAMP(created_at) AS created_at "
-                    + "FROM cohort_owner WHERE cohort_id = ? ORDER BY created_at DESC";
+            "SELECT id, audience_id AS cohort_id, name, status, "
+                    + "EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at "
+                    + "FROM audience_owners WHERE audience_id = $1 ORDER BY created_at DESC";
 
-  private static final String INSERT_COHORT_OWNER =
-      "INSERT INTO cohort_owner(cohort_id, owner, added_by) VALUES (?, ? , ?)";
+  private static final String INSERT_AUDIENCE_OWNER =
+      "INSERT INTO audience_owners (audience_id, tenant_id, project_id, name, status) "
+          + "SELECT $1, a.tenant_id, a.project_id, $2, 'ACTIVE' FROM audiences a WHERE a.id = $1";
 
-  private static final String REMOVE_COHORT_OWNER =
-      "UPDATE cohort_owner SET is_removed = TRUE, removed_by = ? WHERE cohort_id = ? AND owner = ?";
+  private static final String REMOVE_AUDIENCE_OWNER =
+      "UPDATE audience_owners SET status = 'INACTIVE', updated_at = CURRENT_TIMESTAMP "
+          + "WHERE audience_id = $1 AND name = $2 AND status = 'ACTIVE'";
 
   @Override
-  public Single<Cohort> findById(Long cohortId) {
-    return postgresReaderClient.fetchOne(FIND_COHORT_BY_ID, Tuple.of(cohortId), CohortRepositoryImpl::mapCohortRow);
+  public Single<AudienceMeta> findById(Long cohortId) {
+    return postgresReaderClient.fetchOne(FIND_COHORT_BY_ID, Tuple.of(cohortId), CohortRepositoryImpl::mapAudienceRow);
   }
 
   @Override
@@ -56,7 +56,7 @@ public class CohortRepositoryImpl implements CohortRepository {
         .executeWithTransaction(
             conn ->
                 postgresWriterClient
-                    .execute(conn, INSERT_COHORT_OWNER, Tuple.of(cohortId, ownerEmail, userEmail))
+                    .execute(conn, INSERT_AUDIENCE_OWNER, Tuple.of(cohortId, ownerEmail))
                     .toMaybe())
         .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to add owner")))
         .toSingle();
@@ -68,38 +68,35 @@ public class CohortRepositoryImpl implements CohortRepository {
         .executeWithTransaction(
             conn ->
                 postgresWriterClient
-                    .execute(conn, REMOVE_COHORT_OWNER, Tuple.of(userEmail, cohortId, ownerEmail))
+                    .execute(conn, REMOVE_AUDIENCE_OWNER, Tuple.of(cohortId, ownerEmail))
                     .toMaybe())
         .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to remove owner")))
         .toSingle();
   }
 
-  private static Cohort mapCohortRow(Row row) {
-    Cohort c = new Cohort();
-    c.setId(row.getLong("id"));
-    c.setName(row.getString("name"));
-    c.setDescription(row.getString("description"));
-    c.setExpired(row.getBoolean("expired"));
-    c.setExpirationDate(row.getLong("expiration_date"));
-    c.setClient(row.getString("client"));
-    c.setCreatedBy(row.getString("created_by"));
-    c.setCreatedAt(row.getLong("created_at"));
-    c.setUpdatedAt(row.getLong("updated_at"));
-    c.setLastBatchExecutionTime(row.getLong("last_batch_execution_time"));
-    c.setUserCount(row.getLong("user_count"));
-    c.setCohortType(row.getString("cohort_type"));
-    c.setVerified(row.getBoolean("verified"));
-    return c;
+  private static AudienceMeta mapAudienceRow(Row row) {
+    AudienceMeta m = new AudienceMeta();
+    m.setAudienceId(row.getLong("id"));
+    m.setName(row.getString("name"));
+    m.setDescription(row.getString("description"));
+    m.setVerified(row.getBoolean("verified"));
+    m.setCreatedAt(row.getLong("created_at"));
+    m.setUpdatedAt(row.getLong("updated_at"));
+    m.setExpireDate(row.getLong("expire_date"));
+    m.setUserCount(row.getLong("user_count"));
+    m.setCreatedBy(row.getString("created_by"));
+    return m;
   }
 
   private static CohortOwner mapOwnerRow(Row row) {
     CohortOwner o = new CohortOwner();
     o.setId(row.getLong("id"));
     o.setCohortId(row.getLong("cohort_id"));
-    o.setOwner(row.getString("owner"));
-    o.setIsRemoved(row.getBoolean("is_removed"));
-    o.setRemovedBy(row.getString("removed_by"));
-    o.setAddedBy(row.getString("added_by"));
+    o.setOwner(row.getString("name"));
+    String status = row.getString("status");
+    o.setIsRemoved(status != null && !"ACTIVE".equalsIgnoreCase(status));
+    o.setRemovedBy(null);
+    o.setAddedBy(null);
     o.setCreatedAt(row.getLong("created_at"));
     return o;
   }

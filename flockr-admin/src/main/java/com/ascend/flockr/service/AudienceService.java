@@ -2,10 +2,12 @@ package com.ascend.flockr.service;
 
 import com.ascend.flockr.io.request.CreateAudienceRequest;
 import com.ascend.flockr.io.request.CreateRulesRequest;
+import com.ascend.flockr.io.request.UpdateAudienceOwnerRequest;
 import com.ascend.flockr.io.response.AudienceDetailsResponse;
 import com.ascend.flockr.io.response.AudienceMetaResponse;
 import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 
 /**
@@ -88,4 +90,7 @@ public interface AudienceService {
       Boolean verified,
       Integer page,
       Integer pageSize);
+
+  Completable updateAudienceOwner(Long cohortId, String userEmail, UpdateAudienceOwnerRequest updateCohortOwnerRequest);
+
 }
