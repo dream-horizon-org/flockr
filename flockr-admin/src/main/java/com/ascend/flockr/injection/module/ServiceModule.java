@@ -6,6 +6,8 @@ import com.ascend.flockr.client.postgres.PostgresReaderClient;
 import com.ascend.flockr.client.postgres.PostgresWriterClient;
 import com.ascend.flockr.client.postgres.impl.PostgresReaderClientImpl;
 import com.ascend.flockr.client.postgres.impl.PostgresWriterClientImpl;
+import com.ascend.flockr.client.spark.SparkClient;
+import com.ascend.flockr.client.spark.impl.SparkClientImpl;
 import com.ascend.flockr.client.webclient.WebClient;
 import com.ascend.flockr.client.webclient.impl.WebClientImpl;
 import com.ascend.flockr.config.*;
@@ -92,13 +94,14 @@ public class ServiceModule extends DefaultModule {
     bind(FlinkConfig.class).toProvider(FlinkConfig.provider()).asEagerSingleton();
     bind(HttpServerConfig.class).toProvider(HttpServerConfig.provider()).asEagerSingleton();
     bind(PostgresConfig.class).toProvider(PostgresConfig.provider()).asEagerSingleton();
+    bind(SparkConfig.class).toProvider(SparkConfig.provider()).asEagerSingleton();
     bind(WebClientConfig.class).toProvider(WebClientConfig.provider()).asEagerSingleton();
   }
 
   /**
    * Binds client implementations as singletons.
    *
-   * <p>Binds WebClient, FlinkClient, and PostgreSQL reader/writer clients.
+   * <p>Binds WebClient, FlinkClient, SparkClient, and PostgreSQL reader/writer clients.
    */
   private void bindClients() {
     //    web client bindings
@@ -112,6 +115,9 @@ public class ServiceModule extends DefaultModule {
     bind(PostgresWriterClientImpl.class).in(Singleton.class);
     bind(PostgresReaderClient.class).to(PostgresReaderClientImpl.class);
     bind(PostgresWriterClient.class).to(PostgresWriterClientImpl.class);
+    //    spark client bindings
+    bind(SparkClientImpl.class).in(Singleton.class);
+    bind(SparkClient.class).to(SparkClientImpl.class);
   }
 
   /**
