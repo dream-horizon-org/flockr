@@ -11,4 +11,3 @@ public class FlinkJobNotFoundException extends FlinkClientException {
     super("FLINK_JOB_NOT_FOUND", String.format("Flink job not found: %s", jobId), 404, cause);
   }
 }
-

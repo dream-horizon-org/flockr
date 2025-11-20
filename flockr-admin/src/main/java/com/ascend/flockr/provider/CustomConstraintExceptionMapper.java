@@ -2,7 +2,6 @@ package com.ascend.flockr.provider;
 
 import com.ascend.flockr.constants.Constants;
 import com.dream11.rest.exception.RestException;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
@@ -21,7 +20,13 @@ public class CustomConstraintExceptionMapper
     log.error("Constraint violation: ", constraintViolationException);
     String errorMessage =
         constraintViolationException.getConstraintViolations().stream()
-            .map(ConstraintViolation::getMessageTemplate)
+            .map(
+                violation ->
+                    violation.getPropertyPath()
+                        + ": "
+                        + (violation.getMessage() != null
+                            ? violation.getMessage()
+                            : violation.getMessageTemplate()))
             .collect(Collectors.joining(Constants.COMMA));
 
     RestException restException =

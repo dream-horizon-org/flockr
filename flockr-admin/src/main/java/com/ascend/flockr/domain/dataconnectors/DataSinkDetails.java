@@ -1,5 +1,7 @@
 package com.ascend.flockr.domain.dataconnectors;
 
+import com.ascend.flockr.constants.dataconnectors.DataConnectorTypeConstants;
+import com.ascend.flockr.constants.dataconnectors.DataSinkConstants;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Row;
 import lombok.AllArgsConstructor;
@@ -21,14 +23,20 @@ public class DataSinkDetails {
   private String createdBy;
 
   public static DataSinkDetails mapSinkRow(Row row) {
+    JsonObject config = null;
+    String configStr = row.getString(DataSinkConstants.CONFIG);
+    if (configStr != null && !configStr.isBlank()) {
+      config = new JsonObject(configStr);
+    }
+
     return DataSinkDetails.builder()
-        .id(row.getLong("id"))
-        .name(row.getString("name"))
-        .typeId(row.getLong("type_id"))
-        .type(row.getString("type"))
-        .config(row.getJsonObject("config"))
-        .status(row.getString("status"))
-        .createdBy(row.getString("created_by"))
+        .id(row.getLong(DataSinkConstants.ID))
+        .name(row.getString(DataSinkConstants.NAME))
+        .typeId(row.getLong(DataSinkConstants.TYPE_ID))
+        .type(row.getString(DataConnectorTypeConstants.TYPE))
+        .config(config)
+        .status(row.getString(DataSinkConstants.STATUS))
+        .createdBy(row.getString(DataSinkConstants.CREATED_BY))
         .build();
   }
 }

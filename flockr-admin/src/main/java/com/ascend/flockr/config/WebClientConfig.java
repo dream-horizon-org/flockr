@@ -5,6 +5,16 @@ import com.typesafe.config.Optional;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Configuration class for Vert.x Web Client settings.
+ *
+ * <p>This configuration is loaded from {@code config/webclient/default.conf} and contains all
+ * settings needed to configure the HTTP client, including connection timeouts, pool sizes,
+ * keep-alive settings, and HTTP pipelining options.
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @Data
 @NoArgsConstructor
 public class WebClientConfig {
@@ -26,6 +36,12 @@ public class WebClientConfig {
   @Optional private boolean pipelining = DEFAULT_PIPELINING;
   @Optional private int pipeliningLimit = DEFAULT_PIPELINING_LIMIT;
 
+  /**
+   * Creates a provider for WebClientConfig that loads configuration from the webclient config
+   * directory.
+   *
+   * @return a ConfigProvider instance for WebClientConfig
+   */
   public static ConfigProvider<WebClientConfig> provider() {
     return new ConfigProvider<>("webclient", WebClientConfig.class);
   }

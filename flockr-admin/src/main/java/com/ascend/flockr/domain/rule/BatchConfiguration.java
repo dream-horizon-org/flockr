@@ -1,6 +1,10 @@
 package com.ascend.flockr.domain.rule;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,11 +14,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties()
 public class BatchConfiguration<T extends SourceInfo> implements RuleConfiguration<T> {
-  @Builder.Default private String type = "BATCH";
-
+  @Valid @NotNull private T source;
+  @NotEmpty private String query;
   private String cronExpression;
-  private String query;
-  private T source;
 }

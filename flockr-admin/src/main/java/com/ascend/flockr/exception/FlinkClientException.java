@@ -41,4 +41,3 @@ public class FlinkClientException extends RuntimeException {
     return statusCode;
   }
 }
-

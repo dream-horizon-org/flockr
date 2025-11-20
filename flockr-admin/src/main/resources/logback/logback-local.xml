@@ -1,18 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logback configuration for local development environment
+  
+  This configuration is optimized for developer experience with:
+  - Colored console output for better readability
+  - Detailed log patterns including file and line numbers
+  - Appropriate log levels for debugging
+  - Separate logging for application vs framework code
+-->
 <configuration>
-  <appender name="ConsoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+
+  <!-- =================================================================== -->
+  <!-- Property Definitions                                                -->
+  <!-- =================================================================== -->
+  <property name="LOG_PATTERN" 
+            value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) - %msg%n"/>
+  
+  <property name="LOG_PATTERN_DETAILED" 
+            value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %magenta([%file:%line]) %cyan(%logger{36}) - %msg%n"/>
+
+  <!-- =================================================================== -->
+  <!-- Console Appender - Colored output for terminal                     -->
+  <!-- =================================================================== -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%date %highlight(%+5level) [%thread] %magenta([%file:%line]) [%marker] %highlight(%msg%n)</pattern>
+      <pattern>${LOG_PATTERN_DETAILED}</pattern>
+      <charset>UTF-8</charset>
     </encoder>
+    
+    <!-- Optional: Enable immediate flush for real-time logging (may impact performance) -->
+    <immediateFlush>true</immediateFlush>
   </appender>
 
-  <logger name="com.hulk" level="info" additivity="false">
-    <appender-ref ref="ConsoleAppender"/>
+  <!-- =================================================================== -->
+  <!-- Async Appender - Wraps console for better performance              -->
+  <!-- =================================================================== -->
+  <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+    <queueSize>512</queueSize>
+    <discardingThreshold>0</discardingThreshold>
+    <appender-ref ref="CONSOLE"/>
+  </appender>
+
+  <!-- =================================================================== -->
+  <!-- Application Loggers                                                 -->
+  <!-- =================================================================== -->
+  
+  <!-- Application package - Set to DEBUG for local development -->
+  <logger name="com.ascend.flockr" level="DEBUG" additivity="false">
+    <appender-ref ref="CONSOLE"/>
   </logger>
 
-  <!-- Log request body and response time and status code -->
-  <logger name="com.dream11.rest.filter.LoggerFilter" level="debug"/>
+  <!-- REST API logging - Includes request/response details -->
+  <logger name="com.ascend.flockr.rest" level="DEBUG"/>
+  
+  <!-- Service layer logging -->
+  <logger name="com.ascend.flockr.service" level="DEBUG"/>
+  
+  <!-- Repository/Database logging -->
+  <logger name="com.ascend.flockr.repository" level="DEBUG"/>
+  
+  <!-- Client integrations (Flink, Kafka, etc.) -->
+  <logger name="com.ascend.flockr.client" level="DEBUG"/>
 
-  <root level="info">
-    <appender-ref ref="ConsoleAppender"/>
+  <!-- =================================================================== -->
+  <!-- Third-party Library Loggers                                         -->
+  <!-- =================================================================== -->
+  
+  <!-- Vert.x framework -->
+  <logger name="io.vertx" level="INFO"/>
+  <logger name="io.vertx.core.impl.BlockedThreadChecker" level="WARN"/>
+  
+  <!-- Netty (underlying network library) -->
+  <logger name="io.netty" level="INFO"/>
+  
+  <!-- HTTP Client/Server logging -->
+  <logger name="io.vertx.ext.web" level="INFO"/>
+  <logger name="io.vertx.ext.web.handler" level="DEBUG"/>
+  
+  <!-- SQL Client logging -->
+  <logger name="io.vertx.sqlclient" level="DEBUG"/>
+  <logger name="io.vertx.pgclient" level="DEBUG"/>
+  <logger name="io.vertx.mysqlclient" level="DEBUG"/>
+  
+  <!-- Kafka Client -->
+  <logger name="org.apache.kafka" level="WARN"/>
+  <logger name="io.vertx.kafka.client" level="INFO"/>
+  
+  <!-- Guice Dependency Injection -->
+  <logger name="com.google.inject" level="INFO"/>
+  
+  <!-- RESTEasy -->
+  <logger name="org.jboss.resteasy" level="INFO"/>
+  
+  <!-- Aerospike -->
+  <logger name="com.aerospike" level="INFO"/>
+  
+  <!-- Circuit Breaker -->
+  <logger name="io.github.resilience4j" level="INFO"/>
+  
+  <!-- Hikari Connection Pool (if used) -->
+  <logger name="com.zaxxer.hikari" level="INFO"/>
+  
+  <!-- Jackson JSON -->
+  <logger name="com.fasterxml.jackson" level="WARN"/>
+  
+  <!-- Metrics -->
+  <logger name="io.dropwizard.metrics" level="WARN"/>
+
+  <!-- Json Validator -->
+  <logger name="com.networknt" level="WARN"/>
+
+  <!-- =================================================================== -->
+  <!-- Root Logger - Default for all other packages                       -->
+  <!-- =================================================================== -->
+  <root level="DEBUG">
+    <appender-ref ref="CONSOLE"/>
   </root>
+
 </configuration>

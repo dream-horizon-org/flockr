@@ -19,4 +19,3 @@ public class FlinkConnectionException extends FlinkClientException {
         cause);
   }
 }
-

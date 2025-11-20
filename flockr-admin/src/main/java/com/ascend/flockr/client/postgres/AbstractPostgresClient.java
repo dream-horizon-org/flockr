@@ -47,17 +47,17 @@ public abstract class AbstractPostgresClient {
 
   protected Single<RowSet<Row>> rxExecute(
       SqlConnection connection, String preparedQuery, Tuple tuple) {
-    return connection.preparedQuery(preparedQuery).rxExecute(tuple).retry(this.retryCount);
+    return connection.preparedQuery(preparedQuery).rxExecute(tuple);
   }
 
   protected Single<RowSet<Row>> rxExecute(
       SqlConnection connection, String preparedQuery, List<Tuple> tuples) {
-    return connection.preparedQuery(preparedQuery).rxExecuteBatch(tuples).retry(this.retryCount);
+    return connection.preparedQuery(preparedQuery).rxExecuteBatch(tuples);
   }
 
   protected <T> Maybe<T> rxWithTransaction(
       Function<SqlConnection, Maybe<T>> transactionalFunction) {
-    return this.postgresPool.rxWithTransaction(transactionalFunction).retry(this.retryCount);
+    return this.postgresPool.rxWithTransaction(transactionalFunction);
   }
 
   protected static <T> List<T> toList(RowSet<Row> rows, Function<Row, T> rowMapper) {
