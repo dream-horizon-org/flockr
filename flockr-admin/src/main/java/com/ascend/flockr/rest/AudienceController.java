@@ -250,15 +250,19 @@ public class AudienceController {
             description = "Internal Server Error",
             content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
     public CompletionStage<ResponseEntity.Success<String>> updateCohortOwner(
-            @Parameter(description = "ID of the cohort whose owner is to be updated", required = true)
-            @PathParam("cohortId") Long cohortId,
-            @Parameter(description = "Email of the logged-in user (from header 'msd-user-email')", required = true)
-            @HeaderParam("msd-user-email") String userEmail,
+            @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
+            String tenantId,
+            @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
+            String projectId,
+            @Parameter(description = "ID of the audience whose owner is to be updated", required = true)
+            @PathParam("audienceId") Long audienceId,
+            @Parameter(description = "Email of the logged-in user (from header 'msd-email')", required = true)
+            @HeaderParam("msd-email") String email,
             @Parameter(description = "Payload indicating action (add/remove) and target email", required = true)
             UpdateAudienceOwnerRequest requestBody) {
 
         return audienceService
-                .updateAudienceOwner(cohortId, userEmail, requestBody)
+                .updateAudienceOwner(tenantId, projectId, audienceId, email, requestBody)
                 .andThen(io.reactivex.rxjava3.core.Single.just("cohort owner's updated successfully"))
                 .map(ResponseEntity.Success::new)
                 .toCompletionStage();

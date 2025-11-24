@@ -124,6 +124,7 @@ public class ServiceModule extends DefaultModule {
     bind(HealthCheckDAO.class).to(HealthCheckDAOImpl.class);
     bind(DataConnectorRepository.class).to(DataConnectorRepositoryImpl.class);
     bind(AudienceRepository.class).to(AudienceRepositoryImpl.class);
+    bind(AudienceOwnerRepository.class).to(AudienceOwnerRepositoryImpl.class);
     bind(RuleRepository.class).to(RuleRepositoryImpl.class);
   }
 

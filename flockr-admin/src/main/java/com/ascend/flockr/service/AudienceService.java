@@ -91,6 +91,11 @@ public interface AudienceService {
       Integer page,
       Integer pageSize);
 
-  Completable updateAudienceOwner(Long cohortId, String userEmail, UpdateAudienceOwnerRequest updateCohortOwnerRequest);
+  Completable updateAudienceOwner(
+      String tenantId,
+      String projectId,
+      Long audienceId,
+      String email,
+      UpdateAudienceOwnerRequest updateCohortOwnerRequest);
 
 }

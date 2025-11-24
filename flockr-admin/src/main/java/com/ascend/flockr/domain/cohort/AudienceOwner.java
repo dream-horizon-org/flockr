@@ -3,10 +3,10 @@ package com.ascend.flockr.domain.cohort;
 import lombok.Data;
 
 @Data
-public class CohortOwner {
+public class AudienceOwner {
 
   private Long id;
-  private Long cohortId;
+  private Long audienceId;
   private String owner;
   private Boolean isRemoved;
   private String removedBy;

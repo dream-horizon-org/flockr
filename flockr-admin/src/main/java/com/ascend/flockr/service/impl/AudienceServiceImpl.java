@@ -1,7 +1,7 @@
 package com.ascend.flockr.service.impl;
 
 import com.ascend.flockr.domain.audience.AudienceMeta;
-import com.ascend.flockr.domain.cohort.CohortOwner;
+import com.ascend.flockr.domain.cohort.AudienceOwner;
 import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
 import com.ascend.flockr.domain.rule.*;
@@ -14,7 +14,7 @@ import com.ascend.flockr.io.response.AudienceMetaResponse;
 import com.ascend.flockr.io.response.PaginatedResponse;
 import com.ascend.flockr.io.response.RuleDetailsResponse;
 import com.ascend.flockr.repository.AudienceRepository;
-import com.ascend.flockr.repository.CohortRepository;
+import com.ascend.flockr.repository.AudienceOwnerRepository;
 import com.ascend.flockr.repository.DataConnectorRepository;
 import com.ascend.flockr.repository.RuleRepository;
 import com.ascend.flockr.service.AudienceService;
@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class AudienceServiceImpl implements AudienceService {
   private final AudienceRepository audienceRepository;
-  private final CohortRepository cohortRepository;
+  private final AudienceOwnerRepository cohortRepository;
   private final RuleRepository ruleRepository;
   private final DataConnectorRepository dataConnectorRepository;
   private static final String DEFAULT_CREATOR = "dummy_user";
@@ -554,19 +554,19 @@ public class AudienceServiceImpl implements AudienceService {
      * - When {@code action == remove}, marks the target owner as removed, preventing removal of the last owner.
      *
      * <p>Postconditions:
-     * - Returns a completed {@link io.reactivex.rxjava3.core.Completable} on success.
+     * - Returns a completed {@link Completable} on success.
      * - Emits an {@link IllegalStateException} if the cohort is expired or the user is unauthorized.
      * - Emits an {@link IllegalStateException} if the update results in no changes.
      *
-     * @param cohortId the identifier of the cohort to update
+     * @param audienceId the identifier of the cohort to update
      * @param userEmail the acting user's email (must already be a cohort owner)
      * @param req the request containing the action (add/remove) and the target owner email
-     * @return a {@link io.reactivex.rxjava3.core.Completable} that completes on success or errors on failure
+     * @return a {@link Completable} that completes on success or errors on failure
      */
     @Override
-    public Completable updateAudienceOwner(Long cohortId, String userEmail, UpdateAudienceOwnerRequest req) {
+    public Completable updateAudienceOwner(String tenantId, String projectId, Long audienceId, String userEmail, UpdateAudienceOwnerRequest req) {
         return cohortRepository
-                .findById(cohortId)
+                .findById(tenantId, projectId, audienceId)
                 .flatMap(
                         (AudienceMeta cohort) -> {
                             Long expireDate = cohort.getExpireDate(); // epoch seconds as per repository mapping
@@ -575,7 +575,7 @@ public class AudienceServiceImpl implements AudienceService {
                                 return Single.error(new IllegalStateException("cohort expired"));
                             }
                             return cohortRepository
-                                    .findOwners(cohortId)
+                                    .findOwners(tenantId, projectId, audienceId)
                                     .flatMap(
                                             owners -> {
                                                 // Checking if logged-in user has permission
@@ -585,18 +585,26 @@ public class AudienceServiceImpl implements AudienceService {
                                                     return Single.error(
                                                             new IllegalStateException("user not authorized to update cohort"));
                                                 }
-                                                if (req.getAction() == UpdateAudienceOwnerAction.add) {
+                                                if (req.getAction() == UpdateAudienceOwnerAction.ADD) {
                                                     List<String> verifiers = List.of();
                                                     return validateAndAddOwner(
+                                                            tenantId,
+                                                            projectId,
                                                             owners,
-                                                            cohortId,
+                                                            audienceId,
                                                             req,
                                                             userEmail,
                                                             cohort.getName(),
                                                             cohort.getVerified(),
                                                             verifiers);
                                                 }
-                                                return validateAndRemoveOwner(owners, cohortId, req, userEmail);
+                                                return validateAndRemoveOwner(
+                                                        tenantId,
+                                                        projectId,
+                                                        owners,
+                                                        audienceId,
+                                                        req,
+                                                        userEmail);
                                             });
                         })
                 .flatMapCompletable(
@@ -614,7 +622,7 @@ public class AudienceServiceImpl implements AudienceService {
      * - Optional verifier checks (if enabled via configuration).
      *
      * @param existingOwners current owners
-     * @param cohortId cohort identifier
+     * @param audienceId cohort identifier
      * @param request request containing target owner email
      * @param performedBy acting user's email (recorded as {@code added_by})
      * @param cohortName cohort display name (for audit/logging)
@@ -624,15 +632,17 @@ public class AudienceServiceImpl implements AudienceService {
      */
 
     private Single<Boolean> validateAndAddOwner(
-            List<CohortOwner> existingOwners,
-            Long cohortId,
+            String tenantId,
+            String projectId,
+            List<AudienceOwner> existingOwners,
+            Long audienceId,
             UpdateAudienceOwnerRequest request,
             String performedBy,
             String cohortName,
             Boolean isVerified,
             List<String> verifiers) {
 
-        return cohortRepository.addOwner(cohortId, request.getEmail(), performedBy);
+        return cohortRepository.addOwner(tenantId, projectId, audienceId, request.getEmail(), performedBy);
     }
 
     /**
@@ -643,18 +653,20 @@ public class AudienceServiceImpl implements AudienceService {
      * - Must not remove the last remaining owner.
      *
      * @param existingOwners current owners
-     * @param cohortId cohort identifier
+     * @param audienceId cohort identifier
      * @param request request containing target owner email
      * @param performedBy acting user's email (recorded as {@code removed_by})
-     * @return a {@link io.reactivex.rxjava3.core.Single} emitting {@code true} if an update occurred
+     * @return a {@link Single} emitting {@code true} if an update occurred
      */
 
     private Single<Boolean> validateAndRemoveOwner(
-            List<CohortOwner> existingOwners,
-            Long cohortId,
+            String tenantId,
+            String projectId,
+            List<AudienceOwner> existingOwners,
+            Long audienceId,
             UpdateAudienceOwnerRequest request,
             String performedBy) {
 
-        return cohortRepository.removeOwner(cohortId, request.getEmail(), performedBy);
+        return cohortRepository.removeOwner(tenantId, projectId, audienceId, request.getEmail(), performedBy);
     }
 }
