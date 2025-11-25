@@ -18,6 +18,7 @@ import com.ascend.flockr.repository.AudienceOwnerRepository;
 import com.ascend.flockr.repository.DataConnectorRepository;
 import com.ascend.flockr.repository.RuleRepository;
 import com.ascend.flockr.service.AudienceService;
+import com.dream11.rest.exception.RestException;
 import com.ascend.flockr.util.RuleHelpers;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Completable;
@@ -30,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class AudienceServiceImpl implements AudienceService {
   private final AudienceRepository audienceRepository;
-  private final AudienceOwnerRepository cohortRepository;
+  private final AudienceOwnerRepository audienceOwnerRepository;
   private final RuleRepository ruleRepository;
   private final DataConnectorRepository dataConnectorRepository;
   private static final String DEFAULT_CREATOR = "dummy_user";
@@ -565,16 +566,20 @@ public class AudienceServiceImpl implements AudienceService {
      */
     @Override
     public Completable updateAudienceOwner(String tenantId, String projectId, Long audienceId, String userEmail, UpdateAudienceOwnerRequest req) {
-        return cohortRepository
-                .findById(tenantId, projectId, audienceId)
+        return audienceRepository
+                .getAudienceById(tenantId, projectId, audienceId)
                 .flatMap(
                         (AudienceMeta cohort) -> {
                             Long expireDate = cohort.getExpireDate(); // epoch seconds as per repository mapping
                             long nowSec = System.currentTimeMillis() / 1000;
                             if (expireDate != null && expireDate <= nowSec) {
-                                return Single.error(new IllegalStateException("cohort expired"));
+                                return Single.error(
+                                        new RestException(
+                                                "AUDIENCE_EXPIRED",
+                                                "Audience is expired and cannot be modified",
+                                                org.apache.http.HttpStatus.SC_BAD_REQUEST));
                             }
-                            return cohortRepository
+                            return audienceOwnerRepository
                                     .findOwners(tenantId, projectId, audienceId)
                                     .flatMap(
                                             owners -> {
@@ -583,7 +588,10 @@ public class AudienceServiceImpl implements AudienceService {
                                                         owners.stream().anyMatch(o -> o.getOwner().equals(userEmail));
                                                 if (!authorized) {
                                                     return Single.error(
-                                                            new IllegalStateException("user not authorized to update cohort"));
+                                                            new RestException(
+                                                                    "FORBIDDEN",
+                                                                    "User is not authorized to update audience owners",
+                                                                    org.apache.http.HttpStatus.SC_FORBIDDEN));
                                                 }
                                                 if (req.getAction() == UpdateAudienceOwnerAction.ADD) {
                                                     List<String> verifiers = List.of();
@@ -611,7 +619,11 @@ public class AudienceServiceImpl implements AudienceService {
                         ok ->
                                 ok
                                         ? Completable.complete()
-                                        : Completable.error(new IllegalStateException("owner update failed")));
+                                        : Completable.error(
+                                                new RestException(
+                                                        "OWNER_UPDATE_FAILED",
+                                                        "Failed to update audience owners",
+                                                        org.apache.http.HttpStatus.SC_CONFLICT)));
     }
 
     /**
@@ -642,7 +654,7 @@ public class AudienceServiceImpl implements AudienceService {
             Boolean isVerified,
             List<String> verifiers) {
 
-        return cohortRepository.addOwner(tenantId, projectId, audienceId, request.getEmail(), performedBy);
+        return audienceOwnerRepository.addOwner(tenantId, projectId, audienceId, request.getEmail(), performedBy);
     }
 
     /**
@@ -667,6 +679,6 @@ public class AudienceServiceImpl implements AudienceService {
             UpdateAudienceOwnerRequest request,
             String performedBy) {
 
-        return cohortRepository.removeOwner(tenantId, projectId, audienceId, request.getEmail(), performedBy);
+        return audienceOwnerRepository.removeOwner(tenantId, projectId, audienceId, request.getEmail(), performedBy);
     }
 }
