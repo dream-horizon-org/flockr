@@ -96,6 +96,5 @@ public interface AudienceService {
       String projectId,
       Long audienceId,
       String email,
-      UpdateAudienceOwnerRequest updateCohortOwnerRequest);
-
+      UpdateAudienceOwnerRequest updateAudienceOwnerRequest);
 }

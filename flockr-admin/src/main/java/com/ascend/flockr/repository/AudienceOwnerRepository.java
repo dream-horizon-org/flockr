@@ -1,6 +1,6 @@
 package com.ascend.flockr.repository;
 
-import com.ascend.flockr.domain.cohort.AudienceOwner;
+import com.ascend.flockr.domain.audienceOwner.AudienceOwner;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 

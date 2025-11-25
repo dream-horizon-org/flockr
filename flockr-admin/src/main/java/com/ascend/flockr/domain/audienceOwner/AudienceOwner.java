@@ -1,4 +1,4 @@
-package com.ascend.flockr.domain.cohort;
+package com.ascend.flockr.domain.audienceOwner;
 
 import lombok.Data;
 

@@ -2,7 +2,7 @@ package com.ascend.flockr.repository.impl;
 
 import com.ascend.flockr.client.postgres.PostgresReaderClient;
 import com.ascend.flockr.client.postgres.PostgresWriterClient;
-import com.ascend.flockr.domain.cohort.AudienceOwner;
+import com.ascend.flockr.domain.audienceOwner.AudienceOwner;
 import com.ascend.flockr.repository.AudienceOwnerRepository;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Maybe;
@@ -19,7 +19,7 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
   private final PostgresWriterClient postgresWriterClient;
 
     private static final String FIND_OWNERS_BY_AUDIENCE_ID =
-            "SELECT id, audience_id AS cohort_id, name, status, "
+            "SELECT id, audience_id AS audience_id, name, status, "
                     + "EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at "
                     + "FROM audience_owners WHERE audience_id = $1 AND tenant_id = $2 AND project_id = $3 ORDER BY created_at DESC";
 
@@ -63,7 +63,7 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
   private static AudienceOwner mapOwnerRow(Row row) {
     AudienceOwner audienceOwner = new AudienceOwner();
     audienceOwner.setId(row.getLong("id"));
-    audienceOwner.setAudienceId(row.getLong("cohort_id"));
+    audienceOwner.setAudienceId(row.getLong("audience_id"));
     audienceOwner.setOwner(row.getString("name"));
     String ownerStatus = row.getString("status");
     audienceOwner.setIsRemoved(ownerStatus != null && !"ACTIVE".equalsIgnoreCase(ownerStatus));

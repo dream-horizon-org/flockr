@@ -1,7 +1,7 @@
 package com.ascend.flockr.service.impl;
 
 import com.ascend.flockr.domain.audience.AudienceMeta;
-import com.ascend.flockr.domain.cohort.AudienceOwner;
+import com.ascend.flockr.domain.audienceOwner.AudienceOwner;
 import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
 import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
 import com.ascend.flockr.domain.rule.*;
@@ -544,11 +544,11 @@ public class AudienceServiceImpl implements AudienceService {
   }
 
     /**
-     * Adds or removes a cohort owner.
+     * Adds or removes a audience owner.
      *
      * <p>Preconditions:
-     * - The cohort must exist and must not be expired.
-     * - The acting user (from {@code userEmail}) must already be an owner of the cohort.
+     * - The audience must exist and must not be expired.
+     * - The acting user (from {@code userEmail}) must already be an owner of the audience.
      *
      * <p>Behavior:
      * - When {@code action == add}, inserts the target owner if not already present.
@@ -556,11 +556,11 @@ public class AudienceServiceImpl implements AudienceService {
      *
      * <p>Postconditions:
      * - Returns a completed {@link Completable} on success.
-     * - Emits an {@link IllegalStateException} if the cohort is expired or the user is unauthorized.
+     * - Emits an {@link IllegalStateException} if the audience is expired or the user is unauthorized.
      * - Emits an {@link IllegalStateException} if the update results in no changes.
      *
-     * @param audienceId the identifier of the cohort to update
-     * @param userEmail the acting user's email (must already be a cohort owner)
+     * @param audienceId the identifier of the audience to update
+     * @param userEmail the acting user's email (must already be a audience owner)
      * @param req the request containing the action (add/remove) and the target owner email
      * @return a {@link Completable} that completes on success or errors on failure
      */
@@ -569,8 +569,8 @@ public class AudienceServiceImpl implements AudienceService {
         return audienceRepository
                 .getAudienceById(tenantId, projectId, audienceId)
                 .flatMap(
-                        (AudienceMeta cohort) -> {
-                            Long expireDate = cohort.getExpireDate(); // epoch seconds as per repository mapping
+                        (AudienceMeta audience) -> {
+                            Long expireDate = audience.getExpireDate(); // epoch seconds as per repository mapping
                             long nowSec = System.currentTimeMillis() / 1000;
                             if (expireDate != null && expireDate <= nowSec) {
                                 return Single.error(
@@ -602,8 +602,8 @@ public class AudienceServiceImpl implements AudienceService {
                                                             audienceId,
                                                             req,
                                                             userEmail,
-                                                            cohort.getName(),
-                                                            cohort.getVerified(),
+                                                            audience.getName(),
+                                                            audience.getVerified(),
                                                             verifiers);
                                                 }
                                                 return validateAndRemoveOwner(
@@ -627,18 +627,18 @@ public class AudienceServiceImpl implements AudienceService {
     }
 
     /**
-     * Validates and adds a new owner to the cohort.
+     * Validates and adds a new owner to the audience.
      *
      * <p>Validations:
      * - No duplicate owners.
      * - Optional verifier checks (if enabled via configuration).
      *
      * @param existingOwners current owners
-     * @param audienceId cohort identifier
+     * @param audienceId audience identifier
      * @param request request containing target owner email
      * @param performedBy acting user's email (recorded as {@code added_by})
-     * @param cohortName cohort display name (for audit/logging)
-     * @param isVerified whether the cohort is verified (may enforce stricter rules)
+     * @param audienceName audience display name (for audit/logging)
+     * @param isVerified whether the audience is verified (may enforce stricter rules)
      * @param verifiers optional list of allowed verifier emails
      * @return a {@link Single} emitting {@code true} if an insert occurred
      */
@@ -650,7 +650,7 @@ public class AudienceServiceImpl implements AudienceService {
             Long audienceId,
             UpdateAudienceOwnerRequest request,
             String performedBy,
-            String cohortName,
+            String audienceName,
             Boolean isVerified,
             List<String> verifiers) {
 
@@ -658,14 +658,14 @@ public class AudienceServiceImpl implements AudienceService {
     }
 
     /**
-     * Validates and removes an existing owner from the cohort.
+     * Validates and removes an existing owner from the audience.
      *
      * <p>Validations:
      * - Target owner must exist.
      * - Must not remove the last remaining owner.
      *
      * @param existingOwners current owners
-     * @param audienceId cohort identifier
+     * @param audienceId audience identifier
      * @param request request containing target owner email
      * @param performedBy acting user's email (recorded as {@code removed_by})
      * @return a {@link Single} emitting {@code true} if an update occurred
