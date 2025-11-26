@@ -1,23 +1,23 @@
 package io.ascend.flockr.admin.service.impl;
 
+import com.dream11.rest.exception.RestException;
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.domain.rule.*;
-import io.ascend.flockr.admin.io.request.CreateAudienceRequest;
-import io.ascend.flockr.admin.io.request.CreateRulesRequest;
+import io.ascend.flockr.admin.io.request.*;
 import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
 import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
+import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
 import io.ascend.flockr.admin.repository.AudienceRepository;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.ascend.flockr.admin.repository.RuleRepository;
 import io.ascend.flockr.admin.service.AudienceService;
 import io.ascend.flockr.admin.util.RuleHelpers;
-import com.ascend.flockr.io.request.UpdateAudienceOwnerAction;
-import com.ascend.flockr.io.request.UpdateAudienceOwnerRequest;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -558,142 +558,137 @@ public class AudienceServiceImpl implements AudienceService {
         .doOnError(error -> log.error("Failed to fetch audiences list: {}", error.getMessage()));
   }
 
-    /**
-     * Adds or removes a audience owner.
-     *
-     * <p>Preconditions:
-     * - The audience must exist and must not be expired.
-     * - The acting user (from {@code userEmail}) must already be an owner of the audience.
-     *
-     * <p>Behavior:
-     * - When {@code action == add}, inserts the target owner if not already present.
-     * - When {@code action == remove}, marks the target owner as removed, preventing removal of the last owner.
-     *
-     * <p>Postconditions:
-     * - Returns a completed {@link Completable} on success.
-     * - Emits an {@link IllegalStateException} if the audience is expired or the user is unauthorized.
-     * - Emits an {@link IllegalStateException} if the update results in no changes.
-     *
-     * @param audienceId the identifier of the audience to update
-     * @param userEmail the acting user's email (must already be a audience owner)
-     * @param req the request containing the action (add/remove) and the target owner email
-     * @return a {@link Completable} that completes on success or errors on failure
-     */
-    @Override
-    public Completable updateAudienceOwner(String tenantId, String projectId, Long audienceId, String userEmail, UpdateAudienceOwnerRequest req) {
-        return audienceRepository
-                .getAudienceById(tenantId, projectId, audienceId)
-                .flatMap(
-                        (AudienceMeta audience) -> {
-                            Long expireDate = audience.getExpireDate(); // epoch seconds as per repository mapping
-                            long nowSec = System.currentTimeMillis() / 1000;
-                            if (expireDate != null && expireDate <= nowSec) {
-                                return Single.error(
-                                        new RestException(
-                                                "AUDIENCE_EXPIRED",
-                                                "Audience is expired and cannot be modified",
-                                                org.apache.http.HttpStatus.SC_BAD_REQUEST));
-                            }
-                            return audienceOwnerRepository
-                                    .findOwners(tenantId, projectId, audienceId)
-                                    .flatMap(
-                                            owners -> {
-                                                // Checking if logged-in user has permission
-                                                boolean authorized =
-                                                        owners.stream().anyMatch(o -> o.getOwner().equals(userEmail));
-                                                if (!authorized) {
-                                                    return Single.error(
-                                                            new RestException(
-                                                                    "FORBIDDEN",
-                                                                    "User is not authorized to update audience owners",
-                                                                    org.apache.http.HttpStatus.SC_FORBIDDEN));
-                                                }
-                                                if (req.getAction() == UpdateAudienceOwnerAction.ADD) {
-                                                    List<String> verifiers = List.of();
-                                                    return validateAndAddOwner(
-                                                            tenantId,
-                                                            projectId,
-                                                            owners,
-                                                            audienceId,
-                                                            req,
-                                                            userEmail,
-                                                            audience.getName(),
-                                                            audience.getVerified(),
-                                                            verifiers);
-                                                }
-                                                return validateAndRemoveOwner(
-                                                        tenantId,
-                                                        projectId,
-                                                        owners,
-                                                        audienceId,
-                                                        req,
-                                                        userEmail);
-                                            });
-                        })
-                .flatMapCompletable(
-                        ok ->
-                                ok
-                                        ? Completable.complete()
-                                        : Completable.error(
-                                                new RestException(
-                                                        "OWNER_UPDATE_FAILED",
-                                                        "Failed to update audience owners",
-                                                        org.apache.http.HttpStatus.SC_CONFLICT)));
-    }
+  /**
+   * Adds or removes a audience owner.
+   *
+   * <p>Preconditions: - The audience must exist and must not be expired. - The acting user (from
+   * {@code userEmail}) must already be an owner of the audience.
+   *
+   * <p>Behavior: - When {@code action == add}, inserts the target owner if not already present. -
+   * When {@code action == remove}, marks the target owner as removed, preventing removal of the
+   * last owner.
+   *
+   * <p>Postconditions: - Returns a completed {@link Completable} on success. - Emits an {@link
+   * IllegalStateException} if the audience is expired or the user is unauthorized. - Emits an
+   * {@link IllegalStateException} if the update results in no changes.
+   *
+   * @param audienceId the identifier of the audience to update
+   * @param userEmail the acting user's email (must already be a audience owner)
+   * @param req the request containing the action (add/remove) and the target owner email
+   * @return a {@link Completable} that completes on success or errors on failure
+   */
+  @Override
+  public Completable updateAudienceOwner(
+      String tenantId,
+      String projectId,
+      Long audienceId,
+      String userEmail,
+      UpdateAudienceOwnerRequest req) {
+    return audienceRepository
+        .getAudienceById(tenantId, projectId, audienceId)
+        .flatMap(
+            (AudienceMeta audience) -> {
+              Long expireDate = audience.getExpireDate(); // epoch seconds as per repository mapping
+              long nowSec = System.currentTimeMillis() / 1000;
+              if (expireDate != null && expireDate <= nowSec) {
+                return Single.error(
+                    new RestException(
+                        "AUDIENCE_EXPIRED",
+                        "Audience is expired and cannot be modified",
+                        org.apache.http.HttpStatus.SC_BAD_REQUEST));
+              }
+              return audienceOwnerRepository
+                  .findOwners(tenantId, projectId, audienceId)
+                  .flatMap(
+                      owners -> {
+                        // Checking if logged-in user has permission
+                        boolean authorized =
+                            owners.stream().anyMatch(o -> o.getOwner().equals(userEmail));
+                        if (!authorized) {
+                          return Single.error(
+                              new RestException(
+                                  "FORBIDDEN",
+                                  "User is not authorized to update audience owners",
+                                  org.apache.http.HttpStatus.SC_FORBIDDEN));
+                        }
+                        if (req.getAction() == UpdateAudienceOwnerAction.ADD) {
+                          List<String> verifiers = List.of();
+                          return validateAndAddOwner(
+                              tenantId,
+                              projectId,
+                              owners,
+                              audienceId,
+                              req,
+                              userEmail,
+                              audience.getName(),
+                              audience.getVerified(),
+                              verifiers);
+                        }
+                        return validateAndRemoveOwner(
+                            tenantId, projectId, owners, audienceId, req, userEmail);
+                      });
+            })
+        .flatMapCompletable(
+            ok ->
+                ok
+                    ? Completable.complete()
+                    : Completable.error(
+                        new RestException(
+                            "OWNER_UPDATE_FAILED",
+                            "Failed to update audience owners",
+                            org.apache.http.HttpStatus.SC_CONFLICT)));
+  }
 
-    /**
-     * Validates and adds a new owner to the audience.
-     *
-     * <p>Validations:
-     * - No duplicate owners.
-     * - Optional verifier checks (if enabled via configuration).
-     *
-     * @param existingOwners current owners
-     * @param audienceId audience identifier
-     * @param request request containing target owner email
-     * @param performedBy acting user's email (recorded as {@code added_by})
-     * @param audienceName audience display name (for audit/logging)
-     * @param isVerified whether the audience is verified (may enforce stricter rules)
-     * @param verifiers optional list of allowed verifier emails
-     * @return a {@link Single} emitting {@code true} if an insert occurred
-     */
+  /**
+   * Validates and adds a new owner to the audience.
+   *
+   * <p>Validations: - No duplicate owners. - Optional verifier checks (if enabled via
+   * configuration).
+   *
+   * @param existingOwners current owners
+   * @param audienceId audience identifier
+   * @param request request containing target owner email
+   * @param performedBy acting user's email (recorded as {@code added_by})
+   * @param audienceName audience display name (for audit/logging)
+   * @param isVerified whether the audience is verified (may enforce stricter rules)
+   * @param verifiers optional list of allowed verifier emails
+   * @return a {@link Single} emitting {@code true} if an insert occurred
+   */
+  private Single<Boolean> validateAndAddOwner(
+      String tenantId,
+      String projectId,
+      List<AudienceOwner> existingOwners,
+      Long audienceId,
+      UpdateAudienceOwnerRequest request,
+      String performedBy,
+      String audienceName,
+      Boolean isVerified,
+      List<String> verifiers) {
 
-    private Single<Boolean> validateAndAddOwner(
-            String tenantId,
-            String projectId,
-            List<AudienceOwner> existingOwners,
-            Long audienceId,
-            UpdateAudienceOwnerRequest request,
-            String performedBy,
-            String audienceName,
-            Boolean isVerified,
-            List<String> verifiers) {
+    return audienceOwnerRepository.addOwner(
+        tenantId, projectId, audienceId, request.getEmail(), performedBy);
+  }
 
-        return audienceOwnerRepository.addOwner(tenantId, projectId, audienceId, request.getEmail(), performedBy);
-    }
+  /**
+   * Validates and removes an existing owner from the audience.
+   *
+   * <p>Validations: - Target owner must exist. - Must not remove the last remaining owner.
+   *
+   * @param existingOwners current owners
+   * @param audienceId audience identifier
+   * @param request request containing target owner email
+   * @param performedBy acting user's email (recorded as {@code removed_by})
+   * @return a {@link Single} emitting {@code true} if an update occurred
+   */
+  private Single<Boolean> validateAndRemoveOwner(
+      String tenantId,
+      String projectId,
+      List<AudienceOwner> existingOwners,
+      Long audienceId,
+      UpdateAudienceOwnerRequest request,
+      String performedBy) {
 
-    /**
-     * Validates and removes an existing owner from the audience.
-     *
-     * <p>Validations:
-     * - Target owner must exist.
-     * - Must not remove the last remaining owner.
-     *
-     * @param existingOwners current owners
-     * @param audienceId audience identifier
-     * @param request request containing target owner email
-     * @param performedBy acting user's email (recorded as {@code removed_by})
-     * @return a {@link Single} emitting {@code true} if an update occurred
-     */
-
-    private Single<Boolean> validateAndRemoveOwner(
-            String tenantId,
-            String projectId,
-            List<AudienceOwner> existingOwners,
-            Long audienceId,
-            UpdateAudienceOwnerRequest request,
-            String performedBy) {
-
-        return audienceOwnerRepository.removeOwner(tenantId, projectId, audienceId, request.getEmail(), performedBy);
-    }
+    return audienceOwnerRepository.removeOwner(
+        tenantId, projectId, audienceId, request.getEmail(), performedBy);
+  }
 }

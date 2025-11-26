@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import io.ascend.flockr.admin.io.ResponseEntity;
 import io.ascend.flockr.admin.io.request.CreateAudienceRequest;
 import io.ascend.flockr.admin.io.request.CreateRulesRequest;
+import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerRequest;
 import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
 import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
@@ -225,45 +226,49 @@ public class AudienceController {
         "getAudiencesList");
   }
 
-    @POST
-    @Path("/v1/audiences/{audienceId}/owner")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Update audience owner",
-            description = "Updates the owner(s) of a specific audience based on audience ID.")
-    @ApiResponse(
-            responseCode = "200",
-            description = "audience owner updated successfully",
-            content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
-    @ApiResponse(
-            responseCode = "400",
-            description = "Bad Request due to invalid/missing parameters",
-            content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-    @ApiResponse(
-            responseCode = "401",
-            description = "Unauthorized: missing or invalid user email header",
-            content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-    @ApiResponse(
-            responseCode = "500",
-            description = "Internal Server Error",
-            content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-    public CompletionStage<ResponseEntity.Success<String>> updateAudienceOwner(
-            @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-            String tenantId,
-            @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
-            String projectId,
-            @Parameter(description = "ID of the audience whose owner is to be updated", required = true)
-            @PathParam("audienceId") Long audienceId,
-            @Parameter(description = "Email of the logged-in user (from header 'email')", required = true)
-            @HeaderParam("email") String email,
-            @Parameter(description = "Payload indicating action (add/remove) and target email", required = true)
-            UpdateAudienceOwnerRequest requestBody) {
+  @POST
+  @Path("/v1/audiences/{audienceId}/owner")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Update audience owner",
+      description = "Updates the owner(s) of a specific audience based on audience ID.")
+  @ApiResponse(
+      responseCode = "200",
+      description = "audience owner updated successfully",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid/missing parameters",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "401",
+      description = "Unauthorized: missing or invalid user email header",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  public CompletionStage<ResponseEntity.Success<String>> updateAudienceOwner(
+      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
+          String tenantId,
+      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
+          String projectId,
+      @Parameter(description = "ID of the audience whose owner is to be updated", required = true)
+          @PathParam("audienceId")
+          Long audienceId,
+      @Parameter(description = "Email of the logged-in user (from header 'email')", required = true)
+          @HeaderParam("email")
+          String email,
+      @Parameter(
+              description = "Payload indicating action (add/remove) and target email",
+              required = true)
+          UpdateAudienceOwnerRequest requestBody) {
 
-        return audienceService
-                .updateAudienceOwner(tenantId, projectId, audienceId, email, requestBody)
-                .andThen(io.reactivex.rxjava3.core.Single.just("audience owner's updated successfully"))
-                .map(ResponseEntity.Success::new)
-                .toCompletionStage();
-    }
+    return audienceService
+        .updateAudienceOwner(tenantId, projectId, audienceId, email, requestBody)
+        .andThen(io.reactivex.rxjava3.core.Single.just("audience owner's updated successfully"))
+        .map(ResponseEntity.Success::new)
+        .toCompletionStage();
+  }
 }

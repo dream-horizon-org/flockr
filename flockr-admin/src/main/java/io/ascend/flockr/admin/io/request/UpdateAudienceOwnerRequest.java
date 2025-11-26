@@ -1,4 +1,4 @@
-package com.ascend.flockr.io.request;
+package io.ascend.flockr.admin.io.request;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;

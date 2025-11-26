@@ -5,10 +5,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ascend.flockr.io.ResponseEntity;
-import com.ascend.flockr.io.request.UpdateAudienceOwnerAction;
-import com.ascend.flockr.io.request.UpdateAudienceOwnerRequest;
-import com.ascend.flockr.service.AudienceService;
+import io.ascend.flockr.admin.io.ResponseEntity;
+import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerAction;
+import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerRequest;
+import io.ascend.flockr.admin.rest.AudienceController;
+import io.ascend.flockr.admin.service.AudienceService;
 import io.reactivex.rxjava3.core.Completable;
 import java.util.concurrent.CompletionStage;
 import org.junit.Assert;
@@ -31,7 +32,8 @@ public class AudienceControllerTest {
     request.setAction(UpdateAudienceOwnerAction.ADD);
     request.setEmail("target@example.com");
 
-    when(audienceService.updateAudienceOwner(eq(tenantId), eq(projectId), eq(audienceId), eq(actingEmail), eq(request)))
+    when(audienceService.updateAudienceOwner(
+            eq(tenantId), eq(projectId), eq(audienceId), eq(actingEmail), eq(request)))
         .thenReturn(Completable.complete());
 
     // Act
@@ -43,8 +45,7 @@ public class AudienceControllerTest {
     Assert.assertNotNull(response);
     Assert.assertEquals("audience owner's updated successfully", response.data());
     verify(audienceService)
-        .updateAudienceOwner(eq(tenantId), eq(projectId), eq(audienceId), eq(actingEmail), eq(request));
+        .updateAudienceOwner(
+            eq(tenantId), eq(projectId), eq(audienceId), eq(actingEmail), eq(request));
   }
 }
-
-

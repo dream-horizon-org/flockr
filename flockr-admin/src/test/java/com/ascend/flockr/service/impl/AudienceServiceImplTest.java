@@ -5,15 +5,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ascend.flockr.domain.audience.AudienceMeta;
-import com.ascend.flockr.domain.audienceOwner.AudienceOwner;
-import com.ascend.flockr.io.request.UpdateAudienceOwnerAction;
-import com.ascend.flockr.io.request.UpdateAudienceOwnerRequest;
-import com.ascend.flockr.repository.AudienceOwnerRepository;
-import com.ascend.flockr.repository.AudienceRepository;
-import com.ascend.flockr.repository.DataConnectorRepository;
-import com.ascend.flockr.repository.RuleRepository;
 import com.dream11.rest.exception.RestException;
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
+import io.ascend.flockr.admin.io.request.AudienceOwner;
+import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerAction;
+import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerRequest;
+import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
+import io.ascend.flockr.admin.repository.AudienceRepository;
+import io.ascend.flockr.admin.repository.DataConnectorRepository;
+import io.ascend.flockr.admin.repository.RuleRepository;
+import io.ascend.flockr.admin.service.impl.AudienceServiceImpl;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.observers.TestObserver;
 import java.util.ArrayList;
@@ -61,7 +62,8 @@ public class AudienceServiceImplTest {
     RuleRepository ruleRepository = mock(RuleRepository.class);
     DataConnectorRepository dataConnectorRepository = mock(DataConnectorRepository.class);
     AudienceServiceImpl service =
-        buildService(audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
+        buildService(
+            audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
     String tenantId = "t1";
     String projectId = "p1";
@@ -77,10 +79,12 @@ public class AudienceServiceImplTest {
         .thenReturn(Single.just(buildAudienceMeta(false, "aud", false)));
     when(audienceOwnerRepository.findOwners(eq(tenantId), eq(projectId), eq(audienceId)))
         .thenReturn(Single.just(ownersWith(actor)));
-    when(audienceOwnerRepository.addOwner(eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
+    when(audienceOwnerRepository.addOwner(
+            eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
         .thenReturn(Single.just(true));
 
-    TestObserver<Void> to = service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
+    TestObserver<Void> to =
+        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
     to.assertComplete();
 
     verify(audienceOwnerRepository)
@@ -94,7 +98,8 @@ public class AudienceServiceImplTest {
     RuleRepository ruleRepository = mock(RuleRepository.class);
     DataConnectorRepository dataConnectorRepository = mock(DataConnectorRepository.class);
     AudienceServiceImpl service =
-        buildService(audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
+        buildService(
+            audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
     String tenantId = "t1";
     String projectId = "p1";
@@ -110,10 +115,12 @@ public class AudienceServiceImplTest {
         .thenReturn(Single.just(buildAudienceMeta(false, "aud", false)));
     when(audienceOwnerRepository.findOwners(eq(tenantId), eq(projectId), eq(audienceId)))
         .thenReturn(Single.just(ownersWith(actor, target)));
-    when(audienceOwnerRepository.removeOwner(eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
+    when(audienceOwnerRepository.removeOwner(
+            eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
         .thenReturn(Single.just(true));
 
-    TestObserver<Void> to = service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
+    TestObserver<Void> to =
+        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
     to.assertComplete();
 
     verify(audienceOwnerRepository)
@@ -127,7 +134,8 @@ public class AudienceServiceImplTest {
     RuleRepository ruleRepository = mock(RuleRepository.class);
     DataConnectorRepository dataConnectorRepository = mock(DataConnectorRepository.class);
     AudienceServiceImpl service =
-        buildService(audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
+        buildService(
+            audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
     String tenantId = "t1";
     String projectId = "p1";
@@ -143,7 +151,8 @@ public class AudienceServiceImplTest {
     when(audienceOwnerRepository.findOwners(eq(tenantId), eq(projectId), eq(audienceId)))
         .thenReturn(Single.just(ownersWith("different.owner@example.com")));
 
-    TestObserver<Void> to = service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
+    TestObserver<Void> to =
+        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
     to.assertError(RestException.class);
   }
 
@@ -154,7 +163,8 @@ public class AudienceServiceImplTest {
     RuleRepository ruleRepository = mock(RuleRepository.class);
     DataConnectorRepository dataConnectorRepository = mock(DataConnectorRepository.class);
     AudienceServiceImpl service =
-        buildService(audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
+        buildService(
+            audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
     String tenantId = "t1";
     String projectId = "p1";
@@ -168,7 +178,8 @@ public class AudienceServiceImplTest {
     when(audienceRepository.getAudienceById(eq(tenantId), eq(projectId), eq(audienceId)))
         .thenReturn(Single.just(buildAudienceMeta(true, "aud", false)));
 
-    TestObserver<Void> to = service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
+    TestObserver<Void> to =
+        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
     to.assertError(RestException.class);
   }
 
@@ -179,7 +190,8 @@ public class AudienceServiceImplTest {
     RuleRepository ruleRepository = mock(RuleRepository.class);
     DataConnectorRepository dataConnectorRepository = mock(DataConnectorRepository.class);
     AudienceServiceImpl service =
-        buildService(audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
+        buildService(
+            audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
     String tenantId = "t1";
     String projectId = "p1";
@@ -195,12 +207,12 @@ public class AudienceServiceImplTest {
         .thenReturn(Single.just(buildAudienceMeta(false, "aud", false)));
     when(audienceOwnerRepository.findOwners(eq(tenantId), eq(projectId), eq(audienceId)))
         .thenReturn(Single.just(ownersWith(actor, target)));
-    when(audienceOwnerRepository.removeOwner(eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
+    when(audienceOwnerRepository.removeOwner(
+            eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
         .thenReturn(Single.just(false));
 
-    TestObserver<Void> to = service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
+    TestObserver<Void> to =
+        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
     to.assertError(RestException.class);
   }
 }
-
-

@@ -1,10 +1,9 @@
-package com.ascend.flockr.domain.audienceOwner;
+package io.ascend.flockr.admin.io.request;
 
 import lombok.Data;
 
 @Data
 public class AudienceOwner {
-
   private Long id;
   private Long audienceId;
   private String owner;
