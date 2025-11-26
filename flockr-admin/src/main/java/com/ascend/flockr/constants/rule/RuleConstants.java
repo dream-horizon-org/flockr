@@ -52,9 +52,6 @@ public final class RuleConstants {
   /** Created by user column name. */
   public static final String CREATED_BY = "created_by";
 
-  /** Updated by user column name. */
-  public static final String UPDATED_BY = "updated_by";
-
   /** Created timestamp column name. */
   public static final String CREATED_AT = "created_at";
 

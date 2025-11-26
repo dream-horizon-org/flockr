@@ -21,7 +21,7 @@ public class CreateAudienceRequest {
 
   @Max(2177452799000L)
   @NotNull
-  private Long expiryDate;
+  private Long expireDate;
 
   @Valid @NotEmpty private List<Long> sinkIds;
 }

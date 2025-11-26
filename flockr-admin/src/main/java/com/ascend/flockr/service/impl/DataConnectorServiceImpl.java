@@ -17,6 +17,25 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Implementation of {@link DataConnectorService} providing data connector management operations.
+ *
+ * <p>This service handles:
+ *
+ * <ul>
+ *   <li>Listing and retrieval of connector types
+ *   <li>Onboarding data sources with schema validation
+ *   <li>Onboarding data sinks with schema validation
+ *   <li>Creating new connector types with JSON schema definitions
+ *   <li>Pagination support for source and sink listings
+ * </ul>
+ *
+ * <p>The service validates connector configurations against their respective JSON schemas before
+ * persisting them to ensure data integrity.
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataConnectorServiceImpl implements DataConnectorService {

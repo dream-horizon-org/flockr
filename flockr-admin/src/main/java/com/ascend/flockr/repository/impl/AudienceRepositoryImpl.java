@@ -6,7 +6,6 @@ import com.ascend.flockr.constants.audience.AudienceConstants;
 import com.ascend.flockr.domain.audience.AudienceMeta;
 import com.ascend.flockr.io.response.AudienceMetaResponse;
 import com.ascend.flockr.repository.AudienceRepository;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Maybe;
@@ -14,6 +13,7 @@ import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +41,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
 
   private static final String SQL_CREATE_AUDIENCE =
       "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expire_date, created_by, name_vector) "
-          + "VALUES ($1, $2, $3, $4, $5::BIGINT[], CAST($6 AS JSONB), $7, to_timestamp($8), $9, to_tsvector('english', $3)) RETURNING id";
+          + "VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8), $9, to_tsvector('english', $3)) RETURNING id";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
       "SELECT id, tenant_id, project_id, name, description, "
@@ -60,12 +60,8 @@ public class AudienceRepositoryImpl implements AudienceRepository {
    */
   @Override
   public Single<Long> createAudience(AudienceMeta audienceMeta) {
-    JsonObject customConfig = audienceMeta.getCustomAudienceConfig();
-    String customConfigJson = customConfig != null ? customConfig.encode() : null;
-
+    log.info("audienceMeta {}", audienceMeta);
     List<Long> sinksList = audienceMeta.getSinks();
-    Long[] sinksArray =
-        (sinksList != null && !sinksList.isEmpty()) ? sinksList.toArray(new Long[0]) : new Long[0];
 
     Tuple params =
         Tuple.tuple()
@@ -73,18 +69,12 @@ public class AudienceRepositoryImpl implements AudienceRepository {
             .addValue(audienceMeta.getProjectId())
             .addValue(audienceMeta.getName())
             .addValue(audienceMeta.getDescription())
-            .addValue(sinksArray)
-            .addValue(customConfigJson)
+            .addArrayOfLong(sinksList.toArray(new Long[0]))
+            .addValue(audienceMeta.getCustomAudienceConfig())
             .addValue(audienceMeta.getType())
             .addValue(audienceMeta.getExpireDate())
-            .addValue(audienceMeta.getCreatedBy());
-
-    log.info(
-        "Creating audience: tenantId={}, projectId={}, name={}, type={}",
-        audienceMeta.getTenantId(),
-        audienceMeta.getProjectId(),
-        audienceMeta.getName(),
-        audienceMeta.getType());
+            .addValue(audienceMeta.getCreatedBy())
+            .addValue(audienceMeta.getName());
 
     return postgresWriterClient
         .executeWithTransaction(
@@ -92,7 +82,8 @@ public class AudienceRepositoryImpl implements AudienceRepository {
                 postgresWriterClient
                     .executeAndGenerateId(conn, SQL_CREATE_AUDIENCE, params)
                     .toMaybe())
-        .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to create audience")))
+        .switchIfEmpty(
+            Maybe.error(new IllegalStateException("Failed to create audience in transaction")))
         .toSingle();
   }
 
@@ -135,14 +126,18 @@ public class AudienceRepositoryImpl implements AudienceRepository {
             }
           }
 
-          String sinksJson = row.getString(AudienceConstants.SINKS);
-          if (sinksJson != null && !sinksJson.isBlank()) {
+          Long[] sinksArray = row.getArrayOfLongs(AudienceConstants.SINKS);
+          if (sinksArray != null && sinksArray.length != 0) {
             try {
-              List<Long> sinks = objectMapper.readValue(sinksJson, new TypeReference<>() {});
+              List<Long> sinks = List.of(sinksArray);
               builder.sinks(sinks);
             } catch (Exception e) {
               throw new RuntimeException(
-                  "Failed to deserialize sinks for audience id " + id + ": " + sinksJson, e);
+                  "Failed to deserialize sinks for audience id "
+                      + id
+                      + ": "
+                      + Arrays.toString(sinksArray),
+                  e);
             }
           }
 

@@ -9,6 +9,15 @@ import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Single;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Implementation of {@link HealthCheckService} providing health check operations.
+ *
+ * <p>This service verifies the health status of critical system dependencies including database
+ * connections and checks for maintenance mode status.
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class HealthCheckServiceImpl implements HealthCheckService {
 

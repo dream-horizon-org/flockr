@@ -9,6 +9,15 @@ import io.vertx.core.Vertx;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Implementation of {@link HealthCheckDAO} providing health check data access operations.
+ *
+ * <p>This DAO checks the health status of the PostgreSQL reader connection and retrieves
+ * maintenance mode status from the application context.
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class HealthCheckDAOImpl implements HealthCheckDAO {

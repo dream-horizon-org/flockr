@@ -1,5 +1,6 @@
 package com.ascend.flockr.domain.audience;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AudienceMeta {
   /** The tenant identifier that owns this audience. */
   private String tenantId;

@@ -21,6 +21,25 @@ import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Implementation of {@link AudienceService} providing audience and rule management operations.
+ *
+ * <p>This service handles:
+ *
+ * <ul>
+ *   <li>Audience creation with sink associations
+ *   <li>Enrichment of rule configurations with data source details
+ *   <li>Batch and stream rule processing
+ *   <li>Paginated audience listings with full-text search
+ * </ul>
+ *
+ * <p>The service performs data enrichment by fetching related connector details (sources and sinks)
+ * and transforming basic {@link SourceInfo} configurations into {@link SourceInfoEnriched}
+ * configurations that include complete connector metadata.
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class AudienceServiceImpl implements AudienceService {
@@ -54,7 +73,7 @@ public class AudienceServiceImpl implements AudienceService {
             .description(request.getDescription())
             .customAudienceConfig(request.getCustomAudienceConfig())
             .type(request.getType())
-            .expireDate(request.getExpiryDate())
+            .expireDate(request.getExpireDate())
             .sinks(request.getSinkIds())
             .createdBy(DEFAULT_CREATOR)
             .build();
@@ -67,8 +86,8 @@ public class AudienceServiceImpl implements AudienceService {
    * source information.
    *
    * <p>This method fetches the {@link AudienceMeta}, associated {@link DataSinkDetails}, and all
-   * rules for the given audience. Rule configurations are transformed from {@link SourceInfo}
-   * to {@link SourceInfoEnriched} using the corresponding {@link DataSourceDetails}.
+   * rules for the given audience. Rule configurations are transformed from {@link SourceInfo} to
+   * {@link SourceInfoEnriched} using the corresponding {@link DataSourceDetails}.
    *
    * @param tenantId the tenant identifier from the request header
    * @param projectId the project identifier from the request header
@@ -309,16 +328,16 @@ public class AudienceServiceImpl implements AudienceService {
    * Builds an enriched rule configuration by merging {@link DataSourceDetails} into a basic
    * configuration.
    *
-   * <p>Depending on the provided {@link RuleType}, this method delegates to either
-   * {@link #buildEnrichedBatchConfiguration(BatchConfiguration, Map)} or
-   * {@link #buildEnrichedStreamConfiguration(StreamConfiguration, Map)}.
+   * <p>Depending on the provided {@link RuleType}, this method delegates to either {@link
+   * #buildEnrichedBatchConfiguration(BatchConfiguration, Map)} or {@link
+   * #buildEnrichedStreamConfiguration(StreamConfiguration, Map)}.
    *
    * @param basicConfig the basic configuration containing {@link SourceInfo} references
    * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
    *     enrichment
    * @param ruleType the type of rule (e.g. {@link RuleType#BATCH} or {@link RuleType#STREAM})
-   * @return a {@link RuleConfiguration} where source information is represented as
-   * {@link SourceInfoEnriched}
+   * @return a {@link RuleConfiguration} where source information is represented as {@link
+   *     SourceInfoEnriched}
    */
   private RuleConfiguration<SourceInfoEnriched> buildEnrichedConfiguration(
       RuleConfiguration<SourceInfo> basicConfig,

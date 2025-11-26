@@ -15,8 +15,8 @@ public final class RuleHelpers {
   private static final ObjectMapper mapper = new ObjectMapper();
 
   /**
-   * Deserialize JSON string to RuleConfiguration with SourceInfo. Uses TypeReference for
-   * proper generic handling.
+   * Deserialize JSON string to RuleConfiguration with SourceInfo. Uses TypeReference for proper
+   * generic handling.
    */
   public static RuleConfiguration<SourceInfo> deserializeRuleConfiguration(String configJson) {
     try {
@@ -45,6 +45,7 @@ public final class RuleHelpers {
         .ruleId(row.getLong(RuleConstants.ID))
         .audienceId(row.getLong(RuleConstants.AUDIENCE_ID))
         .tenantId(row.getString(RuleConstants.TENANT_ID))
+        .projectId(row.getString(RuleConstants.PROJECT_ID))
         .name(row.getString(RuleConstants.NAME))
         .description(row.getString(RuleConstants.DESCRIPTION))
         .startTime(row.getLong(RuleConstants.START_TIME))

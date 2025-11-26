@@ -14,6 +14,23 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Implementation of {@link RuleRepository} using PostgreSQL as the data store.
+ *
+ * <p>This implementation handles:
+ *
+ * <ul>
+ *   <li>Batch creation of rules within transactions
+ *   <li>Serialization of rule configurations to JSONB
+ *   <li>Retrieval of rules by ID or audience association
+ *   <li>Timestamp conversion between epoch and database formats
+ * </ul>
+ *
+ * <p>All write operations are executed within database transactions to ensure atomicity.
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class RuleRepositoryImpl implements RuleRepository {
   private final PostgresReaderClient postgresReaderClient;

@@ -62,7 +62,7 @@ public final class AudienceConstants {
   public static final String RULES_COUNT = "rules_count";
 
   /** Expiry date column name. */
-  public static final String EXPIRY_DATE = "expiry_date";
+  public static final String EXPIRY_DATE = "expire_date";
 
   /** Expire date column name (PostgreSQL variant). */
   public static final String EXPIRE_DATE = "expire_date";

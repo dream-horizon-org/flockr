@@ -104,6 +104,44 @@ public class ErrorHandler {
           throwable);
     }
 
+    // Map PostgreSQL-specific exceptions
+    if (throwable.getClass().getName().contains("PgException")) {
+      String errorMessage = throwable.getMessage();
+
+      // Check for unique constraint violation (23505)
+      if (errorMessage != null && errorMessage.contains("23505")) {
+        return new RestException(
+            "DUPLICATE_RESOURCE",
+            "Resource already exists: " + errorMessage,
+            HttpStatus.SC_CONFLICT,
+            throwable);
+      }
+
+      // Check for foreign key violation (23503)
+      if (errorMessage != null && errorMessage.contains("23503")) {
+        return new RestException(
+            "INVALID_REFERENCE",
+            "Referenced resource does not exist: " + errorMessage,
+            HttpStatus.SC_BAD_REQUEST,
+            throwable);
+      }
+
+      // Check for not null violation (23502)
+      if (errorMessage != null && errorMessage.contains("23502")) {
+        return new RestException(
+            "MISSING_REQUIRED_FIELD",
+            "Required field is missing: " + errorMessage,
+            HttpStatus.SC_BAD_REQUEST,
+            throwable);
+      }
+
+      return new RestException(
+          "DATABASE_ERROR",
+          "Database operation failed in " + operationName + ": " + errorMessage,
+          HttpStatus.SC_INTERNAL_SERVER_ERROR,
+          throwable);
+    }
+
     // Map common database/IO exceptions to INTERNAL_SERVER_ERROR
     if (throwable.getClass().getName().contains("SQLException")
         || throwable.getClass().getName().contains("IOException")) {

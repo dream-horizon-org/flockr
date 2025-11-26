@@ -14,6 +14,23 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Implementation of {@link DataConnectorRepository} using PostgreSQL as the data store.
+ *
+ * <p>This implementation handles:
+ *
+ * <ul>
+ *   <li>CRUD operations for connector types, data sources, and data sinks
+ *   <li>Pagination for source and sink listings
+ *   <li>Batch retrieval operations using dynamic SQL with IN clauses
+ *   <li>Transaction management for data integrity
+ * </ul>
+ *
+ * <p>All write operations are executed within database transactions to ensure atomicity.
+ *
+ * @author Flockr Team
+ * @since 1.0
+ */
 @Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataConnectorRepositoryImpl implements DataConnectorRepository {
@@ -171,8 +188,13 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
   }
 
   /**
-   * @param sinkIds
-   * @return
+   * Retrieves multiple data sinks by their identifiers.
+   *
+   * <p>This method builds a dynamic SQL query using the provided sink IDs. Returns an empty list
+   * if the input list is null or empty.
+   *
+   * @param sinkIds the list of sink IDs to retrieve
+   * @return a Single emitting a list of data sink details
    */
   @Override
   public Single<List<DataSinkDetails>> getDataSinksByIds(List<Long> sinkIds) {

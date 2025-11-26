@@ -1,6 +1,7 @@
 package com.ascend.flockr.domain.dataconnectors;
 
 import com.ascend.flockr.constants.dataconnectors.DataConnectorTypeConstants;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Row;
 import lombok.AllArgsConstructor;
@@ -12,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class DataConnectorType {
   private Long id;
   private String kind;
