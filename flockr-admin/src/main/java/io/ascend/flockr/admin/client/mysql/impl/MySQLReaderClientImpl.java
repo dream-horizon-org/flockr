@@ -1,10 +1,10 @@
 package io.ascend.flockr.admin.client.mysql.impl;
 
-import com.ascend.flockr.client.mysql.AbstractMySQLClient;
-import com.ascend.flockr.client.mysql.MySQLReaderClient;
-import com.ascend.flockr.config.MySQLConfig;
-import com.ascend.flockr.constants.mysql.ReadQuery;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.mysql.AbstractMySQLClient;
+import io.ascend.flockr.admin.client.mysql.MySQLReaderClient;
+import io.ascend.flockr.admin.config.MySQLConfig;
+import io.ascend.flockr.admin.constants.mysql.ReadQuery;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.core.Vertx;

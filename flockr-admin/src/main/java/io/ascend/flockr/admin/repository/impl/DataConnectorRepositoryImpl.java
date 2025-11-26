@@ -1,12 +1,12 @@
 package io.ascend.flockr.admin.repository.impl;
 
-import com.ascend.flockr.client.postgres.PostgresReaderClient;
-import com.ascend.flockr.client.postgres.PostgresWriterClient;
-import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
-import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
-import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
-import com.ascend.flockr.repository.DataConnectorRepository;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
+import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
+import io.ascend.flockr.admin.domain.dataconnectors.DataConnectorType;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
+import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.sqlclient.Tuple;

@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.validation;
 
-import com.ascend.flockr.domain.rule.*;
-import com.ascend.flockr.io.request.CreateRulesRequest;
+import io.ascend.flockr.admin.domain.rule.*;
+import io.ascend.flockr.admin.io.request.CreateRulesRequest;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 

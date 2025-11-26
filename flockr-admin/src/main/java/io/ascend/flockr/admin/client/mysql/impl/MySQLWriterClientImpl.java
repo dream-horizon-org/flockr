@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.client.mysql.impl;
 
-import com.ascend.flockr.client.mysql.AbstractMySQLClient;
-import com.ascend.flockr.client.mysql.MySQLWriterClient;
-import com.ascend.flockr.config.MySQLConfig;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.mysql.AbstractMySQLClient;
+import io.ascend.flockr.admin.client.mysql.MySQLWriterClient;
+import io.ascend.flockr.admin.config.MySQLConfig;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;

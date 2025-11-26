@@ -17,7 +17,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Swagger overrides for this module -->
-        <swagger.outputFileName>flockr-admin</swagger.outputFileName>
+        <swagger.outputFileName>swagger</swagger.outputFileName>
         <swagger.resourcePackage>com.ascend.flockr.rest</swagger.resourcePackage>
         <networknt-json-schema.version>1.0.76</networknt-json-schema.version>
     </properties>

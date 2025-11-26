@@ -1,6 +1,6 @@
 package io.ascend.flockr.admin.client.mysql;
 
-import com.ascend.flockr.config.MySQLConfig;
+import io.ascend.flockr.admin.config.MySQLConfig;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;

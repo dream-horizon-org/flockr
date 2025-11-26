@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.provider;
 
-import com.ascend.flockr.constants.Constants;
 import com.dream11.rest.exception.RestException;
+import io.ascend.flockr.admin.constants.Constants;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;

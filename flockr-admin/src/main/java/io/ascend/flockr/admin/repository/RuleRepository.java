@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.repository;
 
-import com.ascend.flockr.domain.rule.RuleMeta;
-import com.ascend.flockr.domain.rule.SourceInfo;
+import io.ascend.flockr.admin.domain.rule.RuleMeta;
+import io.ascend.flockr.admin.domain.rule.SourceInfo;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 

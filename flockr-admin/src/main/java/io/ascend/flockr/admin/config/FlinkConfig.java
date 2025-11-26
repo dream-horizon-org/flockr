@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.config;
 
-import com.ascend.flockr.config.provider.ConfigProvider;
 import com.typesafe.config.Optional;
+import io.ascend.flockr.admin.config.provider.ConfigProvider;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 

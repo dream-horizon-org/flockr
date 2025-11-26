@@ -1,27 +1,27 @@
 package io.ascend.flockr.admin.injection.module;
 
-import com.ascend.flockr.client.flink.FlinkClient;
-import com.ascend.flockr.client.flink.impl.FlinkClientImpl;
-import com.ascend.flockr.client.postgres.PostgresReaderClient;
-import com.ascend.flockr.client.postgres.PostgresWriterClient;
-import com.ascend.flockr.client.postgres.impl.PostgresReaderClientImpl;
-import com.ascend.flockr.client.postgres.impl.PostgresWriterClientImpl;
-import com.ascend.flockr.client.webclient.WebClient;
-import com.ascend.flockr.client.webclient.impl.WebClientImpl;
-import com.ascend.flockr.config.*;
-import com.ascend.flockr.repository.*;
-import com.ascend.flockr.repository.impl.*;
-import com.ascend.flockr.service.*;
-import com.ascend.flockr.service.impl.*;
-import com.ascend.flockr.util.CircuitBreakerFactory;
-import com.ascend.flockr.util.json.JsonSchemaValidationUtil;
-import com.ascend.flockr.util.validator.AthenaConfigValidator;
-import com.ascend.flockr.util.validator.ConfigValidator;
-import com.ascend.flockr.util.validator.ConfigValidatorRegistry;
-import com.ascend.flockr.util.validator.KafkaConfigValidator;
-import com.ascend.flockr.util.validator.S3FolderSinkValidator;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
+import io.ascend.flockr.admin.client.flink.FlinkClient;
+import io.ascend.flockr.admin.client.flink.impl.FlinkClientImpl;
+import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
+import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
+import io.ascend.flockr.admin.client.postgres.impl.PostgresReaderClientImpl;
+import io.ascend.flockr.admin.client.postgres.impl.PostgresWriterClientImpl;
+import io.ascend.flockr.admin.client.webclient.WebClient;
+import io.ascend.flockr.admin.client.webclient.impl.WebClientImpl;
+import io.ascend.flockr.admin.config.*;
+import io.ascend.flockr.admin.repository.*;
+import io.ascend.flockr.admin.repository.impl.*;
+import io.ascend.flockr.admin.service.*;
+import io.ascend.flockr.admin.service.impl.*;
+import io.ascend.flockr.admin.util.CircuitBreakerFactory;
+import io.ascend.flockr.admin.util.json.JsonSchemaValidationUtil;
+import io.ascend.flockr.admin.util.validator.AthenaConfigValidator;
+import io.ascend.flockr.admin.util.validator.ConfigValidator;
+import io.ascend.flockr.admin.util.validator.ConfigValidatorRegistry;
+import io.ascend.flockr.admin.util.validator.KafkaConfigValidator;
+import io.ascend.flockr.admin.util.validator.S3FolderSinkValidator;
 import io.vertx.rxjava3.core.Vertx;
 
 /**

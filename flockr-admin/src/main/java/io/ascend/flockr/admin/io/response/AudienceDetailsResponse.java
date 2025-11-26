@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.io.response;
 
-import com.ascend.flockr.domain.audience.AudienceMeta;
-import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
-import com.ascend.flockr.domain.rule.RuleMeta;
-import com.ascend.flockr.domain.rule.SourceInfoEnriched;
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
+import io.ascend.flockr.admin.domain.rule.RuleMeta;
+import io.ascend.flockr.admin.domain.rule.SourceInfoEnriched;
 import java.util.List;
 
 /**

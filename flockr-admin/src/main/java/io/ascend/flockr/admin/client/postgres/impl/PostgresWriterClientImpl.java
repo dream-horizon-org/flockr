@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.client.postgres.impl;
 
-import com.ascend.flockr.client.postgres.AbstractPostgresClient;
-import com.ascend.flockr.client.postgres.PostgresWriterClient;
-import com.ascend.flockr.config.PostgresConfig;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.postgres.AbstractPostgresClient;
+import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
+import io.ascend.flockr.admin.config.PostgresConfig;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;

@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.util;
 
-import com.ascend.flockr.constants.Constants;
 import com.typesafe.config.*;
+import io.ascend.flockr.admin.constants.Constants;
 import lombok.NonNull;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;

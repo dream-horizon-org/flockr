@@ -1,6 +1,5 @@
 package io.ascend.flockr.admin.util.json;
 
-import com.ascend.flockr.exception.ConfigValidationException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -9,6 +8,7 @@ import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
+import io.ascend.flockr.admin.exception.ConfigValidationException;
 import io.vertx.core.json.JsonObject;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;

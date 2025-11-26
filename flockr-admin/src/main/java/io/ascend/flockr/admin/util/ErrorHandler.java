@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.util;
 
-import com.ascend.flockr.exception.ConfigParsingException;
-import com.ascend.flockr.exception.ConfigValidationException;
-import com.ascend.flockr.io.ResponseEntity;
 import com.dream11.rest.exception.RestException;
+import io.ascend.flockr.admin.exception.ConfigParsingException;
+import io.ascend.flockr.admin.exception.ConfigValidationException;
+import io.ascend.flockr.admin.io.ResponseEntity;
 import io.reactivex.rxjava3.core.Single;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;

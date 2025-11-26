@@ -1,13 +1,13 @@
 package io.ascend.flockr.admin.repository.impl;
 
-import com.ascend.flockr.client.postgres.PostgresReaderClient;
-import com.ascend.flockr.client.postgres.PostgresWriterClient;
-import com.ascend.flockr.constants.audience.AudienceConstants;
-import com.ascend.flockr.domain.audience.AudienceMeta;
-import com.ascend.flockr.io.response.AudienceMetaResponse;
-import com.ascend.flockr.repository.AudienceRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
+import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
+import io.ascend.flockr.admin.constants.audience.AudienceConstants;
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
+import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
+import io.ascend.flockr.admin.repository.AudienceRepository;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;

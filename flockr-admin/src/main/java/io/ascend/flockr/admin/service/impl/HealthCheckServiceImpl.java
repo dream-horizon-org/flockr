@@ -1,11 +1,11 @@
 package io.ascend.flockr.admin.service.impl;
 
-import com.ascend.flockr.exception.ErrorEnum;
-import com.ascend.flockr.io.response.HealthCheckResponse;
-import com.ascend.flockr.repository.HealthCheckDAO;
-import com.ascend.flockr.service.HealthCheckService;
 import com.dream11.rest.util.ExceptionUtil;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.exception.ErrorEnum;
+import io.ascend.flockr.admin.io.response.HealthCheckResponse;
+import io.ascend.flockr.admin.repository.HealthCheckDAO;
+import io.ascend.flockr.admin.service.HealthCheckService;
 import io.reactivex.rxjava3.core.Single;
 import lombok.RequiredArgsConstructor;
 

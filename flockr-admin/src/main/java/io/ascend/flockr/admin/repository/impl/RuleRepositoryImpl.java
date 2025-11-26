@@ -1,12 +1,12 @@
 package io.ascend.flockr.admin.repository.impl;
 
-import com.ascend.flockr.client.postgres.PostgresReaderClient;
-import com.ascend.flockr.client.postgres.PostgresWriterClient;
-import com.ascend.flockr.domain.rule.RuleMeta;
-import com.ascend.flockr.domain.rule.SourceInfo;
-import com.ascend.flockr.repository.RuleRepository;
-import com.ascend.flockr.util.RuleHelpers;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
+import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
+import io.ascend.flockr.admin.domain.rule.RuleMeta;
+import io.ascend.flockr.admin.domain.rule.SourceInfo;
+import io.ascend.flockr.admin.repository.RuleRepository;
+import io.ascend.flockr.admin.util.RuleHelpers;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.sqlclient.Tuple;

@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.domain.dataconnectors;
 
-import com.ascend.flockr.constants.dataconnectors.DataConnectorTypeConstants;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.ascend.flockr.admin.constants.dataconnectors.DataConnectorTypeConstants;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Row;
 import lombok.AllArgsConstructor;

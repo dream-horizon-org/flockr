@@ -1,8 +1,8 @@
 package io.ascend.flockr.admin.repository;
 
-import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
-import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
-import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
+import io.ascend.flockr.admin.domain.dataconnectors.DataConnectorType;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 

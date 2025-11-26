@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.domain.rule;
 
-import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 

@@ -1,8 +1,8 @@
 package io.ascend.flockr.admin.util;
 
-import com.ascend.flockr.config.CircuitBreakerConfig;
 import com.dream11.rest.exception.RestException;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.config.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.io.IOException;

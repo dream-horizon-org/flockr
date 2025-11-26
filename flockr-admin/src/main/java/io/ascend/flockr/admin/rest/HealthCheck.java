@@ -1,10 +1,10 @@
 package io.ascend.flockr.admin.rest;
 
-import com.ascend.flockr.io.ResponseEntity;
-import com.ascend.flockr.io.response.HealthCheckResponse;
-import com.ascend.flockr.service.HealthCheckService;
-import com.ascend.flockr.util.ErrorHandler;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.io.ResponseEntity;
+import io.ascend.flockr.admin.io.response.HealthCheckResponse;
+import io.ascend.flockr.admin.service.HealthCheckService;
+import io.ascend.flockr.admin.util.ErrorHandler;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;

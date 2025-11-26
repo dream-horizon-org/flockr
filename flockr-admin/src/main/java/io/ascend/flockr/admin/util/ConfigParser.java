@@ -1,11 +1,11 @@
 package io.ascend.flockr.admin.util;
 
-import com.ascend.flockr.domain.dataconnectors.config.ConnectorConfig;
-import com.ascend.flockr.domain.dataconnectors.config.SinkConfig;
-import com.ascend.flockr.domain.dataconnectors.config.SourceConfig;
-import com.ascend.flockr.exception.ConfigParsingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.ascend.flockr.admin.domain.dataconnectors.config.ConnectorConfig;
+import io.ascend.flockr.admin.domain.dataconnectors.config.SinkConfig;
+import io.ascend.flockr.admin.domain.dataconnectors.config.SourceConfig;
+import io.ascend.flockr.admin.exception.ConfigParsingException;
 import io.vertx.core.json.JsonObject;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;

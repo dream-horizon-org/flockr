@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.io.request;
 
-import com.ascend.flockr.domain.rule.*;
-import com.ascend.flockr.validation.ValidRuleTypeConfiguration;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.ascend.flockr.admin.domain.rule.*;
+import io.ascend.flockr.admin.validation.ValidRuleTypeConfiguration;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;

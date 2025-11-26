@@ -1,17 +1,17 @@
 package io.ascend.flockr.admin.rest;
 
-import com.ascend.flockr.domain.dataconnectors.DataConnectorType;
-import com.ascend.flockr.domain.dataconnectors.DataSinkDetails;
-import com.ascend.flockr.domain.dataconnectors.DataSourceDetails;
-import com.ascend.flockr.io.ResponseEntity;
-import com.ascend.flockr.io.request.OnboardConnectorTypeRequest;
-import com.ascend.flockr.io.request.OnboardDataSinkRequest;
-import com.ascend.flockr.io.request.OnboardDataSourceRequest;
-import com.ascend.flockr.io.response.PaginatedResponse;
-import com.ascend.flockr.service.DataConnectorService;
-import com.ascend.flockr.util.ErrorHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.domain.dataconnectors.DataConnectorType;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
+import io.ascend.flockr.admin.io.ResponseEntity;
+import io.ascend.flockr.admin.io.request.OnboardConnectorTypeRequest;
+import io.ascend.flockr.admin.io.request.OnboardDataSinkRequest;
+import io.ascend.flockr.admin.io.request.OnboardDataSourceRequest;
+import io.ascend.flockr.admin.io.response.PaginatedResponse;
+import io.ascend.flockr.admin.service.DataConnectorService;
+import io.ascend.flockr.admin.util.ErrorHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;

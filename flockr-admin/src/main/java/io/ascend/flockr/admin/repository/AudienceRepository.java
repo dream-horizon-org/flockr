@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.repository;
 
-import com.ascend.flockr.domain.audience.AudienceMeta;
-import com.ascend.flockr.io.response.AudienceMetaResponse;
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
+import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 

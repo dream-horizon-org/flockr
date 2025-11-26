@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.util;
 
-import com.ascend.flockr.constants.rule.RuleConstants;
-import com.ascend.flockr.domain.rule.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.ascend.flockr.admin.constants.rule.RuleConstants;
+import io.ascend.flockr.admin.domain.rule.*;
 import io.vertx.rxjava3.sqlclient.Row;
 import java.util.ArrayList;
 import java.util.List;

@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.client.datadog.impl;
 
-import com.ascend.flockr.client.datadog.DDClient;
-import com.ascend.flockr.constants.datadog.DDConstants;
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
 import com.timgroup.statsd.StatsDClient;
+import io.ascend.flockr.admin.client.datadog.DDClient;
+import io.ascend.flockr.admin.constants.datadog.DDConstants;
 import io.reactivex.rxjava3.core.Completable;
 
 public class DDClientImpl implements DDClient {

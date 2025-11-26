@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin;
 
-import com.ascend.flockr.injection.GuiceInjector;
-import com.ascend.flockr.injection.module.ServiceModule;
-import com.ascend.flockr.util.CommonUtil;
 import com.google.inject.Module;
+import io.ascend.flockr.admin.injection.GuiceInjector;
+import io.ascend.flockr.admin.injection.module.ServiceModule;
+import io.ascend.flockr.admin.util.CommonUtil;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Launcher;
 import io.vertx.core.Vertx;

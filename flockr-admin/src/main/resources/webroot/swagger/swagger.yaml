@@ -1,0 +1,8 @@
+openapi: 3.0.1
+info:
+  title: Flockr Admin API
+  description: "Flockr Admin Service - Manage audiences, rules, and data connectors"
+  version: "1.0"
+servers:
+- url: http://localhost:8080
+  description: Local development server

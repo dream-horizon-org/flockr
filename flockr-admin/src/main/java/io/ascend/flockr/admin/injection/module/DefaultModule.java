@@ -1,6 +1,5 @@
 package io.ascend.flockr.admin.injection.module;
 
-import com.ascend.flockr.util.json.JsonObjectDeserializer;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.AbstractModule;
+import io.ascend.flockr.admin.util.json.JsonObjectDeserializer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.core.Vertx;
 

@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.provider;
 
-import com.ascend.flockr.exception.ConfigParsingException;
-import com.ascend.flockr.exception.ConfigValidationException;
-import com.ascend.flockr.io.ResponseEntity;
 import com.dream11.rest.exception.RestException;
+import io.ascend.flockr.admin.exception.ConfigParsingException;
+import io.ascend.flockr.admin.exception.ConfigValidationException;
+import io.ascend.flockr.admin.io.ResponseEntity;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;

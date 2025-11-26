@@ -1,8 +1,8 @@
 package io.ascend.flockr.admin.util.validator;
 
-import com.ascend.flockr.exception.ConfigValidationException;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.ascend.flockr.admin.exception.ConfigValidationException;
 import io.vertx.core.json.JsonObject;
 import java.util.Map;
 import java.util.Set;

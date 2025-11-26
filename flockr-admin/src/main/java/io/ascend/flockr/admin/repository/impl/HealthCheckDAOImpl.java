@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.repository.impl;
 
-import com.ascend.flockr.client.postgres.PostgresReaderClient;
-import com.ascend.flockr.repository.HealthCheckDAO;
-import com.ascend.flockr.util.MaintenanceUtil;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
+import io.ascend.flockr.admin.repository.HealthCheckDAO;
+import io.ascend.flockr.admin.util.MaintenanceUtil;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.Vertx;
 import lombok.RequiredArgsConstructor;

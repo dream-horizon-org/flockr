@@ -1,6 +1,6 @@
 package io.ascend.flockr.admin.io.request;
 
-import com.ascend.flockr.validation.NotEmptyJsonObject;
+import io.ascend.flockr.admin.validation.NotEmptyJsonObject;
 import io.vertx.core.json.JsonObject;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;

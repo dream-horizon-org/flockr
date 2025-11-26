@@ -1,6 +1,6 @@
 package io.ascend.flockr.admin.service;
 
-import com.ascend.flockr.io.response.HealthCheckResponse;
+import io.ascend.flockr.admin.io.response.HealthCheckResponse;
 import io.reactivex.rxjava3.core.Single;
 
 /**

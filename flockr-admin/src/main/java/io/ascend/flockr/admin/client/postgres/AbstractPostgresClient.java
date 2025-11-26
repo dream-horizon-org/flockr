@@ -1,6 +1,6 @@
 package io.ascend.flockr.admin.client.postgres;
 
-import com.ascend.flockr.config.PostgresConfig;
+import io.ascend.flockr.admin.config.PostgresConfig;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;

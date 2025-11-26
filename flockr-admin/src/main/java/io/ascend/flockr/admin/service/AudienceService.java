@@ -1,11 +1,11 @@
 package io.ascend.flockr.admin.service;
 
-import com.ascend.flockr.io.request.CreateAudienceRequest;
-import com.ascend.flockr.io.request.CreateRulesRequest;
-import com.ascend.flockr.io.response.AudienceDetailsResponse;
-import com.ascend.flockr.io.response.AudienceMetaResponse;
-import com.ascend.flockr.io.response.PaginatedResponse;
-import com.ascend.flockr.io.response.RuleDetailsResponse;
+import io.ascend.flockr.admin.io.request.CreateAudienceRequest;
+import io.ascend.flockr.admin.io.request.CreateRulesRequest;
+import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
+import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
+import io.ascend.flockr.admin.io.response.PaginatedResponse;
+import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
 import io.reactivex.rxjava3.core.Single;
 
 /**

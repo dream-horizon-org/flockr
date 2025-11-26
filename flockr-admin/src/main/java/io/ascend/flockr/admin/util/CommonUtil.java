@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.util;
 
-import com.ascend.flockr.constants.Constants;
-import com.ascend.flockr.constants.datadog.DDConstants;
+import io.ascend.flockr.admin.constants.Constants;
+import io.ascend.flockr.admin.constants.datadog.DDConstants;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
 import lombok.experimental.UtilityClass;
 

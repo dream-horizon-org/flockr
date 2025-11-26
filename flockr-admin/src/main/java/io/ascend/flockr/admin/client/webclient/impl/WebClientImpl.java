@@ -1,10 +1,10 @@
 package io.ascend.flockr.admin.client.webclient.impl;
 
-import com.ascend.flockr.client.webclient.WebClient;
-import com.ascend.flockr.config.WebClientConfig;
-import com.ascend.flockr.constants.web.WebConstants;
-import com.ascend.flockr.util.CommonUtil;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.webclient.WebClient;
+import io.ascend.flockr.admin.config.WebClientConfig;
+import io.ascend.flockr.admin.constants.web.WebConstants;
+import io.ascend.flockr.admin.util.CommonUtil;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.netty.handler.timeout.TimeoutException;
 import io.reactivex.rxjava3.core.Completable;

@@ -1,14 +1,14 @@
 package io.ascend.flockr.admin.verticle;
 
-import com.ascend.flockr.config.HttpServerConfig;
-import com.ascend.flockr.constants.Constants;
-import com.ascend.flockr.injection.GuiceInjector;
 import com.dream11.rest.AbstractRestVerticle;
 import com.dream11.rest.ClassInjector;
 import com.dream11.rest.provider.JsonProvider;
 import com.dream11.rest.provider.impl.JacksonProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.config.HttpServerConfig;
+import io.ascend.flockr.admin.constants.Constants;
+import io.ascend.flockr.admin.injection.GuiceInjector;
 import io.vertx.core.http.HttpServerOptions;
 
 /**

@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.client.kafka.impl;
 
-import com.ascend.flockr.client.datadog.DDClient;
-import com.ascend.flockr.client.kafka.KafkaProducerClient;
-import com.ascend.flockr.config.KafkaProducerConfig;
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.datadog.DDClient;
+import io.ascend.flockr.admin.client.kafka.KafkaProducerClient;
+import io.ascend.flockr.admin.config.KafkaProducerConfig;
 import io.reactivex.rxjava3.core.Completable;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.kafka.client.producer.KafkaProducer;

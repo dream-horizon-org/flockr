@@ -1,11 +1,11 @@
 package io.ascend.flockr.admin.verticle;
 
-import com.ascend.flockr.client.postgres.PostgresReaderClient;
-import com.ascend.flockr.client.postgres.PostgresWriterClient;
-import com.ascend.flockr.client.webclient.WebClient;
-import com.ascend.flockr.constants.Constants;
-import com.ascend.flockr.injection.GuiceInjector;
-import com.ascend.flockr.util.CommonUtil;
+import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
+import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
+import io.ascend.flockr.admin.client.webclient.WebClient;
+import io.ascend.flockr.admin.constants.Constants;
+import io.ascend.flockr.admin.injection.GuiceInjector;
+import io.ascend.flockr.admin.util.CommonUtil;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.vertx.core.DeploymentOptions;

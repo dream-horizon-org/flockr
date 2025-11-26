@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.config.provider;
 
-import com.ascend.flockr.util.ConfigUtil;
 import com.google.inject.Provider;
+import io.ascend.flockr.admin.util.ConfigUtil;
 import lombok.Getter;
 
 @Getter
