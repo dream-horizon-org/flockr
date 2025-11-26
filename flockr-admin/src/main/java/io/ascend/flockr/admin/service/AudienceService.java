@@ -6,6 +6,8 @@ import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
 import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
+import com.ascend.flockr.io.request.UpdateAudienceOwnerRequest;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 
 /**
@@ -88,4 +90,11 @@ public interface AudienceService {
       Boolean verified,
       Integer page,
       Integer pageSize);
+
+  Completable updateAudienceOwner(
+      String tenantId,
+      String projectId,
+      Long audienceId,
+      String email,
+      UpdateAudienceOwnerRequest updateAudienceOwnerRequest);
 }

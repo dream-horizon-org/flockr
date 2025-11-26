@@ -58,7 +58,7 @@ public class AudienceMeta {
   /** Expiry date of the audience as epoch milliseconds. */
   private Long expireDate;
 
-  /** Timestamp of the last audience update as epoch milliseconds. */
+    /** Timestamp of the last audience update as epoch milliseconds. */
   private Long lastAudienceUpdatedAt;
 
   /** Timestamp when the audience was created as epoch milliseconds. */

@@ -82,9 +82,22 @@ CREATE TABLE rules (
     created_by VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    FOREIGN KEY (audience_id) REFERENCES audiences(id) ON DELETE CASCADE
+    FOREIGN KEY (audience_id) REFERENCES audiences(id)
 );
 
 CREATE INDEX idx_rules_audience_id ON rules(audience_id);
 CREATE INDEX idx_rules_tenant_project ON rules(tenant_id, project_id);
 CREATE INDEX idx_rules_audience_tenant_project ON rules(audience_id, tenant_id, project_id);
+
+
+CREATE TABLE audience_owners (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    audience_id BIGINT NOT NULL,
+    tenant_id VARCHAR(255) NOT NULL,
+    project_id VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    status VARCHAR(50) DEFAULT 'ACTIVE' NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (audience_id) REFERENCES audiences(id)
+);
