@@ -585,7 +585,7 @@ components:
     CreateAudienceRequest:
       required:
       - description
-      - expiryDate
+      - expireDate
       - name
       - sinkIds
       - type
@@ -599,7 +599,7 @@ components:
           $ref: '#/components/schemas/JsonObject'
         type:
           type: string
-        expiryDate:
+        expireDate:
           maximum: 2177452799000
           type: integer
           format: int64
