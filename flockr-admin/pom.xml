@@ -16,9 +16,21 @@
         <maven.compiler.target>23</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Swagger overrides for this module -->
+        <!-- Main class and verticle for this module -->
+        <main.class>io.ascend.flockr.admin.MainLauncher</main.class>
+        <main.verticle>io.ascend.flockr.admin.verticle.MainVerticle</main.verticle>
+
+        <!-- Swagger configuration for this module -->
+        <swagger.configurationFilePath>
+            ${project.basedir}/src/main/resources/config/swagger/swagger-info.json
+        </swagger.configurationFilePath>
         <swagger.outputFileName>swagger</swagger.outputFileName>
-        <swagger.resourcePackage>com.ascend.flockr.rest</swagger.resourcePackage>
+        <swagger.outputPath>
+            ${project.basedir}/src/main/resources/webroot/swagger
+        </swagger.outputPath>
+        <swagger.resourcePackage>io.ascend.flockr.admin.rest</swagger.resourcePackage>
+
+        <!-- Dependencies -->
         <networknt-json-schema.version>1.0.76</networknt-json-schema.version>
     </properties>
 

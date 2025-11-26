@@ -16,21 +16,11 @@
   <properties>
     <!-- project settings -->
     <app.release.artifact>target/flockr</app.release.artifact>
-    <main.class>com.ascend.flockr.MainLauncher</main.class>
-    <main.verticle>com.ascend.flockr.verticle.MainVerticle</main.verticle>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <resources.directory>src/main/resources</resources.directory>
 
-    <!-- Swagger properties   -->
-    <!-- These are evaluated per-module because ${project.basedir} is different in each child -->
-    <swagger.configurationFilePath>
-      ${project.basedir}/${resources.directory}/config/swagger/swagger-info.json
-    </swagger.configurationFilePath>
-    <swagger.outputFileName>swagger</swagger.outputFileName>
-    <swagger.outputPath>
-      ${project.basedir}/${resources.directory}/webroot/swagger
-    </swagger.outputPath>
-    <swagger.resourcePackage>com.ascend.flockr.controller</swagger.resourcePackage>
+    <!-- Module-specific properties (main.class, main.verticle, swagger.*) -->
+    <!-- are defined in each module's POM, not here in the parent -->
 
     <!-- extension versions -->
     <os-maven-extension.version>1.7.1</os-maven-extension.version>
@@ -542,7 +532,7 @@
         <version>${jacoco-maven-plugin.version}</version>
         <configuration>
           <excludes>
-            <exclude>com/ascend/flockr/MainLauncher.class</exclude>
+            <!-- Each module can define its own exclusions -->
           </excludes>
         </configuration>
         <executions>

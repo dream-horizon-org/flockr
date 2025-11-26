@@ -16,10 +16,19 @@
         <maven.compiler.target>23</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Swagger overrides for this module -->
+        <!-- Main class and verticle for this module -->
+        <main.class>io.ascend.flockr.users.Main</main.class>
+        <main.verticle>io.ascend.flockr.users.verticle.MainVerticle</main.verticle>
+
+        <!-- Swagger configuration for this module -->
+        <swagger.configurationFilePath>
+            ${project.basedir}/src/main/resources/config/swagger/swagger-info.json
+        </swagger.configurationFilePath>
         <swagger.outputFileName>flockr-users</swagger.outputFileName>
-        <!-- Adjust this package when you add REST controllers to this module -->
-        <swagger.resourcePackage>com.ascend</swagger.resourcePackage>
+        <swagger.outputPath>
+            ${project.basedir}/src/main/resources/webroot/swagger
+        </swagger.outputPath>
+        <swagger.resourcePackage>io.ascend.flockr.users</swagger.resourcePackage>
     </properties>
 
     <build>
