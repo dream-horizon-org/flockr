@@ -2,6 +2,7 @@ package com.ascend.flockr.users;
 
 import com.ascend.flockr.common.AbstractMainApplication;
 import com.ascend.flockr.users.module.AerospikeModule;
+import com.ascend.flockr.users.module.ConfigModule;
 import com.ascend.flockr.users.module.DefaultModule;
 import com.google.inject.Module;
 import io.vertx.core.Vertx;
@@ -31,6 +32,6 @@ public class MainApplication extends AbstractMainApplication {
 
   @Override
   protected List<Module> getGuiceModules(Vertx vertx) {
-    return List.of(new DefaultModule(vertx), new AerospikeModule(vertx));
+    return List.of(new DefaultModule(vertx), new AerospikeModule(vertx), new ConfigModule());
   }
 }

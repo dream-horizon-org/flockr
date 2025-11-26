@@ -13,6 +13,7 @@ import com.ascend.flockr.users.service.UserCohortsService;
 import com.ascend.flockr.users.util.SetNameUtil;
 import com.dream11.rest.exception.RestException;
 import com.dream11.rest.util.ExceptionUtil;
+import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
@@ -27,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 
@@ -52,6 +55,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * @param aerospikeConfig the Aerospike configuration
    * @param vertx the Vert.x instance for async file operations
    */
+  @Inject
   public UserCohortServiceImpl(
       Aerospike aerospikeClient, AerospikeConfig aerospikeConfig, Vertx vertx) {
     this.aerospikeClient = aerospikeClient;
