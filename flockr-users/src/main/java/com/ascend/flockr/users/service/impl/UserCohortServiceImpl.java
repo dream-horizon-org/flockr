@@ -71,7 +71,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * projectId for multi-tenant isolation.
    */
   @Override
-  public Single<List<String>> getCohorts(Long userId, String tenantId, Long projectId) {
+  public Single<List<String>> getCohorts(Long userId, String tenantId, String projectId) {
     String userKey = String.valueOf(userId);
     String setName = SetNameUtil.generateSetName(tenantId, projectId);
     return aerospikeClient.getCohortExpiryBin(userKey, setName).map(this::getActiveCohortsFromMap);
@@ -85,7 +85,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * tenantId and projectId for multi-tenant isolation. Uses default source since it's removed from API.
    */
   @Override
-  public Single<Boolean> mapUserCohorts(Long userId, String tenantId, Long projectId, MapUserCohortsRequest request) {
+  public Single<Boolean> mapUserCohorts(Long userId, String tenantId, String projectId, MapUserCohortsRequest request) {
     String userKey = String.valueOf(userId);
     // Use default source since it's removed from API
     String source = Constants.SOURCE_DREAM11;
@@ -147,7 +147,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    */
   @Override
   public Single<BulkOperationResult> assignUsersToCohort(
-      String cohortName, String tenantId, Long projectId, InputPart csvFilePart) {
+      String cohortName, String tenantId, String projectId, InputPart csvFilePart) {
     String setName = SetNameUtil.generateSetName(tenantId, projectId);
     return Single.fromCallable(() -> persistCsvToTempFile(csvFilePart))
         .flatMap(tempPath -> processCsvAndAssign(tempPath, cohortName, setName));

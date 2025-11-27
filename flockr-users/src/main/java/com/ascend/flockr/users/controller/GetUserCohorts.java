@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
  * REST controller for retrieving user cohorts.
  *
  * <p>Provides endpoint to get active cohorts for a user identified by userId. This is a
- * multi-tenant endpoint that requires tenantId and projectId for proper data isolation.
+ * multi-tenant endpoint that requires x-project-key header for proper data isolation.
  *
  * @since 1.0
  */
@@ -75,17 +75,8 @@ public class GetUserCohorts {
     }
 
     String tenantId = projectKeyParts[0].trim();
-    Long projectId;
-    try {
-      projectId = Long.parseLong(projectKeyParts[1].trim());
-      if (projectId <= 0) {
-        throw new IllegalArgumentException("projectId must be positive");
-      }
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid projectId in x-project-key: {}", projectKey);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
-    }
-
+    String projectId = projectKeyParts[1].trim();
+    
     // Validate tenantId and projectId
     SetNameUtil.validateTenantAndProject(tenantId, projectId);
 

@@ -30,13 +30,13 @@ public interface UserCohortsService {
    * generated as "{tenantId}_{projectId}" for multi-tenant isolation.
    *
    * @param userId the user ID, must be positive
-   * @param tenantId the tenant ID, must not be null or blank
-   * @param projectId the project ID, must be positive
+   * @param tenantId the tenant ID (UUID format), must not be null or blank
+   * @param projectId the project ID (String), must not be null or blank
    * @return Single emitting a list of active cohort names, empty list if none found
    * @throws IllegalArgumentException if userId, tenantId, or projectId are invalid
    * @since 1.0
    */
-  Single<List<String>> getCohorts(Long userId, String tenantId, Long projectId);
+  Single<List<String>> getCohorts(Long userId, String tenantId, String projectId);
 
   /**
    * Maps a user to a cohort (assigns or removes user from cohort).
@@ -45,14 +45,14 @@ public interface UserCohortsService {
    * from a cohort. The action is determined by the request's {@code action} field.
    *
    * @param userId the user ID from header
-   * @param tenantId the tenant ID from header
-   * @param projectId the project ID from header
+   * @param tenantId the tenant ID (UUID format) from header
+   * @param projectId the project ID (String) from header
    * @param request the mapping request containing cohort and action details
    * @return Single emitting {@code true} if operation succeeded, {@code false} otherwise
    * @throws IllegalArgumentException if request validation fails
    * @since 1.0
    */
-  Single<Boolean> mapUserCohorts(Long userId, String tenantId, Long projectId, MapUserCohortsRequest request);
+  Single<Boolean> mapUserCohorts(Long userId, String tenantId, String projectId, MapUserCohortsRequest request);
 
   /**
    * Bulk assigns users from a CSV file to a cohort.
@@ -67,8 +67,8 @@ public interface UserCohortsService {
    * statistics about successful and failed assignments.
    *
    * @param cohortName the name of the cohort to assign users to
-   * @param tenantId the tenant ID for multi-tenant isolation
-   * @param projectId the project ID for multi-tenant isolation
+   * @param tenantId the tenant ID (UUID format) for multi-tenant isolation
+   * @param projectId the project ID (String) for multi-tenant isolation
    * @param csvFilePart the multipart file part containing the CSV file
    * @return Single emitting bulk operation result with success/failure statistics
    * @throws IllegalArgumentException if cohortName is blank, tenantId/projectId are invalid, or CSV
@@ -76,5 +76,5 @@ public interface UserCohortsService {
    * @since 1.0
    */
   Single<BulkOperationResult> assignUsersToCohort(
-      String cohortName, String tenantId, Long projectId, InputPart csvFilePart);
+      String cohortName, String tenantId, String projectId, InputPart csvFilePart);
 }

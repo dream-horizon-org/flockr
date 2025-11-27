@@ -84,17 +84,8 @@ public class BulkCohortAssignment {
     }
 
     String tenantId = projectKeyParts[0].trim();
-    Long projectId;
-    try {
-      projectId = Long.parseLong(projectKeyParts[1].trim());
-      if (projectId <= 0) {
-        throw new IllegalArgumentException("projectId must be positive");
-      }
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid projectId in x-project-key: {}", projectKey);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
-    }
-
+    String projectId = projectKeyParts[1].trim();
+    
     // Validate tenantId and projectId
     SetNameUtil.validateTenantAndProject(tenantId, projectId);
 
