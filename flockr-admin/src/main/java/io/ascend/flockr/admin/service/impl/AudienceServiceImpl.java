@@ -665,6 +665,23 @@ public class AudienceServiceImpl implements AudienceService {
       Boolean isVerified,
       List<String> verifiers) {
 
+    // Prevent adding duplicate active owners
+    boolean alreadyActiveOwner =
+        existingOwners != null
+            && existingOwners.stream()
+                .anyMatch(
+                    o ->
+                        o.getOwner() != null
+                            && o.getOwner().equalsIgnoreCase(request.getEmail())
+                            && (o.getIsRemoved() == null || !o.getIsRemoved()));
+    if (alreadyActiveOwner) {
+      return Single.error(
+          new RestException(
+              "OWNER_ALREADY_EXISTS",
+              "Owner already exists for this audience",
+              org.apache.http.HttpStatus.SC_CONFLICT));
+    }
+
     return audienceOwnerRepository.addOwner(
         tenantId, projectId, audienceId, request.getEmail(), performedBy);
   }

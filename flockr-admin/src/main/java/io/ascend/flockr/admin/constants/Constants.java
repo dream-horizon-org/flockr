@@ -20,7 +20,7 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public final class Constants {
   /** Base package name for component scanning. */
-  public static final String PACKAGE_NAME = "com.ascend.flockr";
+  public static final String PACKAGE_NAME = "io.ascend.flockr.admin";
 
   /** System property key for application environment. */
   public static final String APP_ENV_KEY = "app.environment";
