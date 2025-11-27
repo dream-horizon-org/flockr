@@ -80,23 +80,61 @@ The application uses:
 - **Vert.x**: Reactive toolkit for building event-driven applications
 - **PostgreSQL**: Primary database for persistent storage
 - **Aerospike**: Distributed cache for high-speed data access
-- **Kafka**: Event streaming platform
 - **Flink**: Stream processing framework
 
 ## Getting Started
 
+### 🐳 Quick Start with Docker (Recommended)
+
+The fastest way to get started is using Docker:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/flockr.git
+cd flockr
+
+# Start all services (PostgreSQL, Flink, Spark, Kafka, Aerospike, and Flockr)
+./docker-start.sh
+```
+
+That's it! All services will start automatically. Access the API at http://localhost:8080
+
+📖 **[Read the complete Docker guide →](DOCKER.md)**
+
 ### Prerequisites
 
-Before you begin, ensure you have the following installed:
+#### For Docker Deployment (Recommended)
+- **Docker** 20.10+ ([Download](https://docs.docker.com/get-docker/))
+- **Docker Compose** v2.0+ ([Download](https://docs.docker.com/compose/install/))
+- At least **4GB RAM** allocated to Docker
 
+#### For Local Development
 - **Java JDK 17 or higher** ([Download](https://www.oracle.com/java/technologies/downloads/))
 - **Apache Maven 3.6+** ([Download](https://maven.apache.org/download.cgi))
 - **PostgreSQL 12+** (for database)
 - **Aerospike** (optional, for caching)
-- **Apache Kafka** (optional, for event streaming)
 - **Apache Flink** (optional, for stream processing)
 
 ### Installation
+
+#### Option A: Docker Installation (Recommended)
+
+1. **Clone the repository**
+
+```bash
+git clone https://github.com/yourusername/flockr.git
+cd flockr
+```
+
+2. **Start with Docker**
+
+```bash
+./docker-start.sh
+```
+
+The database schema and seed data are automatically loaded. See [DOCKER.md](DOCKER.md) for details.
+
+#### Option B: Local Installation
 
 1. **Clone the repository**
 
@@ -160,7 +198,27 @@ export PRIVATE_HOSTED_ZONE=your-hosted-zone
 
 ### Running the Application
 
-#### Option 1: Run from JAR
+#### Option 1: Docker (Recommended)
+
+```bash
+# Start all services
+./docker-start.sh
+
+# View logs
+docker-compose logs -f flockr-admin
+
+# Stop services
+./docker-stop.sh
+
+# Check status
+./docker-status.sh
+```
+
+Access the application at http://localhost:8080
+
+See [DOCKER.md](DOCKER.md) for complete Docker documentation.
+
+#### Option 2: Run from JAR
 
 ```bash
 # Build the fat JAR
@@ -197,7 +255,7 @@ java \
      ```
 4. Run the configuration
 
-#### Option 3: Maven Exec Plugin
+#### Option 4: Maven Exec Plugin
 
 ```bash
 mvn clean compile exec:java \
@@ -206,6 +264,57 @@ mvn clean compile exec:java \
 ```
 
 The application will start on `http://localhost:8080` (default port).
+
+## 🐳 Docker Deployment
+
+Flockr includes a complete Docker setup with all dependencies:
+
+### Quick Start
+
+```bash
+./docker-start.sh
+```
+
+### What's Included
+
+The Docker environment includes:
+- **PostgreSQL 16** - Primary database
+- **Apache Flink 1.17** - Stream processing
+- **Apache Spark 3.5** - Distributed computing (Master + Worker)
+- **Aerospike** - Distributed cache
+- **Flockr Admin** - Main application
+
+### Services & Ports
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Flockr Admin | 8080 | Main REST API |
+| PostgreSQL | 5432 | Database |
+| Flink Dashboard | 8081 | Stream processing UI |
+| Spark Master | 8082 | Spark cluster UI |
+| Spark Worker | 8083 | Spark worker UI |
+| Aerospike | 3000 | Cache |
+
+### Management Commands
+
+```bash
+# Start services
+./docker-start.sh
+
+# Check status
+./docker-status.sh
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+./docker-stop.sh
+
+# Clean up everything
+./docker-clean.sh
+```
+
+**📖 [Complete Docker Documentation →](DOCKER.md)**
 
 ## API Documentation
 
@@ -369,7 +478,6 @@ Coverage reports are generated in:
 ### Data & Persistence
 - **PostgreSQL** - Primary database
 - **Aerospike 6.2.0** - Distributed cache
-- **Apache Kafka 3.6.0** - Event streaming
 
 ### Stream Processing
 - **Apache Flink** - Stream processing

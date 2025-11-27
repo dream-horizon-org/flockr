@@ -26,9 +26,9 @@ VALUES
         "catalog": {
           "type": "string"
         }
-      }
-    }',
-   1)
+	      }
+	    }',
+	   TRUE)
 ON CONFLICT (kind, type) DO UPDATE SET display_name=EXCLUDED.display_name, config_schema=EXCLUDED.config_schema, is_active=EXCLUDED.is_active;
 
 INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active)

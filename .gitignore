@@ -229,3 +229,11 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 /.vscode/settings.json
+
+### Docker ###
+docker-compose.override.yml
+backup_*.sql
+*.backup
+
+### Application specific ###
+application-local.conf
