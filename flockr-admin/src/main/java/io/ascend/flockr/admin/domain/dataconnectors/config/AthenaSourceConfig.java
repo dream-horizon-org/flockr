@@ -22,7 +22,7 @@ public class AthenaSourceConfig implements SourceConfig {
   @JsonProperty("query")
   private String query;
 
-  /** Optional: Database name. */
+  /** Required: Database name. */
   @JsonProperty("database")
   private String database;
 
@@ -30,11 +30,11 @@ public class AthenaSourceConfig implements SourceConfig {
   @JsonProperty("region")
   private String region;
 
-  /** Optional: AWS access key ID. Must be provided together with secretKey. */
+  /** Required: AWS access key ID. Must be provided together with secretKey. */
   @JsonProperty("accessKey")
   private String accessKey;
 
-  /** Optional: AWS secret access key. Must be provided together with accessKey. */
+  /** Required: AWS secret access key. Must be provided together with accessKey. */
   @JsonProperty("secretKey")
   private String secretKey;
 
