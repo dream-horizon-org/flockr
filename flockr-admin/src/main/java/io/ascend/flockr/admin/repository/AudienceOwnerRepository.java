@@ -1,10 +1,9 @@
 package io.ascend.flockr.admin.repository;
 
-import io.ascend.flockr.admin.io.request.AudienceOwner;
+import io.ascend.flockr.admin.domain.audience.AudienceOwner;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
-// AudienceOwnerRepository.java
 public interface AudienceOwnerRepository {
 
   Single<List<AudienceOwner>> findOwners(String tenantId, String projectId, Long audienceId);

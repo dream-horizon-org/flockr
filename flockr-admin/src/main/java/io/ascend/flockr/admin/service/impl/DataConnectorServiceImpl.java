@@ -66,10 +66,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
             type ->
                 repository
                     .createDataSource(
-                        request.getName(),
-                        request.getTypeId(),
-                        createdBy,
-                        request.getConfig())
+                        request.getName(), request.getTypeId(), createdBy, request.getConfig())
                     .map(
                         id ->
                             DataSourceDetails.builder()
@@ -100,10 +97,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
             type ->
                 repository
                     .createDataSink(
-                        request.getName(),
-                        request.getTypeId(),
-                        createdBy,
-                        request.getConfig())
+                        request.getName(), request.getTypeId(), createdBy, request.getConfig())
                     .map(
                         id ->
                             DataSinkDetails.builder()

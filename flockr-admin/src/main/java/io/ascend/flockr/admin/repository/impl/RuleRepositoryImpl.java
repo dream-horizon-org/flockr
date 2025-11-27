@@ -45,7 +45,7 @@ public class RuleRepositoryImpl implements RuleRepository {
       "SELECT id, audience_id, tenant_id, project_id, name, description, "
           + "EXTRACT(EPOCH FROM start_time)::BIGINT as start_time, EXTRACT(EPOCH FROM end_time)::BIGINT as end_time, "
           + "rule_action, rule_type, status, configuration, "
-          + "created_by, updated_by, EXTRACT(EPOCH FROM created_at)::BIGINT as created_at, "
+          + "created_by, EXTRACT(EPOCH FROM created_at)::BIGINT as created_at, "
           + "EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at "
           + "FROM rules WHERE id = $1 AND tenant_id = $2 AND project_id = $3";
 
@@ -53,7 +53,7 @@ public class RuleRepositoryImpl implements RuleRepository {
       "SELECT id, audience_id, tenant_id, project_id, name, description, "
           + "EXTRACT(EPOCH FROM start_time)::BIGINT as start_time, EXTRACT(EPOCH FROM end_time)::BIGINT as end_time, "
           + "rule_action, rule_type, status, configuration, "
-          + "created_by, updated_by, EXTRACT(EPOCH FROM created_at)::BIGINT as created_at, "
+          + "created_by, EXTRACT(EPOCH FROM created_at)::BIGINT as created_at, "
           + "EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at "
           + "FROM rules WHERE audience_id = $1 AND tenant_id = $2 AND project_id = $3 ORDER BY created_at DESC";
 

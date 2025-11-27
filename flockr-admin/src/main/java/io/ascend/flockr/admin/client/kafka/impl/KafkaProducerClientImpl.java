@@ -1,7 +1,6 @@
 package io.ascend.flockr.admin.client.kafka.impl;
 
 import com.google.inject.Inject;
-import io.ascend.flockr.admin.client.datadog.DDClient;
 import io.ascend.flockr.admin.client.kafka.KafkaProducerClient;
 import io.ascend.flockr.admin.config.KafkaProducerConfig;
 import io.reactivex.rxjava3.core.Completable;
@@ -15,14 +14,11 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 @Slf4j
 public class KafkaProducerClientImpl implements KafkaProducerClient {
 
-  private final DDClient ddClient;
   private final KafkaProducer<String, String> kafkaProducer;
   private final KafkaProducerConfig producerConfig;
 
   @Inject
-  public KafkaProducerClientImpl(
-      Vertx vertx, KafkaProducerConfig producerConfig, DDClient ddClient) {
-    this.ddClient = ddClient;
+  public KafkaProducerClientImpl(Vertx vertx, KafkaProducerConfig producerConfig) {
     this.producerConfig = producerConfig;
     this.kafkaProducer = KafkaProducer.create(vertx, getConfigMap(producerConfig));
   }

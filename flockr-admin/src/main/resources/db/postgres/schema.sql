@@ -95,9 +95,21 @@ CREATE TABLE audience_owners (
     audience_id BIGINT NOT NULL,
     tenant_id VARCHAR(255) NOT NULL,
     project_id VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    status VARCHAR(50) DEFAULT 'ACTIVE' NOT NULL,
+    owner_email VARCHAR(255) NOT NULL,
+    status VARCHAR(50) DEFAULT 'ACTIVE' NOT NULL CHECK (status IN ('ACTIVE', 'INACTIVE')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    FOREIGN KEY (audience_id) REFERENCES audiences(id)
+    
+    -- Foreign key constraint with cascade delete
+    CONSTRAINT fk_audience_owners_audience FOREIGN KEY (audience_id) REFERENCES audiences(id) ON DELETE CASCADE,
+    
+    -- Unique constraint: one active owner record per audience
+    CONSTRAINT uq_active_audience_owner UNIQUE (audience_id, owner_email)
 );
+
+-- Indexes for performance optimization
+CREATE INDEX idx_audience_owners_audience_id ON audience_owners(audience_id);
+CREATE INDEX idx_audience_owners_tenant_project ON audience_owners(tenant_id, project_id);
+CREATE INDEX idx_audience_owners_email ON audience_owners(owner_email);
+CREATE INDEX idx_audience_owners_status ON audience_owners(status) WHERE status = 'ACTIVE';
+CREATE INDEX idx_audience_owners_lookup ON audience_owners(audience_id, tenant_id, project_id, status);

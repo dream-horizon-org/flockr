@@ -1,6 +1,5 @@
 package io.ascend.flockr.admin.repository.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
@@ -10,10 +9,8 @@ import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.ascend.flockr.admin.repository.AudienceRepository;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
-import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,10 +35,9 @@ public class AudienceRepositoryImpl implements AudienceRepository {
   private final PostgresReaderClient postgresReaderClient;
   private final PostgresWriterClient postgresWriterClient;
 
-
   private static final String SQL_CREATE_AUDIENCE =
       "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expire_date, created_by, name_vector) "
-          + "VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8), $9, to_tsvector('english', $10)) RETURNING id";
+          + "VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8), $9, to_tsvector('english', $3)) RETURNING id";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
       "SELECT id, tenant_id, project_id, name, description, "

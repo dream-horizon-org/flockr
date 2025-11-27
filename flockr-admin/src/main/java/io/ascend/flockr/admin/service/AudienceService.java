@@ -5,10 +5,12 @@ import io.ascend.flockr.admin.io.request.CreateRulesRequest;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerRequest;
 import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
 import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
+import io.ascend.flockr.admin.io.response.AudienceOwnerResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
+import java.util.List;
 
 /**
  * Service interface for managing audiences and their associated rules.
@@ -91,10 +93,33 @@ public interface AudienceService {
       Integer page,
       Integer pageSize);
 
+  /**
+   * Adds or removes an audience owner.
+   *
+   * <p>Validates that the acting user is an authorized owner and the audience is not expired.
+   *
+   * @param tenantId the tenant identifier
+   * @param projectId the project identifier
+   * @param audienceId the identifier of the audience to update
+   * @param userEmail the acting user's email (must already be an owner)
+   * @param updateAudienceOwnerRequest the request containing the action and target owner email
+   * @return a Completable that completes on success or errors on failure
+   */
   Completable updateAudienceOwner(
       String tenantId,
       String projectId,
       Long audienceId,
-      String email,
+      String userEmail,
       UpdateAudienceOwnerRequest updateAudienceOwnerRequest);
+
+  /**
+   * Retrieves all owners for a specific audience.
+   *
+   * @param tenantId the tenant identifier
+   * @param projectId the project identifier
+   * @param audienceId the identifier of the audience
+   * @return a Single emitting a list of audience owners
+   */
+  Single<List<AudienceOwnerResponse>> getAudienceOwners(
+      String tenantId, String projectId, Long audienceId);
 }

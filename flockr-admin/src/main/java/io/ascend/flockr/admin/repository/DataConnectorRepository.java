@@ -5,7 +5,6 @@ import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
-
 import java.util.List;
 
 /**

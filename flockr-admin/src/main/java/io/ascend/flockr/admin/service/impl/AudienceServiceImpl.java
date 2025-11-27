@@ -3,12 +3,14 @@ package io.ascend.flockr.admin.service.impl;
 import com.dream11.rest.exception.RestException;
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
+import io.ascend.flockr.admin.domain.audience.AudienceOwner;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.domain.rule.*;
 import io.ascend.flockr.admin.io.request.*;
 import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
 import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
+import io.ascend.flockr.admin.io.response.AudienceOwnerResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
 import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
@@ -319,9 +321,11 @@ public class AudienceServiceImpl implements AudienceService {
       return Single.just(List.of());
     }
 
-    log.debug("Fetching {} data sources in batch", sourceIds.size());
+    log.debug("Fetching {} data sources in batch", sourceIds);
     return dataConnectorRepository
         .getDataSourcesByIds(sourceIds)
+        .filter(list -> list.size() == sourceIds.size())
+        .switchIfEmpty(Single.error(new RuntimeException("Fetched source metadata partially")))
         .doOnSuccess(sources -> log.debug("Successfully fetched {} data sources", sources.size()))
         .doOnError(
             error -> log.error("Failed to fetch data sources in batch: {}", error.getMessage()));
@@ -603,7 +607,7 @@ public class AudienceServiceImpl implements AudienceService {
                       owners -> {
                         // Checking if logged-in user has permission
                         boolean authorized =
-                            owners.stream().anyMatch(o -> o.getOwner().equals(userEmail));
+                            owners.stream().anyMatch(o -> o.getOwnerEmail().equals(userEmail));
                         if (!authorized) {
                           return Single.error(
                               new RestException(
@@ -690,5 +694,45 @@ public class AudienceServiceImpl implements AudienceService {
 
     return audienceOwnerRepository.removeOwner(
         tenantId, projectId, audienceId, request.getEmail(), performedBy);
+  }
+
+  /**
+   * Retrieves all owners for a specific audience.
+   *
+   * <p>This method fetches all owners (active and inactive) associated with an audience and
+   * transforms them into response objects.
+   *
+   * @param tenantId the tenant identifier from the request header
+   * @param projectId the project identifier from the request header
+   * @param audienceId the identifier of the audience
+   * @return a {@link Single} emitting a list of {@link AudienceOwnerResponse}
+   */
+  @Override
+  public Single<List<AudienceOwnerResponse>> getAudienceOwners(
+      String tenantId, String projectId, Long audienceId) {
+    return audienceOwnerRepository
+        .findOwners(tenantId, projectId, audienceId)
+        .map(
+            owners ->
+                owners.stream()
+                    .map(
+                        owner ->
+                            AudienceOwnerResponse.builder()
+                                .id(owner.getId())
+                                .audienceId(owner.getAudienceId())
+                                .ownerEmail(owner.getOwnerEmail())
+                                .status(owner.getStatus())
+                                .createdAt(owner.getCreatedAt())
+                                .updatedAt(owner.getUpdatedAt())
+                                .build())
+                    .toList())
+        .doOnSuccess(
+            owners ->
+                log.info(
+                    "Successfully fetched {} owners for audience {}", owners.size(), audienceId))
+        .doOnError(
+            error ->
+                log.error(
+                    "Failed to fetch owners for audience {}: {}", audienceId, error.getMessage()));
   }
 }
