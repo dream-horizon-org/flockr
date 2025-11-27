@@ -163,8 +163,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
   private Path persistCsvToTempFile(InputPart csvFilePart) throws Exception {
     byte[] payload = csvFilePart.getBody(byte[].class, null);
     if (payload == null || payload.length == 0) {
-      throw ExceptionUtil.getException(
-          DefinedErrors.INVALID_REQUEST_PARAMS, "Uploaded CSV is empty");
+      throw ExceptionUtil.getException(DefinedErrors.EMPTY_CSV_FILE);
     }
     Path tempFile = Files.createTempFile("cohort-upload-", ".csv");
     Files.write(tempFile, payload);

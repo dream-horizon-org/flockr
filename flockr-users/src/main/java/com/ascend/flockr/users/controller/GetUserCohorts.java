@@ -55,30 +55,65 @@ public class GetUserCohorts {
       @HeaderParam("userId") String userIdHeader,
       @HeaderParam("x-project-key") String projectKey) {
 
+    // Validate userId header is present
+    if (userIdHeader == null || userIdHeader.trim().isEmpty()) {
+      log.error("Missing userId header");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_USER_ID_HEADER);
+    }
+
+    // Validate x-project-key header is present
+    if (projectKey == null || projectKey.trim().isEmpty()) {
+      log.error("Missing x-project-key header");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_PROJECT_KEY_HEADER);
+    }
+
     // Parse user ID
     Long userId;
     try {
-      userId = Long.parseLong(userIdHeader);
+      userId = Long.parseLong(userIdHeader.trim());
       if (userId <= 0) {
-        throw new IllegalArgumentException("userId must be positive");
+        log.error("Invalid userId provided: {}", userIdHeader);
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_USER_ID, userIdHeader);
       }
     } catch (IllegalArgumentException | NullPointerException e) {
-      log.error("Invalid userId provided: {}", userIdHeader);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+      log.error("Invalid userId format: {}", userIdHeader);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_USER_ID, userIdHeader);
     }
 
     // Parse x-project-key (format: tenantId_projectId)
-    String[] projectKeyParts = projectKey != null ? projectKey.split("_", 2) : new String[0];
+    String[] projectKeyParts = projectKey.split("_", 2);
     if (projectKeyParts.length != 2) {
       log.error("Invalid x-project-key format: {}", projectKey);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_PROJECT_KEY_FORMAT, projectKey);
     }
 
     String tenantId = projectKeyParts[0].trim();
     String projectId = projectKeyParts[1].trim();
     
-    // Validate tenantId and projectId
-    SetNameUtil.validateTenantAndProject(tenantId, projectId);
+    // Validate tenantId is not empty
+    if (tenantId.isEmpty()) {
+      log.error("Empty tenantId in x-project-key: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_TENANT_ID);
+    }
+
+    // Validate projectId is not empty
+    if (projectId.isEmpty()) {
+      log.error("Empty projectId in x-project-key: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_PROJECT_ID);
+    }
+
+    // Validate tenantId and projectId (includes UUID validation for tenantId)
+    try {
+      SetNameUtil.validateTenantAndProject(tenantId, projectId);
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid tenantId or projectId: tenantId={}, projectId={}, error={}", tenantId, projectId, e.getMessage());
+      // Check if it's a UUID validation error
+      if (e.getMessage().contains("UUID")) {
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_TENANT_ID_FORMAT, tenantId);
+      } else {
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_PROJECT_KEY_FORMAT, projectKey);
+      }
+    }
 
     return userCohortsService
         .getCohorts(userId, tenantId, projectId)

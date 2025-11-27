@@ -76,22 +76,76 @@ public class BulkCohortAssignment {
       @HeaderParam("x-project-key") String projectKey,
       MultipartFormDataInput input) {
 
+    // Validate x-project-key header is present
+    if (projectKey == null || projectKey.trim().isEmpty()) {
+      log.error("Missing x-project-key header");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_PROJECT_KEY_HEADER);
+    }
+
     // Parse x-project-key (format: tenantId_projectId)
-    String[] projectKeyParts = projectKey != null ? projectKey.split("_", 2) : new String[0];
+    String[] projectKeyParts = projectKey.split("_", 2);
     if (projectKeyParts.length != 2) {
       log.error("Invalid x-project-key format: {}", projectKey);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_PROJECT_KEY_FORMAT, projectKey);
     }
 
     String tenantId = projectKeyParts[0].trim();
     String projectId = projectKeyParts[1].trim();
     
-    // Validate tenantId and projectId
-    SetNameUtil.validateTenantAndProject(tenantId, projectId);
+    // Validate tenantId is not empty
+    if (tenantId.isEmpty()) {
+      log.error("Empty tenantId in x-project-key: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_TENANT_ID);
+    }
+
+    // Validate projectId is not empty
+    if (projectId.isEmpty()) {
+      log.error("Empty projectId in x-project-key: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_PROJECT_ID);
+    }
+
+    // Validate tenantId and projectId (includes UUID validation for tenantId)
+    try {
+      SetNameUtil.validateTenantAndProject(tenantId, projectId);
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid tenantId or projectId: tenantId={}, projectId={}, error={}", tenantId, projectId, e.getMessage());
+      // Check if it's a UUID validation error
+      if (e.getMessage().contains("UUID")) {
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_TENANT_ID_FORMAT, tenantId);
+      } else {
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_PROJECT_KEY_FORMAT, projectKey);
+      }
+    }
 
     // Extract form data (using snake_case for API)
-    String cohortName = extractPart(input, COHORT_NAME);
-    InputPart filePart = getPart(input, CSV_FILE);
+    String cohortName;
+    InputPart filePart;
+    
+    try {
+      cohortName = extractPart(input, COHORT_NAME);
+      if (cohortName == null || cohortName.trim().isEmpty()) {
+        log.error("Missing or empty cohort_name in form data");
+        throw ExceptionUtil.getException(DefinedErrors.MISSING_COHORT_NAME);
+      }
+    } catch (Exception e) {
+      if (e instanceof RuntimeException && e.getCause() instanceof IllegalArgumentException) {
+        // Re-throw if it's already a DefinedErrors exception
+        throw e;
+      }
+      log.error("Missing cohort_name in form data");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_COHORT_NAME);
+    }
+
+    try {
+      filePart = getPart(input, CSV_FILE);
+    } catch (Exception e) {
+      if (e instanceof RuntimeException && e.getCause() instanceof IllegalArgumentException) {
+        // Re-throw if it's already a DefinedErrors exception
+        throw e;
+      }
+      log.error("Missing csv_file in form data");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_CSV_FILE);
+    }
 
     return userCohortsService
         .assignUsersToCohort(cohortName, tenantId, projectId, filePart)
@@ -134,7 +188,14 @@ public class BulkCohortAssignment {
   private InputPart getPart(MultipartFormDataInput input, String name) {
     List<InputPart> parts = input.getFormDataMap().get(name);
     if (parts == null || parts.isEmpty()) {
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS, "Missing " + name);
+      if (CSV_FILE.equals(name)) {
+        throw ExceptionUtil.getException(DefinedErrors.MISSING_CSV_FILE);
+      } else if (COHORT_NAME.equals(name)) {
+        throw ExceptionUtil.getException(DefinedErrors.MISSING_COHORT_NAME);
+      } else {
+        // Fallback for unknown form fields - should not happen in normal operation
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST, "Missing required form field: " + name);
+      }
     }
     return parts.get(0);
   }

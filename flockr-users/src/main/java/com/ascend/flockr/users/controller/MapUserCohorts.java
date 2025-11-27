@@ -1,5 +1,6 @@
 package com.ascend.flockr.users.controller;
 
+import com.ascend.flockr.common.constants.Constants;
 import com.ascend.flockr.common.exception.errors.DefinedErrors;
 import com.ascend.flockr.users.dto.ResponseEntity;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
@@ -66,33 +67,101 @@ public class MapUserCohorts {
       @HeaderParam("x-project-key") String projectKey,
       MapUserCohortsRequest request) {
 
+    // Validate userId header is present
+    if (userIdHeader == null || userIdHeader.trim().isEmpty()) {
+      log.error("Missing userId header");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_USER_ID_HEADER);
+    }
+
+    // Validate x-project-key header is present
+    if (projectKey == null || projectKey.trim().isEmpty()) {
+      log.error("Missing x-project-key header");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_PROJECT_KEY_HEADER);
+    }
+
     // Parse user ID
     Long userId;
     try {
-      userId = Long.parseLong(userIdHeader);
+      userId = Long.parseLong(userIdHeader.trim());
       if (userId <= 0) {
-        throw new IllegalArgumentException("userId must be positive");
+        log.error("Invalid userId provided: {}", userIdHeader);
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_USER_ID, userIdHeader);
       }
     } catch (IllegalArgumentException | NullPointerException e) {
-      log.error("Invalid userId provided: {}", userIdHeader);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+      log.error("Invalid userId format: {}", userIdHeader);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_USER_ID, userIdHeader);
     }
 
     // Parse x-project-key (format: tenantId_projectId)
-    String[] projectKeyParts = projectKey != null ? projectKey.split("_", 2) : new String[0];
+    String[] projectKeyParts = projectKey.split("_", 2);
     if (projectKeyParts.length != 2) {
       log.error("Invalid x-project-key format: {}", projectKey);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_PROJECT_KEY_FORMAT, projectKey);
     }
 
     String tenantId = projectKeyParts[0].trim();
     String projectId = projectKeyParts[1].trim();
     
-    // Validate tenantId and projectId
-    SetNameUtil.validateTenantAndProject(tenantId, projectId);
+    // Validate tenantId is not empty
+    if (tenantId.isEmpty()) {
+      log.error("Empty tenantId in x-project-key: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_TENANT_ID);
+    }
+
+    // Validate projectId is not empty
+    if (projectId.isEmpty()) {
+      log.error("Empty projectId in x-project-key: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_PROJECT_ID);
+    }
+
+    // Validate tenantId and projectId (includes UUID validation for tenantId)
+    try {
+      SetNameUtil.validateTenantAndProject(tenantId, projectId);
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid tenantId or projectId: tenantId={}, projectId={}, error={}", tenantId, projectId, e.getMessage());
+      // Check if it's a UUID validation error
+      if (e.getMessage().contains("UUID")) {
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_TENANT_ID_FORMAT, tenantId);
+      } else {
+        throw ExceptionUtil.getException(DefinedErrors.INVALID_PROJECT_KEY_FORMAT, projectKey);
+      }
+    }
 
     // Validate request body
-    request.validate();
+    if (request == null) {
+      log.error("Request body is null");
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST, "Request body is required");
+    }
+
+    // Validate required fields
+    if (request.getCohortKey() == null || request.getCohortKey().trim().isEmpty()) {
+      log.error("Missing cohort_key in request body");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_COHORT_KEY);
+    }
+
+    if (request.getAction() == null || request.getAction().trim().isEmpty()) {
+      log.error("Missing action in request body");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_ACTION);
+    }
+
+    if (request.getExpireAt() == null || request.getExpireAt().trim().isEmpty()) {
+      log.error("Missing expire_at in request body");
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_EXPIRE_AT);
+    }
+
+    // Validate action value
+    if (!request.getAction().equals(Constants.ACTION_APPEND) && !request.getAction().equals(Constants.ACTION_REMOVE)) {
+      log.error("Invalid action value: {}", request.getAction());
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_ACTION, request.getAction());
+    }
+
+    // Validate request body using Bean Validation
+    try {
+      request.validate();
+    } catch (Exception e) {
+      log.error("Request validation failed: {}", e.getMessage());
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST, e.getMessage());
+    }
 
     return userCohortsService
         .mapUserCohorts(userId, tenantId, projectId, request)
