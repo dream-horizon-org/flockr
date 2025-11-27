@@ -1,0 +1,114 @@
+services:
+  # PostgreSQL 16 Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: flockr-postgres
+    environment:
+      POSTGRES_DB: flockr
+      POSTGRES_USER: flockr_user
+      POSTGRES_PASSWORD: flockr_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./flockr-admin/src/main/resources/db/postgres:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flockr_user -d flockr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - flockr-network
+
+  # Apache Flink 1.17 JobManager
+  flink-jobmanager:
+    image: flink:1.17.2
+    container_name: flockr-flink-jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 2
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - flockr-network
+
+  # Apache Flink 1.17 TaskManager
+  flink-taskmanager:
+    image: flink:1.17.2
+    container_name: flockr-flink-taskmanager
+    depends_on:
+      - flink-jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        taskmanager.memory.process.size: 1024m
+    command: taskmanager
+    scale: 1
+    networks:
+      - flockr-network
+
+  # Flockr Admin Application
+  flockr-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flockr-admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      # Application
+      - ENV=docker
+      - TEAM_SUFFIX=
+      - PRIVATE_HOSTED_ZONE=
+      
+      # PostgreSQL
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=flockr_user
+      - POSTGRES_PASSWORD=flockr_password
+      - POSTGRES_DATABASE=flockr
+      
+      # Flink
+      - FLINK_HOST=flink-jobmanager
+      - FLINK_PORT=8081
+      - FLINK_CONNECT_TIMEOUT=30000
+      - FLINK_REQUEST_TIMEOUT=60000
+      
+      # JVM Options
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - flockr-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  flockr-network:
+    driver: bridge

@@ -12,9 +12,33 @@
     <artifactId>flockr-users</artifactId>
 
     <properties>
-        <maven.compiler.source>23</maven.compiler.source>
-        <maven.compiler.target>23</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Main class and verticle for this module -->
+        <main.class>io.ascend.flockr.users.Main</main.class>
+        <main.verticle>io.ascend.flockr.users.verticle.MainVerticle</main.verticle>
+
+        <!-- Swagger configuration for this module -->
+        <swagger.configurationFilePath>
+            ${project.basedir}/src/main/resources/config/swagger/swagger-info.json
+        </swagger.configurationFilePath>
+        <swagger.outputFileName>flockr-users</swagger.outputFileName>
+        <swagger.outputPath>
+            ${project.basedir}/src/main/resources/webroot/swagger
+        </swagger.outputPath>
+        <swagger.resourcePackage>io.ascend.flockr.users</swagger.resourcePackage>
     </properties>
+
+    <build>
+        <plugins>
+            <!-- Enable Swagger generation for this module using parent pluginManagement config -->
+            <plugin>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-maven-plugin-jakarta</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

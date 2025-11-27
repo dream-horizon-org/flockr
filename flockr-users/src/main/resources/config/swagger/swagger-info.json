@@ -1,0 +1,16 @@
+{
+  "prettyPrint": true,
+  "openAPI": {
+    "info": {
+      "version": "1.0",
+      "title": "Flockr Users API",
+      "description": "Flockr Users Service - User management and authentication"
+    },
+    "servers": [
+      {
+        "url": "http://localhost:8081",
+        "description": "Local development server"
+      }
+    ]
+  }
+}

@@ -16,16 +16,11 @@
   <properties>
     <!-- project settings -->
     <app.release.artifact>target/flockr</app.release.artifact>
-    <main.class>com.ascend.flockr.MainLauncher</main.class>
-    <main.verticle>com.ascend.flockr.verticle.MainVerticle</main.verticle>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <resources.directory>src/main/resources</resources.directory>
 
-    <!-- Swagger properties   -->
-    <swagger.configurationFilePath>${project.basedir}/${resources.directory}/config/swagger/swagger-info.json</swagger.configurationFilePath>
-    <swagger.outputFileName>swagger</swagger.outputFileName>
-    <swagger.outputPath>${resources.directory}/webroot/swagger</swagger.outputPath>
-    <swagger.resourcePackage>com.ascend.flockr.controller</swagger.resourcePackage>
+    <!-- Module-specific properties (main.class, main.verticle, swagger.*) -->
+    <!-- are defined in each module's POM, not here in the parent -->
 
     <!-- extension versions -->
     <os-maven-extension.version>1.7.1</os-maven-extension.version>
@@ -44,9 +39,9 @@
     <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
     <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
     <swagger-maven-plugin-jakarta.version>2.2.16</swagger-maven-plugin-jakarta.version>
+    <swagger-annotations-jakarta.version>2.2.16</swagger-annotations-jakarta.version>
 
     <!-- dependency versions -->
-    <aerospike-client.version>6.2.0</aerospike-client.version>
     <caffeine.version>3.1.8</caffeine.version>
     <commons-collections.version>4.5.0-M1</commons-collections.version>
     <commons-compress.version>1.26.1</commons-compress.version>
@@ -69,7 +64,6 @@
     <testcontainers.version>1.19.8</testcontainers.version>
     <typesafe.version>1.4.3</typesafe.version>
     <vertx.version>4.4.9</vertx.version>
-    <vertx-aerospike-client.version>2.0.1</vertx-aerospike-client.version>
     <vertx-rest.version>1.1.0</vertx-rest.version>
     <wiremock.version>3.6.0</wiremock.version>
   </properties>
@@ -87,6 +81,18 @@
   </dependencyManagement>
 
   <dependencies>
+
+  <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-pg-client</artifactId>
+  </dependency>
+
+  <dependency>
+      <groupId>com.ongres.scram</groupId>
+      <artifactId>client</artifactId>
+      <version>2.1</version>
+  </dependency>
+
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
@@ -94,16 +100,28 @@
     </dependency>
 
     <dependency>
-      <groupId>com.aerospike</groupId>
-      <artifactId>aerospike-client</artifactId>
-      <version>${aerospike-client.version}</version>
-    </dependency>
-
-    <dependency>
       <groupId>com.atlassian.oai</groupId>
       <artifactId>swagger-request-validator-restassured</artifactId>
       <version>${swagger-validator.version}</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-annotations-jakarta</artifactId>
+      <version>${swagger-annotations-jakarta.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-jaxrs2-jakarta</artifactId>
+      <version>${swagger-annotations-jakarta.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.webjars</groupId>
+      <artifactId>swagger-ui</artifactId>
+      <version>5.10.3</version>
     </dependency>
 
     <dependency>
@@ -146,12 +164,6 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>${commons-io.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>io.d11</groupId>
-      <artifactId>vertx-aerospike-client</artifactId>
-      <version>${vertx-aerospike-client.version}</version>
     </dependency>
 
     <dependency>
@@ -345,29 +357,8 @@
       </extension>
     </extensions>
 
-    <plugins>
-      <plugin>
-        <groupId>com.spotify.fmt</groupId>
-        <artifactId>fmt-maven-plugin</artifactId>
-        <version>${fmt-maven-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>format-code</id>
-            <phase>process-sources</phase>
-            <goals>
-              <goal>format</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>validate-code-format</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
+    <pluginManagement>
+      <plugins>
       <plugin>
         <groupId>io.swagger.core.v3</groupId>
         <artifactId>swagger-maven-plugin-jakarta</artifactId>
@@ -387,7 +378,32 @@
             <id>generate-swagger-docs</id>
             <phase>compile</phase>
             <goals>
-              <goal>resolve</goal>
+                <goal>resolve</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>com.spotify.fmt</groupId>
+        <artifactId>fmt-maven-plugin</artifactId>
+        <version>${fmt-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>format-code</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>format</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>validate-code-format</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
             </goals>
           </execution>
         </executions>
@@ -502,7 +518,7 @@
         <version>${jacoco-maven-plugin.version}</version>
         <configuration>
           <excludes>
-            <exclude>com/ascend/flockr/MainLauncher.class</exclude>
+            <!-- Each module can define its own exclusions -->
           </excludes>
         </configuration>
         <executions>

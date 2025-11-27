@@ -1,3 +1,17 @@
+### Java ###
+*.class
+*.ctxt
+.mtj.tmp/
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
 ### Vert.x ###
 .vertx/
 
@@ -6,9 +20,6 @@
 .metadata
 bin/
 tmp/
-*.tmp
-*.bak
-*.swp
 *~.nib
 local.properties
 .settings/
@@ -183,12 +194,46 @@ nbdist/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+*.code-workspace
 
 ### IDEA ###
 .idea/
 
 ### Python ###
 __pycache__/
-.vscode/
 
+### Environment Variables ###
+.env
+.env.local
+.env.*.local
+*.env
+
+### Tool Versions ###
 /.tool-versions
+
+### Logs ###
+logs/
+*.log
+
+### Temporary Files ###
+*.tmp
+*.temp
+*~
+*.bak
+*.swp
+*.swo
+*~.nib
+
+### OS-specific ###
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+/.vscode/settings.json
+
+### Docker ###
+docker-compose.override.yml
+backup_*.sql
+*.backup
+
+### Application specific ###
+application-local.conf
