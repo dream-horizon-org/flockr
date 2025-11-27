@@ -1,4 +1,4 @@
-package com.ascend.flockr.service.impl;
+package io.ascend.flockr.admin.service.impl;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -14,7 +14,6 @@ import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
 import io.ascend.flockr.admin.repository.AudienceRepository;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.ascend.flockr.admin.repository.RuleRepository;
-import io.ascend.flockr.admin.service.impl.AudienceServiceImpl;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.observers.TestObserver;
 import java.util.ArrayList;
@@ -48,8 +47,8 @@ public class AudienceServiceImplTest {
     List<AudienceOwner> list = new ArrayList<>();
     for (String email : emails) {
       AudienceOwner o = new AudienceOwner();
-      o.setOwner(email);
-      o.setIsRemoved(false);
+      o.setOwnerEmail(email);
+      o.setStatus("ACTIVE");
       list.add(o);
     }
     return list;

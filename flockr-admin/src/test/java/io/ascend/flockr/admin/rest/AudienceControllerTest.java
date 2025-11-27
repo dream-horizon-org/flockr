@@ -1,4 +1,4 @@
-package com.ascend.flockr.rest;
+package io.ascend.flockr.admin.rest;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import io.ascend.flockr.admin.io.ResponseEntity;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerAction;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerRequest;
-import io.ascend.flockr.admin.rest.AudienceController;
 import io.ascend.flockr.admin.service.AudienceService;
 import io.reactivex.rxjava3.core.Completable;
 import java.util.concurrent.CompletionStage;

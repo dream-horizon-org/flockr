@@ -227,6 +227,129 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Failure'
+  /v1/audiences/{audienceId}/owners:
+    get:
+      tags:
+      - Audiences
+      summary: Get all audience owners
+      description: Retrieves all owners (active and inactive) for a specific audience
+      operationId: getAudienceOwners
+      parameters:
+      - name: X-Tenant-Id
+        in: header
+        description: Tenant identifier
+        required: true
+        schema:
+          type: string
+      - name: X-Project-Id
+        in: header
+        description: Project identifier
+        required: true
+        schema:
+          type: string
+      - name: audienceId
+        in: path
+        description: ID of the audience
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: Successfully retrieved audience owners
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid/missing parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "404":
+          description: Audience not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+    post:
+      tags:
+      - Audiences
+      summary: Add or remove an audience owner
+      description: Adds or removes an owner for a specific audience. The acting user
+        must be an existing owner.
+      operationId: updateAudienceOwner
+      parameters:
+      - name: X-Tenant-Id
+        in: header
+        description: Tenant identifier
+        required: true
+        schema:
+          type: string
+      - name: X-Project-Id
+        in: header
+        description: Project identifier
+        required: true
+        schema:
+          type: string
+      - name: audienceId
+        in: path
+        description: ID of the audience whose owner is to be updated
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: email
+        in: header
+        description: Email of the logged-in user
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: Payload indicating action (ADD/REMOVE) and target owner email
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAudienceOwnerRequest'
+        required: true
+      responses:
+        "200":
+          description: Audience owner updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request due to invalid/missing parameters or expired audience
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "403":
+          description: "Forbidden: user is not authorized to update audience owners"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "409":
+          description: "Conflict: owner update failed"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
   /v1/audiences/{audienceId}/rules/{ruleId}:
     get:
       tags:
@@ -277,71 +400,6 @@ paths:
                 $ref: '#/components/schemas/Failure'
         "404":
           description: Rule not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Failure'
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Failure'
-  /v1/audiences/{audienceId}/owner:
-    post:
-      tags:
-      - Audiences
-      summary: Update audience owner
-      description: Updates the owner(s) of a specific audience based on audience ID.
-      operationId: updateAudienceOwner
-      parameters:
-      - name: X-Tenant-Id
-        in: header
-        description: Tenant identifier
-        required: true
-        schema:
-          type: string
-      - name: X-Project-Id
-        in: header
-        description: Project identifier
-        required: true
-        schema:
-          type: string
-      - name: audienceId
-        in: path
-        description: ID of the audience whose owner is to be updated
-        required: true
-        schema:
-          type: integer
-          format: int64
-      - name: email
-        in: header
-        description: Email of the logged-in user (from header 'email')
-        required: true
-        schema:
-          type: string
-      requestBody:
-        description: Payload indicating action (add/remove) and target email
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateAudienceOwnerRequest'
-        required: true
-      responses:
-        "200":
-          description: audience owner updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Success'
-        "400":
-          description: Bad Request due to invalid/missing parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Failure'
-        "401":
-          description: "Unauthorized: missing or invalid user email header"
           content:
             application/json:
               schema:
