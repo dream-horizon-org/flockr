@@ -3,6 +3,7 @@ package io.ascend.flockr.admin.domain.dataconnectors;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.ascend.flockr.admin.constants.dataconnectors.DataConnectorTypeConstants;
 import io.ascend.flockr.admin.constants.dataconnectors.DataSinkConstants;
+import io.ascend.flockr.admin.constants.dataconnectors.DataSourceConstants;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Row;
 import lombok.AllArgsConstructor;
@@ -25,18 +26,12 @@ public class DataSinkDetails {
   private String createdBy;
 
   public static DataSinkDetails mapSinkRow(Row row) {
-    JsonObject config = null;
-    String configStr = row.getString(DataSinkConstants.CONFIG);
-    if (configStr != null && !configStr.isBlank()) {
-      config = new JsonObject(configStr);
-    }
-
     return DataSinkDetails.builder()
         .id(row.getLong(DataSinkConstants.ID))
         .name(row.getString(DataSinkConstants.NAME))
         .typeId(row.getLong(DataSinkConstants.TYPE_ID))
         .type(row.getString(DataConnectorTypeConstants.TYPE))
-        .config(config)
+        .config(row.getJsonObject(DataSourceConstants.CONFIG))
         .status(row.getString(DataSinkConstants.STATUS))
         .createdBy(row.getString(DataSinkConstants.CREATED_BY))
         .build();

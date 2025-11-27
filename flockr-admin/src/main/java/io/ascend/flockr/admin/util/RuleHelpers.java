@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.ascend.flockr.admin.constants.rule.RuleConstants;
 import io.ascend.flockr.admin.domain.rule.*;
+import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Row;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,28 +19,27 @@ public final class RuleHelpers {
    * Deserialize JSON string to RuleConfiguration with SourceInfo. Uses TypeReference for proper
    * generic handling.
    */
-  public static RuleConfiguration<SourceInfo> deserializeRuleConfiguration(String configJson) {
+  public static RuleConfiguration<SourceInfo> deserializeRuleConfiguration(JsonObject configJson) {
     try {
       // TypeReference preserves generic type information at runtime
-      return mapper.readValue(configJson, new TypeReference<>() {});
+      return mapper.readValue(configJson.encode(), new TypeReference<>() {});
     } catch (Exception e) {
       throw new RuntimeException("Failed to deserialize rule configuration: " + configJson, e);
     }
   }
 
   /** Serialize RuleConfiguration with SourceInfo to JSON string. */
-  public static String serializeRuleConfiguration(RuleConfiguration<SourceInfo> configuration) {
+  public static JsonObject serializeRuleConfiguration(RuleConfiguration<SourceInfo> configuration) {
     try {
-      return mapper.writeValueAsString(configuration);
+      return new JsonObject(mapper.writeValueAsString(configuration));
     } catch (Exception e) {
       throw new IllegalArgumentException("Failed to serialize configuration", e);
     }
   }
 
   public static RuleMeta<SourceInfo> mapRuleRow(Row row) {
-    String configJson = row.getString(RuleConstants.CONFIGURATION);
     RuleConfiguration<SourceInfo> configuration =
-        RuleHelpers.deserializeRuleConfiguration(configJson);
+        RuleHelpers.deserializeRuleConfiguration(row.getJsonObject(RuleConstants.CONFIGURATION));
 
     return RuleMeta.builder()
         .ruleId(row.getLong(RuleConstants.ID))

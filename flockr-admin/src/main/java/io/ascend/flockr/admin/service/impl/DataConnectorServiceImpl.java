@@ -69,7 +69,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                         request.getName(),
                         request.getTypeId(),
                         createdBy,
-                        request.getConfig().encode())
+                        request.getConfig())
                     .map(
                         id ->
                             DataSourceDetails.builder()
@@ -103,7 +103,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                         request.getName(),
                         request.getTypeId(),
                         createdBy,
-                        request.getConfig().encode())
+                        request.getConfig())
                     .map(
                         id ->
                             DataSinkDetails.builder()
@@ -146,7 +146,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
       return Single.error(new IllegalArgumentException("Kind must be either 'SOURCE' or 'SINK'"));
     }
 
-    String configSchemaJson = request.getConfigSchema().encode();
+    JsonObject configSchemaJson = request.getConfigSchema();
 
     return repository
         .createConnectorType(

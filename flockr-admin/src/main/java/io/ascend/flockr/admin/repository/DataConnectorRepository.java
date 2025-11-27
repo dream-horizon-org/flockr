@@ -4,6 +4,8 @@ import io.ascend.flockr.admin.domain.dataconnectors.DataConnectorType;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonObject;
+
 import java.util.List;
 
 /**
@@ -48,7 +50,7 @@ public interface DataConnectorRepository {
    * @param configJson the JSON configuration as a string
    * @return a Single emitting the generated data source ID
    */
-  Single<Long> createDataSource(String name, Long typeId, String createdBy, String configJson);
+  Single<Long> createDataSource(String name, Long typeId, String createdBy, JsonObject configJson);
 
   /**
    * Creates a new data sink in the database.
@@ -59,7 +61,7 @@ public interface DataConnectorRepository {
    * @param configJson the JSON configuration as a string
    * @return a Single emitting the generated data sink ID
    */
-  Single<Long> createDataSink(String name, Long typeId, String createdBy, String configJson);
+  Single<Long> createDataSink(String name, Long typeId, String createdBy, JsonObject configJson);
 
   /**
    * Lists data sources with pagination.
@@ -106,5 +108,5 @@ public interface DataConnectorRepository {
    * @return a Single emitting the generated connector type ID
    */
   Single<Long> createConnectorType(
-      String kind, String type, String displayName, String createdBy, String configSchemaJson);
+      String kind, String type, String displayName, String createdBy, JsonObject configSchemaJson);
 }

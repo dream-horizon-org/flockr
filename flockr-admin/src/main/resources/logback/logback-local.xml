@@ -46,21 +46,21 @@
   <!-- =================================================================== -->
   
   <!-- Application package - Set to DEBUG for local development -->
-  <logger name="com.ascend.flockr" level="DEBUG" additivity="false">
+  <logger name="io.ascend.flockr.admin" level="DEBUG" additivity="false">
     <appender-ref ref="CONSOLE"/>
   </logger>
 
   <!-- REST API logging - Includes request/response details -->
-  <logger name="com.ascend.flockr.rest" level="DEBUG"/>
+  <logger name="io.ascend.flockr.admin.rest" level="DEBUG"/>
   
   <!-- Service layer logging -->
-  <logger name="com.ascend.flockr.service" level="DEBUG"/>
+  <logger name="io.ascend.flockr.admin.service" level="DEBUG"/>
   
   <!-- Repository/Database logging -->
-  <logger name="com.ascend.flockr.repository" level="DEBUG"/>
+  <logger name="io.ascend.flockr.admin.repository" level="DEBUG"/>
   
   <!-- Client integrations (Flink, Kafka, etc.) -->
-  <logger name="com.ascend.flockr.client" level="DEBUG"/>
+  <logger name="io.ascend.flockr.admin.client" level="DEBUG"/>
 
   <!-- =================================================================== -->
   <!-- Third-party Library Loggers                                         -->

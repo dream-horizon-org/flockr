@@ -23,18 +23,12 @@ public class DataConnectorType {
   private Boolean active;
 
   public static DataConnectorType mapTypeRow(Row row) {
-    JsonObject configSchema = null;
-    String configSchemaStr = row.getString(DataConnectorTypeConstants.CONFIG_SCHEMA);
-    if (configSchemaStr != null && !configSchemaStr.isBlank()) {
-      configSchema = new JsonObject(configSchemaStr);
-    }
-
     return DataConnectorType.builder()
         .id(row.getLong(DataConnectorTypeConstants.ID))
         .kind(row.getString(DataConnectorTypeConstants.KIND))
         .type(row.getString(DataConnectorTypeConstants.TYPE))
         .displayName(row.getString(DataConnectorTypeConstants.DISPLAY_NAME))
-        .configSchema(configSchema)
+        .configSchema(row.getJsonObject(DataConnectorTypeConstants.CONFIG_SCHEMA))
         .active(row.getBoolean(DataConnectorTypeConstants.IS_ACTIVE))
         .build();
   }
