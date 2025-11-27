@@ -9,6 +9,7 @@ import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -63,7 +64,7 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
       "SELECT s.id, s.name, s.type_id, t.type, s.config, s.status, s.created_by FROM data_sinks s JOIN data_connector_types t ON s.type_id = t.id WHERE s.id IN (%s)";
 
   private static final String SQL_CREATE_CONNECTOR_TYPE =
-      "INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active) VALUES ($1, $2, $3, CAST($4 AS JSONB), TRUE) RETURNING id";
+      "INSERT INTO data_connector_types (kind, type, display_name, config_schema, is_active) VALUES ($1, $2, $3, $4::jsonb, TRUE) RETURNING id";
 
   @Override
   public Single<List<DataConnectorType>> listConnectorTypes(String kind) {
@@ -93,7 +94,7 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
   @Override
   public Single<Long> createDataSource(
-      String name, Long typeId, String createdBy, String configJson) {
+      String name, Long typeId, String createdBy, JsonObject configJson) {
     return postgresWriterClient
         .executeWithTransaction(
             conn ->
@@ -116,7 +117,7 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
   @Override
   public Single<Long> createDataSink(
-      String name, Long typeId, String createdBy, String configJson) {
+      String name, Long typeId, String createdBy, JsonObject configJson) {
     return postgresWriterClient
         .executeWithTransaction(
             conn ->
@@ -215,14 +216,14 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
   @Override
   public Single<Long> createConnectorType(
-      String kind, String type, String displayName, String createdBy, String configSchemaJson) {
+      String kind, String type, String displayName, String createdBy, JsonObject jsonObject) {
     log.info(
         "Creating connector type. kind: {}, type: {}, displayName: {}, createdBy: {}, configSchemaJson: {}",
         kind,
         type,
         displayName,
         createdBy,
-        configSchemaJson);
+        jsonObject);
     return postgresWriterClient
         .executeWithTransaction(
             conn ->
@@ -230,7 +231,7 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
                     .executeAndGenerateId(
                         conn,
                         SQL_CREATE_CONNECTOR_TYPE,
-                        Tuple.of(kind, type, displayName, configSchemaJson))
+                        Tuple.of(kind, type, displayName, jsonObject))
                     .toMaybe())
         .doOnError(
             error ->

@@ -61,7 +61,6 @@ public class RuleRepositoryImpl implements RuleRepository {
   public Single<Boolean> createRules(List<RuleMeta<SourceInfo>> ruleMetas) {
     List<Tuple> batchParams = new ArrayList<>(ruleMetas.size());
     for (RuleMeta<SourceInfo> ruleMeta : ruleMetas) {
-      String configJson = RuleHelpers.serializeRuleConfiguration(ruleMeta.getConfiguration());
       Tuple params =
           Tuple.tuple()
               .addValue(ruleMeta.getAudienceId())
@@ -73,7 +72,7 @@ public class RuleRepositoryImpl implements RuleRepository {
               .addValue(ruleMeta.getEndTime())
               .addValue(ruleMeta.getRuleAction())
               .addValue(ruleMeta.getRuleType())
-              .addValue(configJson)
+              .addValue(RuleHelpers.serializeRuleConfiguration(ruleMeta.getConfiguration()))
               .addValue(ruleMeta.getCreatedBy());
       batchParams.add(params);
     }

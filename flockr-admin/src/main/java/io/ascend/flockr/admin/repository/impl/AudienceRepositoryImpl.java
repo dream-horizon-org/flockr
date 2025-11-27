@@ -37,11 +37,11 @@ import lombok.extern.slf4j.Slf4j;
 public class AudienceRepositoryImpl implements AudienceRepository {
   private final PostgresReaderClient postgresReaderClient;
   private final PostgresWriterClient postgresWriterClient;
-  private final ObjectMapper objectMapper;
+
 
   private static final String SQL_CREATE_AUDIENCE =
       "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expire_date, created_by, name_vector) "
-          + "VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8), $9, to_tsvector('english', $3)) RETURNING id";
+          + "VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8), $9, to_tsvector('english', $10)) RETURNING id";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
       "SELECT id, tenant_id, project_id, name, description, "
@@ -113,33 +113,9 @@ public class AudienceRepositoryImpl implements AudienceRepository {
                   .lastAudienceUpdatedAt(row.getLong(AudienceConstants.LAST_AUDIENCE_UPDATED_AT))
                   .createdAt(row.getLong(AudienceConstants.CREATED_AT))
                   .updatedAt(row.getLong(AudienceConstants.UPDATED_AT))
-                  .createdBy(row.getString(AudienceConstants.CREATED_BY));
-
-          // Map JSON fields
-          String configJson = row.getString(AudienceConstants.CUSTOM_AUDIENCE_CONFIG);
-          if (configJson != null) {
-            try {
-              builder.customAudienceConfig(objectMapper.convertValue(configJson, JsonObject.class));
-            } catch (Exception e) {
-              throw new RuntimeException(
-                  "Failed to deserialize custom_audience_config for audience id " + id, e);
-            }
-          }
-
-          Long[] sinksArray = row.getArrayOfLongs(AudienceConstants.SINKS);
-          if (sinksArray != null && sinksArray.length != 0) {
-            try {
-              List<Long> sinks = List.of(sinksArray);
-              builder.sinks(sinks);
-            } catch (Exception e) {
-              throw new RuntimeException(
-                  "Failed to deserialize sinks for audience id "
-                      + id
-                      + ": "
-                      + Arrays.toString(sinksArray),
-                  e);
-            }
-          }
+                  .createdBy(row.getString(AudienceConstants.CREATED_BY))
+                  .customAudienceConfig(row.getJsonObject(AudienceConstants.CUSTOM_AUDIENCE_CONFIG))
+                  .sinks(List.of(row.getArrayOfLongs(AudienceConstants.SINKS)));
 
           return builder.build();
         });
