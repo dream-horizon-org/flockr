@@ -59,26 +59,6 @@ services:
     networks:
       - flockr-network
 
-  # Aerospike
-  aerospike:
-    image: aerospike/aerospike-server:latest
-    container_name: flockr-aerospike
-    environment:
-      - NAMESPACE=flockr
-      - SERVICE_PORT=3000
-      - FABRIC_PORT=3001
-      - HEARTBEAT_PORT=3002
-      - INFO_PORT=3003
-    ports:
-      - "3000:3000"
-      - "3001:3001"
-      - "3002:3002"
-      - "3003:3003"
-    volumes:
-      - aerospike_data:/opt/aerospike/data
-    networks:
-      - flockr-network
-
   # Flockr Admin Application
   flockr-admin:
     build:
@@ -90,8 +70,6 @@ services:
         condition: service_healthy
       flink-jobmanager:
         condition: service_healthy
-      aerospike:
-        condition: service_started
     environment:
       # Application
       - ENV=docker
@@ -111,10 +89,6 @@ services:
       - FLINK_CONNECT_TIMEOUT=30000
       - FLINK_REQUEST_TIMEOUT=60000
       
-      # Aerospike
-      - AEROSPIKE_HOST=aerospike
-      - AEROSPIKE_PORT=3000
-      
       # JVM Options
       - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC
     ports:
@@ -133,8 +107,6 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
-  aerospike_data:
     driver: local
 
 networks:

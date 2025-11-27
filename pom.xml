@@ -42,7 +42,6 @@
     <swagger-annotations-jakarta.version>2.2.16</swagger-annotations-jakarta.version>
 
     <!-- dependency versions -->
-    <aerospike-client.version>6.2.0</aerospike-client.version>
     <caffeine.version>3.1.8</caffeine.version>
     <commons-collections.version>4.5.0-M1</commons-collections.version>
     <commons-compress.version>1.26.1</commons-compress.version>
@@ -65,7 +64,6 @@
     <testcontainers.version>1.19.8</testcontainers.version>
     <typesafe.version>1.4.3</typesafe.version>
     <vertx.version>4.4.9</vertx.version>
-    <vertx-aerospike-client.version>2.0.1</vertx-aerospike-client.version>
     <vertx-rest.version>1.1.0</vertx-rest.version>
     <wiremock.version>3.6.0</wiremock.version>
   </properties>
@@ -99,12 +97,6 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>${logback.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.aerospike</groupId>
-      <artifactId>aerospike-client</artifactId>
-      <version>${aerospike-client.version}</version>
     </dependency>
 
     <dependency>
@@ -172,12 +164,6 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>${commons-io.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>io.d11</groupId>
-      <artifactId>vertx-aerospike-client</artifactId>
-      <version>${vertx-aerospike-client.version}</version>
     </dependency>
 
     <dependency>

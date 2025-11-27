@@ -55,12 +55,12 @@ docker-compose --version
 │                   Flockr Admin (8080)                    │
 │              REST API + Business Logic                   │
 └─────────────────────────────────────────────────────────┘
-          │         │         │         │
-          ▼         ▼         ▼         ▼
-   ┌──────────┐ ┌─────┐ ┌───────┐ ┌──────────┐
-   │PostgreSQL│ │Flink│ │ Spark │ │Aerospike │
-   │   :5432  │ │:8081│ │ :8082 │ │  :3000   │
-   └──────────┘ └─────┘ └───────┘ └──────────┘
+          │         │         │
+          ▼         ▼         ▼
+   ┌──────────┐ ┌─────┐ ┌───────┐
+   │PostgreSQL│ │Flink│ │ Spark │
+   │   :5432  │ │:8081│ │ :8082 │
+   └──────────┘ └─────┘ └───────┘
 ```
 
 ### Services
@@ -73,7 +73,6 @@ docker-compose --version
 | **Flink TaskManager** | 1.17 | - | Stream processing workers (scalable) |
 | **Spark Master** | 3.5 | 7077, 8082 | Distributed computing master |
 | **Spark Worker** | 3.5 | 8083 | Distributed computing worker (scalable) |
-| **Aerospike** | latest | 3000-3003 | Distributed in-memory cache |
 
 ### Key Features
 
@@ -135,9 +134,7 @@ flockr/
 ├── .dockerignore                    # Build exclusions
 ├── env.docker                       # Environment template
 ├── docker/
-│   ├── aerospike/aerospike.conf    # Aerospike server config
 │   └── config/                      # Service configurations
-│       ├── aerospike.conf
 │       ├── flink.conf
 │       └── postgres.conf
 └── docker-*.sh                      # Management scripts
@@ -152,7 +149,6 @@ flockr/
 | `POSTGRES_HOST` | postgres | Database hostname |
 | `FLINK_HOST` | flink-jobmanager | Flink hostname |
 | `SPARK_MASTER_URL` | spark://spark-master:7077 | Spark master URL |
-| `AEROSPIKE_HOST` | aerospike | Cache hostname |
 | `JAVA_OPTS` | -Xms512m -Xmx1024m | JVM options |
 
 ### Custom Overrides
@@ -544,7 +540,6 @@ docker run --rm -v flockr_postgres_data:/data -v $(pwd):/backup \
 ### Persistent Data Locations
 
 - `postgres_data` - PostgreSQL database files
-- `aerospike_data` - Aerospike cache data
 - `spark_master_data` - Spark master metadata
 - `spark_worker_data` - Spark worker data
 
@@ -603,10 +598,10 @@ Client Request → [Flockr Admin]
                       ↓
       ┌───────────────┼───────────────┐
       ↓               ↓               ↓
-[PostgreSQL]      [Aerospike]     [Flink]
-   (Store)         (Cache)      (Process)
+[PostgreSQL]       [Flink]        [Spark]
+   (Store)        (Process)     (Compute)
       ↓               ↓               ↓
-   Response ← [Business Logic] ← [Spark]
+   Response ← [Business Logic] ←────┘
 ```
 
 ### Internal Networking
@@ -620,7 +615,6 @@ All services communicate via `flockr-network` bridge network.
 - `flink-taskmanager` - Flink workers
 - `spark-master` - Spark master
 - `spark-worker` - Spark workers
-- `aerospike` - Cache
 
 ## Additional Resources
 

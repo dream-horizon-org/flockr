@@ -92,9 +92,6 @@
   <!-- RESTEasy -->
   <logger name="org.jboss.resteasy" level="INFO"/>
   
-  <!-- Aerospike -->
-  <logger name="com.aerospike" level="INFO"/>
-  
   <!-- Circuit Breaker -->
   <logger name="io.github.resilience4j" level="INFO"/>
   

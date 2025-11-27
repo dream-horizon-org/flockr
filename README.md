@@ -39,7 +39,6 @@ The platform enables organizations to:
 - Connect various data sources and sinks through a unified interface
 - Process streaming data with Apache Flink integration
 - Maintain data integrity with PostgreSQL persistence
-- Scale horizontally with distributed caching via Aerospike
 
 ## Features
 
@@ -58,7 +57,6 @@ The platform enables organizations to:
 ### Technical Features
 
 - Reactive programming with Vert.x and RxJava3
-- Distributed caching with Aerospike
 - PostgreSQL for persistent storage
 - Kafka for event streaming
 - Google Guice for dependency injection
@@ -79,7 +77,6 @@ flockr/
 The application uses:
 - **Vert.x**: Reactive toolkit for building event-driven applications
 - **PostgreSQL**: Primary database for persistent storage
-- **Aerospike**: Distributed cache for high-speed data access
 - **Flink**: Stream processing framework
 
 ## Getting Started
@@ -93,7 +90,7 @@ The fastest way to get started is using Docker:
 git clone https://github.com/yourusername/flockr.git
 cd flockr
 
-# Start all services (PostgreSQL, Flink, Spark, Kafka, Aerospike, and Flockr)
+# Start all services (PostgreSQL, Flink, and Flockr)
 ./docker-start.sh
 ```
 
@@ -112,7 +109,6 @@ That's it! All services will start automatically. Access the API at http://local
 - **Java JDK 17 or higher** ([Download](https://www.oracle.com/java/technologies/downloads/))
 - **Apache Maven 3.6+** ([Download](https://maven.apache.org/download.cgi))
 - **PostgreSQL 12+** (for database)
-- **Aerospike** (optional, for caching)
 - **Apache Flink** (optional, for stream processing)
 
 ### Installation
@@ -170,7 +166,6 @@ Flockr uses Typesafe Config (HOCON) for configuration management. Configuration 
 src/main/resources/config/
 ├── application/default.conf      # Application settings
 ├── postgres/default.conf         # Database configuration
-├── aerospike/default.conf        # Cache configuration
 ├── kafka-producer/default.conf   # Kafka settings
 ├── flink/default.conf            # Flink settings
 └── ...
@@ -281,7 +276,6 @@ The Docker environment includes:
 - **PostgreSQL 16** - Primary database
 - **Apache Flink 1.17** - Stream processing
 - **Apache Spark 3.5** - Distributed computing (Master + Worker)
-- **Aerospike** - Distributed cache
 - **Flockr Admin** - Main application
 
 ### Services & Ports
@@ -293,7 +287,6 @@ The Docker environment includes:
 | Flink Dashboard | 8081 | Stream processing UI |
 | Spark Master | 8082 | Spark cluster UI |
 | Spark Worker | 8083 | Spark worker UI |
-| Aerospike | 3000 | Cache |
 
 ### Management Commands
 
@@ -477,7 +470,6 @@ Coverage reports are generated in:
 
 ### Data & Persistence
 - **PostgreSQL** - Primary database
-- **Aerospike 6.2.0** - Distributed cache
 
 ### Stream Processing
 - **Apache Flink** - Stream processing
