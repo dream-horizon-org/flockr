@@ -55,6 +55,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 # Set JVM options
 ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 
-# Run the application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dapp.environment=${ENV:-docker} -Dlogback.configurationFile=./resources/logback/logback.xml -jar flockr-admin.jar"]
+# Run the application with console logging
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dapp.environment=${ENV:-docker} -Dlogback.configurationFile=./resources/logback/logback-local.xml -jar flockr-admin.jar"]
 
