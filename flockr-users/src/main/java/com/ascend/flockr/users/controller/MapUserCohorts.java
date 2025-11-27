@@ -4,12 +4,10 @@ import com.ascend.flockr.common.exception.errors.DefinedErrors;
 import com.ascend.flockr.users.dto.ResponseEntity;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import com.ascend.flockr.users.service.UserCohortsService;
+import com.ascend.flockr.users.util.SetNameUtil;
 import com.dream11.rest.util.ExceptionUtil;
 import com.google.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.concurrent.CompletionStage;
@@ -35,22 +33,27 @@ public class MapUserCohorts {
    *
    * <p>Endpoint: POST /flockr/users/map-cohorts
    *
+   * <p>Headers:
+   *
+   * <ul>
+   *   <li>{@code userId} - User ID (required, must be positive)
+   *   <li>{@code x-project-key} - Combined tenant and project identifier in format "tenantId_projectId" (required)
+   * </ul>
+   *
    * <p>Request body should contain:
    *
    * <ul>
-   *   <li>{@code userId} - User identifier (required)
-   *   <li>{@code tenantId} - Tenant ID (required)
-   *   <li>{@code projectId} - Project ID (required)
-   *   <li>{@code cohortKey} - Cohort name
-   *   <li>{@code source} - Source identifier
+   *   <li>{@code cohort_key} - Cohort name (snake_case for API)
    *   <li>{@code action} - "append" or "remove"
-   *   <li>{@code expireAt} - Expiry time (for append action)
+   *   <li>{@code expire_at} - Expiry time in format "yyyy-MM-dd HH:mm:ss" (for append action)
    * </ul>
    *
-   * <p>The set name used for Aerospike operations is generated as "{tenantId}_{projectId}" to
+   * <p>The set name used for Aerospike operations is generated from x-project-key to
    * ensure multi-tenant isolation.
    *
-   * @param request the mapping request
+   * @param userIdHeader the user ID from userId header
+   * @param projectKey the combined tenant and project identifier from x-project-key header
+   * @param request the mapping request (cohort_key, action, expire_at)
    * @return CompletionStage resolving to HTTP 200 with success status, or 400 if validation fails
    * @since 1.0
    */
@@ -58,16 +61,50 @@ public class MapUserCohorts {
   @Path("/map-cohorts")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public CompletionStage<Response> handle(MapUserCohortsRequest request) {
-    request.validate();
+  public CompletionStage<Response> handle(
+      @HeaderParam("userId") String userIdHeader,
+      @HeaderParam("x-project-key") String projectKey,
+      MapUserCohortsRequest request) {
 
-    if (request.getUserId() == null || request.getUserId() <= 0) {
-      log.error("userId is required and must be positive");
+    // Parse user ID
+    Long userId;
+    try {
+      userId = Long.parseLong(userIdHeader);
+      if (userId <= 0) {
+        throw new IllegalArgumentException("userId must be positive");
+      }
+    } catch (IllegalArgumentException | NullPointerException e) {
+      log.error("Invalid userId provided: {}", userIdHeader);
       throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
     }
 
+    // Parse x-project-key (format: tenantId_projectId)
+    String[] projectKeyParts = projectKey != null ? projectKey.split("_", 2) : new String[0];
+    if (projectKeyParts.length != 2) {
+      log.error("Invalid x-project-key format: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+
+    String tenantId = projectKeyParts[0].trim();
+    Long projectId;
+    try {
+      projectId = Long.parseLong(projectKeyParts[1].trim());
+      if (projectId <= 0) {
+        throw new IllegalArgumentException("projectId must be positive");
+      }
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid projectId in x-project-key: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+
+    // Validate tenantId and projectId
+    SetNameUtil.validateTenantAndProject(tenantId, projectId);
+
+    // Validate request body
+    request.validate();
+
     return userCohortsService
-        .mapUserCohorts(request)
+        .mapUserCohorts(userId, tenantId, projectId, request)
         .map(ResponseEntity.Success::new)
         .map(res -> Response.ok(res).build())
         .toCompletionStage();

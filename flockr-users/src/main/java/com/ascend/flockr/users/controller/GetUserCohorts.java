@@ -32,20 +32,18 @@ public class GetUserCohorts {
    *
    * <p>Endpoint: GET /flockr/users/get-cohorts
    *
-   * <p>Query parameters:
+   * <p>Headers:
    *
    * <ul>
    *   <li>{@code userId} - User ID (required, must be positive)
-   *   <li>{@code tenantId} - Tenant ID (required, must not be blank)
-   *   <li>{@code projectId} - Project ID (required, must be positive)
+   *   <li>{@code x-project-key} - Combined tenant and project identifier in format "tenantId_projectId" (required)
    * </ul>
    *
-   * <p>The set name used for Aerospike operations is generated as "{tenantId}_{projectId}" to
+   * <p>The set name used for Aerospike operations is generated from x-project-key to
    * ensure multi-tenant isolation.
    *
-   * @param userId the user ID from query parameter
-   * @param tenantId the tenant ID from query parameter
-   * @param projectId the project ID from query parameter
+   * @param userIdHeader the user ID from userId header
+   * @param projectKey the combined tenant and project identifier from x-project-key header
    * @return CompletionStage resolving to HTTP 200 with list of cohort names, or 400 if validation
    *     fails
    * @since 1.0
@@ -54,37 +52,47 @@ public class GetUserCohorts {
   @Path("/get-cohorts")
   @Produces(MediaType.APPLICATION_JSON)
   public CompletionStage<Response> handle(
-      @QueryParam("userId") Long userId,
-      @QueryParam("tenantId") String tenantId,
-      @QueryParam("projectId") Long projectId) {
+      @HeaderParam("userId") String userIdHeader,
+      @HeaderParam("x-project-key") String projectKey) {
 
-    validate(userId, tenantId, projectId);
+    // Parse user ID
+    Long userId;
+    try {
+      userId = Long.parseLong(userIdHeader);
+      if (userId <= 0) {
+        throw new IllegalArgumentException("userId must be positive");
+      }
+    } catch (IllegalArgumentException | NullPointerException e) {
+      log.error("Invalid userId provided: {}", userIdHeader);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+
+    // Parse x-project-key (format: tenantId_projectId)
+    String[] projectKeyParts = projectKey != null ? projectKey.split("_", 2) : new String[0];
+    if (projectKeyParts.length != 2) {
+      log.error("Invalid x-project-key format: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+
+    String tenantId = projectKeyParts[0].trim();
+    Long projectId;
+    try {
+      projectId = Long.parseLong(projectKeyParts[1].trim());
+      if (projectId <= 0) {
+        throw new IllegalArgumentException("projectId must be positive");
+      }
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid projectId in x-project-key: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+
+    // Validate tenantId and projectId
+    SetNameUtil.validateTenantAndProject(tenantId, projectId);
 
     return userCohortsService
         .getCohorts(userId, tenantId, projectId)
         .map(ResponseEntity.Success::new)
         .map(res -> Response.ok(res).build())
         .toCompletionStage();
-  }
-
-  /**
-   * Validates request parameters.
-   *
-   * @param userId the user ID to validate
-   * @param tenantId the tenant ID to validate
-   * @param projectId the project ID to validate
-   * @throws IllegalArgumentException if validation fails
-   */
-  private void validate(Long userId, String tenantId, Long projectId) {
-    if (userId == null || userId <= 0) {
-      log.error("Invalid userId provided: {}", userId);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
-    }
-    try {
-      SetNameUtil.validateTenantAndProject(tenantId, projectId);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid tenantId or projectId: tenantId={}, projectId={}", tenantId, projectId);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
-    }
   }
 }

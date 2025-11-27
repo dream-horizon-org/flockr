@@ -3,12 +3,10 @@ package com.ascend.flockr.users.controller;
 import com.ascend.flockr.common.exception.errors.DefinedErrors;
 import com.ascend.flockr.users.dto.ResponseEntity;
 import com.ascend.flockr.users.service.UserCohortsService;
+import com.ascend.flockr.users.util.SetNameUtil;
 import com.dream11.rest.util.ExceptionUtil;
 import com.google.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
@@ -32,38 +30,40 @@ import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class BulkCohortAssignment {
 
-  private static final String CSV_FILE = "csvFile";
-  private static final String COHORT_NAME = "cohortName";
+  private static final String CSV_FILE = "csv_file";
+  private static final String COHORT_NAME = "cohort_name";
 
   private final UserCohortsService userCohortsService;
-
-  private static final String TENANT_ID = "tenantId";
-  private static final String PROJECT_ID = "projectId";
 
   /**
    * Bulk assigns users from a CSV file to a cohort.
    *
    * <p>Endpoint: POST /flockr/users/assignments/bulk
    *
+   * <p>Headers:
+   *
+   * <ul>
+   *   <li>{@code x-project-key} - Combined tenant and project identifier in format "tenantId_projectId" (required)
+   * </ul>
+   *
    * <p>Accepts multipart form data with:
    *
    * <ul>
-   *   <li>{@code csvFile} - CSV file containing comma-separated user UUIDs
-   *   <li>{@code cohortName} - Name of the cohort to assign users to
-   *   <li>{@code tenantId} - Tenant ID (required for multi-tenant isolation)
-   *   <li>{@code projectId} - Project ID (required for multi-tenant isolation)
+   *   <li>{@code csv_file} - CSV file containing comma-separated user UUIDs (snake_case for API)
+   *   <li>{@code cohort_name} - Name of the cohort to assign users to (snake_case for API)
    * </ul>
    *
    * <p>The CSV file is processed line by line, with each line containing comma-separated UUIDs.
    * Invalid UUIDs are skipped and counted as failures.
    *
-   * <p>The set name used for Aerospike operations is generated as "{tenantId}_{projectId}" to
+   * <p>The set name used for Aerospike operations is generated from x-project-key to
    * ensure multi-tenant isolation.
    *
    * <p>Response is returned only after all users in the CSV have been processed. The response
    * includes statistics about total processed, successful, and failed assignments.
    *
-   * @param input multipart form data containing file, cohortName, tenantId, and projectId
+   * @param projectKey the combined tenant and project identifier from x-project-key header
+   * @param input multipart form data containing file and cohort_name
    * @return CompletionStage resolving to HTTP 200 with bulk operation result, or 400/500 if
    *     validation or processing fails
    * @since 1.0
@@ -72,28 +72,35 @@ public class BulkCohortAssignment {
   @Path("/assignments/bulk")
   @Consumes(MediaType.MULTIPART_FORM_DATA)
   @Produces(MediaType.APPLICATION_JSON)
-  public CompletionStage<Response> bulkAssignUsers(MultipartFormDataInput input) {
-    String cohortName = extractPart(input, COHORT_NAME);
-    String tenantId = extractPart(input, TENANT_ID);
-    String projectIdStr = extractPart(input, PROJECT_ID);
-    InputPart filePart = getPart(input, CSV_FILE);
+  public CompletionStage<Response> bulkAssignUsers(
+      @HeaderParam("x-project-key") String projectKey,
+      MultipartFormDataInput input) {
 
-    // Validate tenantId and projectId
+    // Parse x-project-key (format: tenantId_projectId)
+    String[] projectKeyParts = projectKey != null ? projectKey.split("_", 2) : new String[0];
+    if (projectKeyParts.length != 2) {
+      log.error("Invalid x-project-key format: {}", projectKey);
+      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
+    }
+
+    String tenantId = projectKeyParts[0].trim();
     Long projectId;
     try {
-      projectId = Long.parseLong(projectIdStr);
+      projectId = Long.parseLong(projectKeyParts[1].trim());
       if (projectId <= 0) {
         throw new IllegalArgumentException("projectId must be positive");
       }
     } catch (IllegalArgumentException e) {
-      log.error("Invalid projectId provided: {}", projectIdStr);
+      log.error("Invalid projectId in x-project-key: {}", projectKey);
       throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
     }
 
-    if (tenantId == null || tenantId.trim().isEmpty()) {
-      log.error("tenantId is required");
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST_PARAMS);
-    }
+    // Validate tenantId and projectId
+    SetNameUtil.validateTenantAndProject(tenantId, projectId);
+
+    // Extract form data (using snake_case for API)
+    String cohortName = extractPart(input, COHORT_NAME);
+    InputPart filePart = getPart(input, CSV_FILE);
 
     return userCohortsService
         .assignUsersToCohort(cohortName, tenantId, projectId, filePart)

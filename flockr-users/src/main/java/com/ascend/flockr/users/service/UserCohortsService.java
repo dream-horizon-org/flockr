@@ -44,12 +44,15 @@ public interface UserCohortsService {
    * <p>This operation can either append a user to a cohort with an expiry time, or remove a user
    * from a cohort. The action is determined by the request's {@code action} field.
    *
-   * @param request the mapping request containing user, cohort, and action details
+   * @param userId the user ID from header
+   * @param tenantId the tenant ID from header
+   * @param projectId the project ID from header
+   * @param request the mapping request containing cohort and action details
    * @return Single emitting {@code true} if operation succeeded, {@code false} otherwise
    * @throws IllegalArgumentException if request validation fails
    * @since 1.0
    */
-  Single<Boolean> mapUserCohorts(MapUserCohortsRequest request);
+  Single<Boolean> mapUserCohorts(Long userId, String tenantId, Long projectId, MapUserCohortsRequest request);
 
   /**
    * Bulk assigns users from a CSV file to a cohort.

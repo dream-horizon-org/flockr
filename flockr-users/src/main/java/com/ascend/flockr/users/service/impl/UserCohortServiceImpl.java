@@ -82,13 +82,14 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * <p>Implementation handles both append and remove actions. For append operations, validates
    * expiry time. Returns {@code false} if Aerospike key is not found. Uses set name generated from
-   * tenantId and projectId for multi-tenant isolation.
+   * tenantId and projectId for multi-tenant isolation. Uses default source since it's removed from API.
    */
   @Override
-  public Single<Boolean> mapUserCohorts(MapUserCohortsRequest request) {
-    String userKey = String.valueOf(request.getUserId());
-    String source = request.getSource();
-    String setName = SetNameUtil.generateSetName(request.getTenantId(), request.getProjectId());
+  public Single<Boolean> mapUserCohorts(Long userId, String tenantId, Long projectId, MapUserCohortsRequest request) {
+    String userKey = String.valueOf(userId);
+    // Use default source since it's removed from API
+    String source = Constants.SOURCE_DREAM11;
+    String setName = SetNameUtil.generateSetName(tenantId, projectId);
 
     Single<Boolean> single;
     try {
