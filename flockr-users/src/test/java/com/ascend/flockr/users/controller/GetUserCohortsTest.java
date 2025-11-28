@@ -40,15 +40,17 @@ public class GetUserCohortsTest {
   @Test
   public void handle_WithValidUserId_ReturnsSuccessResponse() throws Exception {
     // Arrange
-    Long userId = 123L;
-    Long projectId = 100L;
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     List<String> cohorts = Arrays.asList("cohort1", "cohort2", "cohort3");
 
-    when(userCohortsService.getCohorts(eq(userId), isNull(), eq(projectId)))
+    when(userCohortsService.getCohorts(eq(123L), eq(tenantId), eq(projectId)))
         .thenReturn(Single.just(cohorts));
 
     // Act
-    CompletionStage<Response> responseStage = controller.handle(userId, null, projectId);
+    CompletionStage<Response> responseStage = controller.handle(userIdHeader, projectKey);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -61,38 +63,19 @@ public class GetUserCohortsTest {
   }
 
   @Test
-  public void handle_WithValidGuestId_ReturnsSuccessResponse() throws Exception {
-    // Arrange
-    String guestId = "guest-123";
-    Long projectId = 100L;
-    List<String> cohorts = Arrays.asList("cohort1", "cohort2");
-
-    when(userCohortsService.getCohorts(isNull(), eq(guestId), eq(projectId)))
-        .thenReturn(Single.just(cohorts));
-
-    // Act
-    CompletionStage<Response> responseStage = controller.handle(null, guestId, projectId);
-    Response response = responseStage.toCompletableFuture().get();
-
-    // Assert
-    assertNotNull(response);
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertNotNull(response.getEntity());
-    assertTrue(response.getEntity() instanceof ResponseEntity.Success);
-  }
-
-  @Test
   public void handle_WithEmptyCohortsList_ReturnsEmptyList() throws Exception {
     // Arrange
-    Long userId = 123L;
-    Long projectId = 100L;
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     List<String> emptyCohorts = Collections.emptyList();
 
-    when(userCohortsService.getCohorts(eq(userId), isNull(), eq(projectId)))
+    when(userCohortsService.getCohorts(eq(123L), eq(tenantId), eq(projectId)))
         .thenReturn(Single.just(emptyCohorts));
 
     // Act
-    CompletionStage<Response> responseStage = controller.handle(userId, null, projectId);
+    CompletionStage<Response> responseStage = controller.handle(userIdHeader, projectKey);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -103,93 +86,91 @@ public class GetUserCohortsTest {
   }
 
   @Test
-  public void handle_WithNullProjectId_ThrowsException() {
+  public void handle_WithMissingUserIdHeader_ThrowsException() {
     // Arrange
-    Long userId = 123L;
-    Long projectId = null;
+    String userIdHeader = null;
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
 
     // Act & Assert
     try {
-      controller.handle(userId, null, projectId).toCompletableFuture().get();
-      fail("Expected exception to be thrown for null projectId");
+      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
+      fail("Expected exception to be thrown for missing userId header");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")
-                  || e.getCause().getMessage().contains("projectId")));
+              && (e.getCause().getMessage().contains("MISSING_USER_ID_HEADER")
+                  || e.getCause().getMessage().contains("userId")));
     }
   }
 
   @Test
-  public void handle_WithZeroProjectId_ThrowsException() {
+  public void handle_WithMissingProjectKeyHeader_ThrowsException() {
     // Arrange
-    Long userId = 123L;
-    Long projectId = 0L;
+    String userIdHeader = "123";
+    String projectKey = null;
 
     // Act & Assert
     try {
-      controller.handle(userId, null, projectId).toCompletableFuture().get();
-      fail("Expected exception to be thrown for zero projectId");
+      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
+      fail("Expected exception to be thrown for missing x-project-key header");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")
-                  || e.getCause().getMessage().contains("projectId")));
+              && (e.getCause().getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                  || e.getCause().getMessage().contains("x-project-key")));
     }
   }
 
   @Test
-  public void handle_WithNegativeProjectId_ThrowsException() {
+  public void handle_WithInvalidProjectKeyFormat_ThrowsException() {
     // Arrange
-    Long userId = 123L;
-    Long projectId = -1L;
+    String userIdHeader = "123";
+    String projectKey = "invalid-format"; // Missing underscore
 
     // Act & Assert
     try {
-      controller.handle(userId, null, projectId).toCompletableFuture().get();
-      fail("Expected exception to be thrown for negative projectId");
+      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid x-project-key format");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")
-                  || e.getCause().getMessage().contains("projectId")));
+              && (e.getCause().getMessage().contains("INVALID_PROJECT_KEY_FORMAT")
+                  || e.getCause().getMessage().contains("x-project-key")));
     }
   }
 
   @Test
-  public void handle_WithBothUserIdAndGuestIdNull_ThrowsException() {
+  public void handle_WithInvalidTenantIdFormat_ThrowsException() {
     // Arrange
-    Long userId = null;
-    String guestId = null;
-    Long projectId = 100L;
+    String userIdHeader = "123";
+    String projectKey = "invalid-uuid_project-100"; // Invalid UUID format
 
     // Act & Assert
     try {
-      controller.handle(userId, guestId, projectId).toCompletableFuture().get();
-      fail("Expected exception to be thrown when both userId and guestId are null");
+      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid tenantId format");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")
-                  || e.getCause().getMessage().contains("userId")
-                  || e.getCause().getMessage().contains("guestId")));
+              && (e.getCause().getMessage().contains("INVALID_TENANT_ID_FORMAT")
+                  || e.getCause().getMessage().contains("UUID")));
     }
   }
 
   @Test
-  public void handle_WithNegativeUserId_ThrowsException() {
+  public void handle_WithInvalidUserId_ThrowsException() {
     // Arrange
-    Long userId = -1L;
-    Long projectId = 100L;
+    String userIdHeader = "-1";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
 
     // Act & Assert
     try {
-      controller.handle(userId, null, projectId).toCompletableFuture().get();
-      fail("Expected exception to be thrown for negative userId");
+      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid userId");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")
+              && (e.getCause().getMessage().contains("INVALID_USER_ID")
                   || e.getCause().getMessage().contains("userId")));
     }
   }
@@ -197,17 +178,35 @@ public class GetUserCohortsTest {
   @Test
   public void handle_WithZeroUserId_ThrowsException() {
     // Arrange
-    Long userId = 0L;
-    Long projectId = 100L;
+    String userIdHeader = "0";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
 
     // Act & Assert
     try {
-      controller.handle(userId, null, projectId).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
       fail("Expected exception to be thrown for zero userId");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")
+              && (e.getCause().getMessage().contains("INVALID_USER_ID")
+                  || e.getCause().getMessage().contains("userId")));
+    }
+  }
+
+  @Test
+  public void handle_WithNonNumericUserId_ThrowsException() {
+    // Arrange
+    String userIdHeader = "abc";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+
+    // Act & Assert
+    try {
+      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
+      fail("Expected exception to be thrown for non-numeric userId");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("INVALID_USER_ID")
                   || e.getCause().getMessage().contains("userId")));
     }
   }
@@ -215,42 +214,22 @@ public class GetUserCohortsTest {
   @Test
   public void handle_WithServiceError_PropagatesError() {
     // Arrange
-    Long userId = 123L;
-    Long projectId = 100L;
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     RuntimeException serviceError = new RuntimeException("Service error");
 
-    when(userCohortsService.getCohorts(eq(userId), isNull(), eq(projectId)))
+    when(userCohortsService.getCohorts(eq(123L), eq(tenantId), eq(projectId)))
         .thenReturn(Single.error(serviceError));
 
     // Act & Assert
     try {
-      controller.handle(userId, null, projectId).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
       fail("Expected exception to be propagated");
     } catch (Exception e) {
       assertNotNull(e);
       // The error should be propagated from the service
     }
-  }
-
-  @Test
-  public void handle_WithBothUserIdAndGuestIdProvided_UsesUserId() throws Exception {
-    // Arrange
-    Long userId = 123L;
-    String guestId = "guest-123";
-    Long projectId = 100L;
-    List<String> cohorts = Arrays.asList("cohort1");
-
-    // When both are provided, userId takes precedence
-    when(userCohortsService.getCohorts(eq(userId), eq(guestId), eq(projectId)))
-        .thenReturn(Single.just(cohorts));
-
-    // Act
-    CompletionStage<Response> responseStage = controller.handle(userId, guestId, projectId);
-    Response response = responseStage.toCompletableFuture().get();
-
-    // Assert
-    assertNotNull(response);
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(userCohortsService).getCohorts(eq(userId), eq(guestId), eq(projectId));
   }
 }

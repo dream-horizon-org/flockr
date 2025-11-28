@@ -21,9 +21,13 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.parsetools.RecordParser;
 import io.vertx.rxjava3.core.Vertx;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -149,25 +153,167 @@ public class UserCohortServiceImpl implements UserCohortsService {
   public Single<BulkOperationResult> assignUsersToCohort(
       String cohortName, String tenantId, String projectId, InputPart csvFilePart) {
     String setName = SetNameUtil.generateSetName(tenantId, projectId);
-    return Single.fromCallable(() -> persistCsvToTempFile(csvFilePart))
-        .flatMap(tempPath -> processCsvAndAssign(tempPath, cohortName, setName));
+    
+    // Read InputStream synchronously on request thread (required for JAX-RS context)
+    java.io.InputStream inputStream;
+    try {
+      inputStream = csvFilePart.getBody(java.io.InputStream.class, null);
+      if (inputStream == null) {
+        log.error("InputStream is null from InputPart");
+        return Single.error(ExceptionUtil.getException(DefinedErrors.EMPTY_CSV_FILE));
+      }
+    } catch (Exception e) {
+      log.error("Failed to read InputStream from InputPart", e);
+      return Single.error(ExceptionUtil.getException(DefinedErrors.EMPTY_CSV_FILE));
+    }
+    
+    // Immediately move to background thread for file I/O
+    return Single.fromCallable(() -> {
+          Path tempPath = persistCsvToTempFile(inputStream);
+          verifyFileIntegrity(tempPath);
+          return tempPath;
+        })
+        .subscribeOn(io.reactivex.rxjava3.schedulers.Schedulers.io())
+        .doOnError(error -> log.error("Error creating temp file", error))
+        .flatMap(tempPath -> processCsvAndAssign(tempPath, cohortName, setName)
+            .doOnSuccess(result -> log.info(
+                "Bulk assignment completed. cohort={}, total={}, success={}, failed={}", 
+                cohortName, result.getTotalProcessed(), result.getSuccessCount(), result.getFailedCount()))
+            .doOnError(error -> log.error("Error during CSV processing for cohort: {}", cohortName, error)));
   }
 
   /**
-   * Saves the uploaded CSV file to a temporary location on disk.
+   * Saves the uploaded CSV file to a temporary location on disk using streaming with atomic write.
    *
-   * @param csvFilePart the multipart file part containing CSV data
+   * <p>This method is designed for concurrent request handling:
+   * <ul>
+   *   <li>Uses constant memory (8KB buffer) regardless of file size</li>
+   *   <li>Runs on IO scheduler to avoid blocking event loop</li>
+   *   <li>Generates unique temp file names (handled by Files.createTempFile)</li>
+   *   <li>Uses atomic rename for crash safety</li>
+   *   <li>Validates file size during streaming to prevent DoS</li>
+   * </ul>
+   *
+   * <p>Uses a two-phase write pattern:
+   * <ol>
+   *   <li>Write to a temporary file with .tmp extension</li>
+   *   <li>Atomically rename to .csv only after successful complete write</li>
+   * </ol>
+   *
+   * <p>This ensures that if the system crashes during write, we never have a partial .csv file.
+   * The .tmp file can be safely ignored or cleaned up.
+   *
+   * <p><strong>Note:</strong> The InputStream must be obtained from InputPart on the request thread
+   * (where JAX-RS context is available) before calling this method.
+   *
+   * @param inputStream the InputStream from InputPart (must be read on request thread)
    * @return path to the temporary file
-   * @throws Exception if file is empty or cannot be written
+   * @throws Exception if file is empty, too large, or cannot be written
    */
-  private Path persistCsvToTempFile(InputPart csvFilePart) throws Exception {
-    byte[] payload = csvFilePart.getBody(byte[].class, null);
-    if (payload == null || payload.length == 0) {
+  private Path persistCsvToTempFile(java.io.InputStream inputStream) throws Exception {
+    if (inputStream == null) {
       throw ExceptionUtil.getException(DefinedErrors.EMPTY_CSV_FILE);
     }
-    Path tempFile = Files.createTempFile("cohort-upload-", ".csv");
-    Files.write(tempFile, payload);
-    return tempFile;
+
+    // Phase 1: Write to temporary file with .tmp extension
+    // Files.createTempFile() ensures unique names even with concurrent requests
+    Path tempFile = Files.createTempFile("cohort-upload-", ".tmp");
+
+    try (java.io.InputStream is = inputStream;
+        java.io.OutputStream os = Files.newOutputStream(tempFile)) {
+
+      byte[] buffer = new byte[8 * 1024]; // 8KB buffer - constant memory
+      int bytesRead;
+      long totalBytesRead = 0;
+      boolean hasData = false;
+
+      // Stream data to temp file
+      while ((bytesRead = is.read(buffer)) != -1) {
+        if (bytesRead > 0) {
+          hasData = true;
+          os.write(buffer, 0, bytesRead);
+          totalBytesRead += bytesRead;
+
+          // Validate file size during streaming (prevent DoS)
+          if (totalBytesRead > BulkCohortAssignmentConstants.MAX_SIZE) {
+            log.error("File size {} exceeds maximum {}", 
+                totalBytesRead, BulkCohortAssignmentConstants.MAX_SIZE);
+            Files.deleteIfExists(tempFile);
+            throw ExceptionUtil.getException(
+                DefinedErrors.INVALID_REQUEST,
+                "File size exceeds maximum allowed size: " + BulkCohortAssignmentConstants.MAX_SIZE);
+          }
+
+          // Flush periodically to ensure data is written to disk
+          // This helps with concurrent writes by reducing buffering
+          if (totalBytesRead % (64 * 1024) == 0) { // Flush every 64KB
+            os.flush();
+          }
+        }
+      }
+
+      // Final flush to ensure all data is written
+      os.flush();
+
+      if (!hasData) {
+        Files.deleteIfExists(tempFile);
+        throw ExceptionUtil.getException(DefinedErrors.EMPTY_CSV_FILE);
+      }
+    }
+
+    // Phase 2: Atomically rename .tmp to .csv
+    // This is an atomic operation on most filesystems (Linux, macOS, Windows)
+    // If system crashes before this, we only have a .tmp file (safe to ignore)
+    Path finalFile =
+        tempFile.resolveSibling(tempFile.getFileName().toString().replace(".tmp", ".csv"));
+
+    try {
+      // Atomic move - if this fails, we still have .tmp file
+      Files.move(
+          tempFile, finalFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+      return finalFile;
+    } catch (UnsupportedOperationException e) {
+      // Fallback for filesystems that don't support ATOMIC_MOVE
+      // Regular move is still safe - worst case is partial file (which we verify)
+      try {
+        Files.move(tempFile, finalFile, StandardCopyOption.REPLACE_EXISTING);
+        return finalFile;
+      } catch (IOException e2) {
+        Files.deleteIfExists(tempFile);
+        throw new IOException("Failed to persist CSV file", e2);
+      }
+    }
+  }
+
+  /**
+   * Verifies that the CSV file is complete and readable before processing.
+   *
+   * <p>This method checks:
+   * <ul>
+   *   <li>File exists</li>
+   *   <li>File is not empty</li>
+   *   <li>File is readable and contains at least one line</li>
+   * </ul>
+   *
+   * @param csvFile path to the CSV file to verify
+   * @throws IOException if file verification fails
+   */
+  private void verifyFileIntegrity(Path csvFile) throws IOException {
+    if (!Files.exists(csvFile)) {
+      throw new IOException("CSV file does not exist: " + csvFile);
+    }
+
+    if (Files.size(csvFile) == 0) {
+      throw ExceptionUtil.getException(DefinedErrors.EMPTY_CSV_FILE);
+    }
+
+    // Try to read first line to verify file is readable
+    try (BufferedReader reader = Files.newBufferedReader(csvFile, StandardCharsets.UTF_8)) {
+      String firstLine = reader.readLine();
+      if (firstLine == null || firstLine.trim().isEmpty()) {
+        throw ExceptionUtil.getException(DefinedErrors.EMPTY_CSV_FILE);
+      }
+    }
   }
 
   /**
@@ -204,6 +350,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
         .distinct()
         .doOnNext(id -> total.incrementAndGet())
         .buffer(BulkCohortAssignmentConstants.BATCH_SIZE)
+        .doOnNext(batch -> log.info("Processing batch of {} UUIDs for cohort: {}", batch.size(), cohortName))
         .flatMap(
             batch ->
                 Flowable.fromIterable(batch)
@@ -255,56 +402,89 @@ public class UserCohortServiceImpl implements UserCohortsService {
    */
   private Flowable<String> openFileAsFlowable(Path path) {
     return Flowable.create(
-        emitter ->
-            // Handle file open errors
-            vertx
-                .fileSystem()
-                .open(path.toString(), new OpenOptions().setRead(true))
-                .subscribe(
-                    asyncFile -> {
-                      // Set buffer size for efficient reading
-                      asyncFile.setReadBufferSize(64 * 1024);
+        emitter -> {
+          // Handle file open errors
+          vertx
+              .fileSystem()
+              .open(path.toString(), new OpenOptions().setRead(true))
+              .subscribe(
+                  asyncFile -> {
+                    // Set buffer size for efficient reading
+                    asyncFile.setReadBufferSize(64 * 1024);
 
-                      // Create parser to read lines (newline-delimited)
-                      RecordParser parser =
-                          RecordParser.newDelimited(
-                              "\n",
-                              buffer -> {
-                                String line = buffer.toString(StandardCharsets.UTF_8);
-                                if (!line.isEmpty()) {
-                                  emitter.onNext(line);
-                                }
-                              });
+                    // Track if we've already completed to avoid double completion
+                    final boolean[] completed = {false};
 
-                      // Handle end of file
-                      parser.endHandler(
-                          v -> {
+                    // Create parser to read lines (newline-delimited)
+                    RecordParser parser =
+                        RecordParser.newDelimited(
+                            "\n",
+                            buffer -> {
+                              String line = buffer.toString(StandardCharsets.UTF_8);
+                              if (!line.isEmpty()) {
+                                emitter.onNext(line);
+                              }
+                            });
+
+                    // Handle end of file from parser
+                    parser.endHandler(
+                        v -> {
+                          if (!completed[0]) {
+                            completed[0] = true;
                             asyncFile.close();
                             emitter.onComplete();
-                          });
+                          }
+                        });
 
-                      // Handle parsing errors
-                      parser.exceptionHandler(
-                          err -> {
+                    // Handle parsing errors
+                    parser.exceptionHandler(
+                        err -> {
+                          log.error("Parser error while reading file", err);
+                          if (!completed[0]) {
+                            completed[0] = true;
                             asyncFile.close();
                             emitter.onError(err);
-                          });
+                          }
+                        });
 
-                      // Connect asyncFile to parser: feed data from file to parser
-                      // Use lambda to bridge between AsyncFile's Handler and RecordParser
-                      asyncFile.handler(buffer -> parser.handle(buffer.getDelegate()));
+                    // Connect asyncFile to parser: feed data from file to parser
+                    asyncFile.handler(buffer -> parser.handle(buffer.getDelegate()));
 
-                      // Handle file read errors
-                      asyncFile.exceptionHandler(
-                          err -> {
+                    // CRITICAL: Handle file stream end - this is called when file reading completes
+                    asyncFile.endHandler(
+                        v -> {
+                          if (!completed[0]) {
+                            completed[0] = true;
+                            // Flush any remaining data in parser
+                            try {
+                              parser.handle(io.vertx.core.buffer.Buffer.buffer());
+                            } catch (Exception e) {
+                              // Ignore - parser might already be closed
+                            }
+                            asyncFile.close();
+                            emitter.onComplete();
+                          }
+                        });
+
+                    // Handle file read errors
+                    asyncFile.exceptionHandler(
+                        err -> {
+                          log.error("File read error", err);
+                          if (!completed[0]) {
+                            completed[0] = true;
                             asyncFile.close();
                             emitter.onError(err);
-                          });
+                          }
+                        });
 
-                      // Start reading the file
-                      asyncFile.resume();
-                    },
-                    emitter::onError),
+                    // Start reading the file
+                    asyncFile.resume();
+                  },
+                  error -> {
+                    log.error("openFileAsFlowable: Failed to open file", error);
+                    emitter.onError(error);
+                  });
+        },
         BackpressureStrategy.BUFFER);
   }
 
@@ -382,6 +562,67 @@ public class UserCohortServiceImpl implements UserCohortsService {
     } catch (Exception ex) {
       log.warn("Unable to delete temp file {}", path, ex);
     }
+  }
+
+  /**
+   * Cleans up orphaned temporary files from previous crashes or incomplete uploads.
+   *
+   * <p>This method should be called on application startup to remove .tmp files that were created
+   * but never renamed to .csv (indicating a crash or error during upload).
+   *
+   * <p>Only deletes files older than 1 hour to avoid interfering with active uploads.
+   *
+   * @return number of files cleaned up
+   */
+  public int cleanupOrphanedTempFiles() {
+    int cleanedCount = 0;
+    try {
+      Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"));
+      if (!Files.exists(tempDir) || !Files.isDirectory(tempDir)) {
+        return 0;
+      }
+
+      long oneHourAgo = System.currentTimeMillis() - 3600000; // 1 hour in milliseconds
+
+      try (var stream = Files.list(tempDir)) {
+        cleanedCount =
+            (int)
+                stream
+                    .filter(
+                        path ->
+                            path.getFileName().toString().startsWith("cohort-upload-")
+                                && path.getFileName().toString().endsWith(".tmp"))
+                    .filter(
+                        path -> {
+                          try {
+                            long lastModified = Files.getLastModifiedTime(path).toMillis();
+                            return lastModified < oneHourAgo;
+                          } catch (IOException e) {
+                            log.warn("Failed to get last modified time for {}", path, e);
+                            return false;
+                          }
+                        })
+                    .mapToInt(
+                        path -> {
+                          try {
+                            Files.deleteIfExists(path);
+                            log.debug("Cleaned up orphaned temp file: {}", path);
+                            return 1;
+                          } catch (Exception e) {
+                            log.warn("Failed to cleanup temp file: {}", path, e);
+                            return 0;
+                          }
+                        })
+                    .sum();
+      }
+
+      if (cleanedCount > 0) {
+        log.info("Cleaned up {} orphaned temp file(s)", cleanedCount);
+      }
+    } catch (Exception e) {
+      log.warn("Failed to cleanup orphaned temp files", e);
+    }
+    return cleanedCount;
   }
 
   /**

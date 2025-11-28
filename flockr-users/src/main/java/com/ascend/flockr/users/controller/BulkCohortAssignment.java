@@ -1,6 +1,7 @@
 package com.ascend.flockr.users.controller;
 
 import com.ascend.flockr.common.exception.errors.DefinedErrors;
+import com.ascend.flockr.users.dto.BulkOperationResult;
 import com.ascend.flockr.users.dto.ResponseEntity;
 import com.ascend.flockr.users.service.UserCohortsService;
 import com.ascend.flockr.users.util.SetNameUtil;
@@ -149,7 +150,7 @@ public class BulkCohortAssignment {
 
     return userCohortsService
         .assignUsersToCohort(cohortName, tenantId, projectId, filePart)
-        .map(ResponseEntity.Success::new)
+        .map(ResponseEntity.Success<BulkOperationResult>::new)
         .map(res -> Response.ok(res).build())
         .onErrorReturn(
             error -> {

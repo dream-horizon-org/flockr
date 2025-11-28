@@ -73,18 +73,20 @@ public class UserCohortServiceImplTest {
   public void getCohorts_WithActiveCohorts_ReturnsFilteredList() {
     // Arrange
     Long userId = 123L;
-    Long projectId = 100L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     Map<String, Long> cohortMap = new HashMap<>();
     long currentTime = System.currentTimeMillis();
     cohortMap.put("cohort1", currentTime + 10000); // active
     cohortMap.put("cohort2", currentTime + 20000); // active
     cohortMap.put("cohort3", currentTime - 10000); // expired
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq("100")))
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName)))
         .thenReturn(Single.just(cohortMap));
 
     // Act
-    List<String> result = service.getCohorts(userId, null, projectId).blockingGet();
+    List<String> result = service.getCohorts(userId, tenantId, projectId).blockingGet();
 
     // Assert
     assertNotNull(result);
@@ -95,19 +97,21 @@ public class UserCohortServiceImplTest {
   }
 
   @Test
-  public void getCohorts_WithGuestId_ReturnsActiveCohorts() {
+  public void getCohorts_WithValidParams_ReturnsActiveCohorts() {
     // Arrange
-    String guestId = "guest-123";
-    Long projectId = 100L;
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     Map<String, Long> cohortMap = new HashMap<>();
     long currentTime = System.currentTimeMillis();
     cohortMap.put("cohort1", currentTime + 10000);
 
-    when(aerospikeClient.getCohortExpiryBin(eq(guestId), eq("100")))
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName)))
         .thenReturn(Single.just(cohortMap));
 
     // Act
-    List<String> result = service.getCohorts(null, guestId, projectId).blockingGet();
+    List<String> result = service.getCohorts(userId, tenantId, projectId).blockingGet();
 
     // Assert
     assertNotNull(result);
@@ -119,14 +123,16 @@ public class UserCohortServiceImplTest {
   public void getCohorts_WithEmptyMap_ReturnsEmptyList() {
     // Arrange
     Long userId = 123L;
-    Long projectId = 100L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     Map<String, Long> emptyMap = new HashMap<>();
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq("100")))
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName)))
         .thenReturn(Single.just(emptyMap));
 
     // Act
-    List<String> result = service.getCohorts(userId, null, projectId).blockingGet();
+    List<String> result = service.getCohorts(userId, tenantId, projectId).blockingGet();
 
     // Assert
     assertNotNull(result);
@@ -137,17 +143,19 @@ public class UserCohortServiceImplTest {
   public void getCohorts_WithAllExpiredCohorts_ReturnsEmptyList() {
     // Arrange
     Long userId = 123L;
-    Long projectId = 100L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     Map<String, Long> cohortMap = new HashMap<>();
     long currentTime = System.currentTimeMillis();
     cohortMap.put("cohort1", currentTime - 10000); // expired
     cohortMap.put("cohort2", currentTime - 20000); // expired
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq("100")))
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName)))
         .thenReturn(Single.just(cohortMap));
 
     // Act
-    List<String> result = service.getCohorts(userId, null, projectId).blockingGet();
+    List<String> result = service.getCohorts(userId, tenantId, projectId).blockingGet();
 
     // Assert
     assertNotNull(result);
@@ -158,14 +166,16 @@ public class UserCohortServiceImplTest {
   public void getCohorts_WithAerospikeError_PropagatesError() {
     // Arrange
     Long userId = 123L;
-    Long projectId = 100L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     RuntimeException error = new RuntimeException("Aerospike connection failed");
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq("100"))).thenReturn(Single.error(error));
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName))).thenReturn(Single.error(error));
 
     // Act & Assert
     try {
-      service.getCohorts(userId, null, projectId).blockingGet();
+      service.getCohorts(userId, tenantId, projectId).blockingGet();
       fail("Expected exception to be thrown");
     } catch (RuntimeException e) {
       assertEquals("Aerospike connection failed", e.getMessage());
@@ -177,90 +187,89 @@ public class UserCohortServiceImplTest {
   @Test
   public void mapUserCohorts_WithAppendAction_ReturnsTrue() throws Exception {
     // Arrange
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
     when(aerospikeClient.appendCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), anyLong(), eq("100")))
+            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), anyLong(), eq(setName)))
         .thenReturn(Single.just(true));
 
     // Act
-    Boolean result = service.mapUserCohorts(request).blockingGet();
+    Boolean result = service.mapUserCohorts(userId, tenantId, projectId, request).blockingGet();
 
     // Assert
     assertTrue(result);
     verify(aerospikeClient)
         .appendCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), anyLong(), eq("100"));
+            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), anyLong(), eq(setName));
   }
 
   @Test
   public void mapUserCohorts_WithRemoveAction_ReturnsTrue() {
     // Arrange
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_REMOVE);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
     when(aerospikeClient.removeCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq("100")))
+            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(setName)))
         .thenReturn(Single.just(true));
 
     // Act
-    Boolean result = service.mapUserCohorts(request).blockingGet();
+    Boolean result = service.mapUserCohorts(userId, tenantId, projectId, request).blockingGet();
 
     // Assert
     assertTrue(result);
     verify(aerospikeClient)
-        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq("100"));
+        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(setName));
   }
 
   @Test
-  public void mapUserCohorts_WithGuestId_UsesGuestIdAsKey() {
+  public void mapUserCohorts_WithValidParams_ProcessesRequest() {
     // Arrange
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(null);
-    request.setGuestId("guest-123");
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_REMOVE);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
     when(aerospikeClient.removeCohort(
-            eq("guest-123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq("100")))
+            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(setName)))
         .thenReturn(Single.just(true));
 
     // Act
-    Boolean result = service.mapUserCohorts(request).blockingGet();
+    Boolean result = service.mapUserCohorts(userId, tenantId, projectId, request).blockingGet();
 
     // Assert
     assertTrue(result);
     verify(aerospikeClient)
-        .removeCohort(eq("guest-123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq("100"));
+        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(setName));
   }
 
   @Test
   public void mapUserCohorts_WithKeyNotFoundError_ReturnsFalse() {
     // Arrange
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
     AerospikeException exception =
         new AerospikeException(ResultCode.KEY_NOT_FOUND_ERROR, "Key not found");
@@ -270,7 +279,7 @@ public class UserCohortServiceImplTest {
         .thenReturn(Single.error(exception));
 
     // Act
-    Boolean result = service.mapUserCohorts(request).blockingGet();
+    Boolean result = service.mapUserCohorts(userId, tenantId, projectId, request).blockingGet();
 
     // Assert
     assertFalse(result);
@@ -279,18 +288,17 @@ public class UserCohortServiceImplTest {
   @Test
   public void mapUserCohorts_WithInvalidExpiryTime_ThrowsRestException() {
     // Arrange
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2020-01-01 00:00:00"); // Past date
-    request.setProjectId(100L);
 
     // Act & Assert
     try {
-      service.mapUserCohorts(request).blockingGet();
+      service.mapUserCohorts(userId, tenantId, projectId, request).blockingGet();
       fail("Expected RestException to be thrown");
     } catch (Exception e) {
       assertTrue(e.getMessage().contains("INVALID_EXPIRY_TIME") || e.getCause() != null);
@@ -300,14 +308,13 @@ public class UserCohortServiceImplTest {
   @Test
   public void mapUserCohorts_WithOtherAerospikeError_ThrowsInternalServerError() {
     // Arrange
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
     AerospikeException exception = new AerospikeException(ResultCode.SERVER_ERROR, "Server error");
 
@@ -317,7 +324,7 @@ public class UserCohortServiceImplTest {
 
     // Act & Assert
     try {
-      service.mapUserCohorts(request).blockingGet();
+      service.mapUserCohorts(userId, tenantId, projectId, request).blockingGet();
       fail("Expected exception to be thrown");
     } catch (Exception e) {
       assertNotNull(e);
@@ -325,45 +332,44 @@ public class UserCohortServiceImplTest {
   }
 
   @Test
-  public void mapUserCohorts_WithNullProjectId_UsesNullSetName() {
+  public void mapUserCohorts_WithValidParams_ProcessesSuccessfully() {
     // Arrange
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_REMOVE);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(null);
 
     when(aerospikeClient.removeCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), isNull()))
+            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(setName)))
         .thenReturn(Single.just(true));
 
     // Act
-    Boolean result = service.mapUserCohorts(request).blockingGet();
+    Boolean result = service.mapUserCohorts(userId, tenantId, projectId, request).blockingGet();
 
     // Assert
     assertTrue(result);
     verify(aerospikeClient)
-        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), isNull());
+        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(setName));
   }
 
   @Test
   public void mapUserCohorts_WithExceptionInExpiryCalculation_ReturnsError() {
     // Arrange
+    Long userId = 123L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("invalid-date-format");
-    request.setProjectId(100L);
 
     // Act & Assert
     try {
-      service.mapUserCohorts(request).blockingGet();
+      service.mapUserCohorts(userId, tenantId, projectId, request).blockingGet();
       fail("Expected exception to be thrown");
     } catch (Exception e) {
       assertNotNull(e);
@@ -376,11 +382,14 @@ public class UserCohortServiceImplTest {
   public void assignUsersToCohort_WithValidCsv_ReturnsSuccessResult() throws Exception {
     // Arrange
     String cohortName = "test-cohort";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     String csvContent = "550e8400-e29b-41d4-a716-446655440000,6ba7b810-9dad-11d1-80b4-00c04fd430c8";
-    byte[] csvBytes = csvContent.getBytes(StandardCharsets.UTF_8);
-
+    
     InputPart csvFilePart = mock(InputPart.class);
-    when(csvFilePart.getBody(byte[].class, null)).thenReturn(csvBytes);
+    java.io.InputStream inputStream = new java.io.ByteArrayInputStream(
+        csvContent.getBytes(StandardCharsets.UTF_8));
+    when(csvFilePart.getBody(java.io.InputStream.class, null)).thenReturn(inputStream);
 
     when(aerospikeClient.appendCohort(
             anyString(), eq(cohortName), anyString(), anyLong(), anyString()))
@@ -404,7 +413,7 @@ public class UserCohortServiceImplTest {
         .handler(any());
 
     // Act
-    var result = service.assignUsersToCohort(cohortName, csvFilePart).blockingGet();
+    var result = service.assignUsersToCohort(cohortName, tenantId, projectId, csvFilePart).blockingGet();
 
     // Assert
     assertNotNull(result);
@@ -415,18 +424,20 @@ public class UserCohortServiceImplTest {
   public void assignUsersToCohort_WithEmptyCsv_ThrowsException() throws Exception {
     // Arrange
     String cohortName = "test-cohort";
-    byte[] emptyBytes = new byte[0];
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    java.io.InputStream emptyStream = new java.io.ByteArrayInputStream(new byte[0]);
 
     InputPart csvFilePart = mock(InputPart.class);
-    when(csvFilePart.getBody(byte[].class, null)).thenReturn(emptyBytes);
+    when(csvFilePart.getBody(java.io.InputStream.class, null)).thenReturn(emptyStream);
 
     // Act & Assert
     try {
-      service.assignUsersToCohort(cohortName, csvFilePart).blockingGet();
+      service.assignUsersToCohort(cohortName, tenantId, projectId, csvFilePart).blockingGet();
       fail("Expected exception to be thrown for empty CSV");
     } catch (Exception e) {
       assertTrue(
-          e.getMessage().contains("empty") || e.getMessage().contains("INVALID_REQUEST_PARAMS"));
+          e.getMessage().contains("empty") || e.getMessage().contains("EMPTY_CSV_FILE"));
     }
   }
 
@@ -434,20 +445,22 @@ public class UserCohortServiceImplTest {
   public void assignUsersToCohort_WithNullCsv_ThrowsException() {
     // Arrange
     String cohortName = "test-cohort";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     InputPart csvFilePart = mock(InputPart.class);
     try {
-      when(csvFilePart.getBody(byte[].class, null)).thenReturn(null);
+      when(csvFilePart.getBody(java.io.InputStream.class, null)).thenReturn(null);
     } catch (Exception e) {
       // Mock setup can throw, but we'll handle it in the test
     }
 
     // Act & Assert
     try {
-      service.assignUsersToCohort(cohortName, csvFilePart).blockingGet();
+      service.assignUsersToCohort(cohortName, tenantId, projectId, csvFilePart).blockingGet();
       fail("Expected exception to be thrown for null CSV");
     } catch (Exception e) {
       assertTrue(
-          e.getMessage().contains("empty") || e.getMessage().contains("INVALID_REQUEST_PARAMS"));
+          e.getMessage().contains("empty") || e.getMessage().contains("EMPTY_CSV_FILE"));
     }
   }
 
@@ -458,7 +471,9 @@ public class UserCohortServiceImplTest {
     // This tests the private method indirectly through getCohorts
     // Arrange
     Long userId = 123L;
-    Long projectId = 100L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     Map<String, Long> cohortMap = new HashMap<>();
     long currentTime = System.currentTimeMillis();
     cohortMap.put("active1", currentTime + 5000);
@@ -467,11 +482,11 @@ public class UserCohortServiceImplTest {
     cohortMap.put("expired2", currentTime - 10000);
     cohortMap.put("expired3", currentTime - 1); // Just expired
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq("100")))
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName)))
         .thenReturn(Single.just(cohortMap));
 
     // Act
-    List<String> result = service.getCohorts(userId, null, projectId).blockingGet();
+    List<String> result = service.getCohorts(userId, tenantId, projectId).blockingGet();
 
     // Assert
     assertEquals(2, result.size());
@@ -486,16 +501,18 @@ public class UserCohortServiceImplTest {
   public void getActiveCohortsFromMap_WithExactCurrentTime_IncludesCohort() {
     // Arrange
     Long userId = 123L;
-    Long projectId = 100L;
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
+    String setName = tenantId + "_" + projectId;
     Map<String, Long> cohortMap = new HashMap<>();
     long currentTime = System.currentTimeMillis();
     cohortMap.put("exact", currentTime); // Exactly current time (should be included)
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq("100")))
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName)))
         .thenReturn(Single.just(cohortMap));
 
     // Act
-    List<String> result = service.getCohorts(userId, null, projectId).blockingGet();
+    List<String> result = service.getCohorts(userId, tenantId, projectId).blockingGet();
 
     // Assert
     assertEquals(1, result.size());

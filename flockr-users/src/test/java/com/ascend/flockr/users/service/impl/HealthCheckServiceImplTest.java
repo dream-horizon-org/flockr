@@ -1,7 +1,6 @@
 package com.ascend.flockr.users.service.impl;
 
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.ascend.flockr.common.client.Aerospike;

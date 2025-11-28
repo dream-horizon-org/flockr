@@ -51,26 +51,29 @@ public class BulkCohortAssignmentTest {
   @Test
   public void bulkAssignUsers_WithValidRequest_ReturnsSuccessResponse() throws Exception {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     String cohortName = "test-cohort";
     String csvContent = "550e8400-e29b-41d4-a716-446655440000";
-    byte[] csvBytes = csvContent.getBytes(StandardCharsets.UTF_8);
 
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("csvFile", Collections.singletonList(csvFilePart));
-    formDataMap.put("cohortName", Collections.singletonList(cohortNamePart));
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
 
     when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
     when(cohortNamePart.getBodyAsString()).thenReturn(cohortName);
-    when(csvFilePart.getBody(byte[].class, null)).thenReturn(csvBytes);
+    when(csvFilePart.getBody(java.io.InputStream.class, null))
+        .thenReturn(new java.io.ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8)));
 
     BulkOperationResult operationResult =
         new BulkOperationResult(1, 1, 0, "Processed 1 users successfully");
 
-    when(userCohortsService.assignUsersToCohort(eq(cohortName), any(InputPart.class)))
+    when(userCohortsService.assignUsersToCohort(eq(cohortName), eq(tenantId), eq(projectId), any(InputPart.class)))
         .thenReturn(Single.just(operationResult));
 
     // Act
-    CompletionStage<Response> responseStage = controller.bulkAssignUsers(multipartInput);
+    CompletionStage<Response> responseStage = controller.bulkAssignUsers(projectKey, multipartInput);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -83,64 +86,135 @@ public class BulkCohortAssignmentTest {
   @Test
   public void bulkAssignUsers_WithMissingCsvFile_ThrowsException() {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("cohortName", Collections.singletonList(cohortNamePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
 
     when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
 
     // Act & Assert
     try {
-      controller.bulkAssignUsers(multipartInput).toCompletableFuture().get();
-      fail("Expected exception to be thrown for missing csvFile");
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
+      fail("Expected exception to be thrown for missing csv_file");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("Missing csvFile")
-                  || e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")));
+              && (e.getCause().getMessage().contains("MISSING_CSV_FILE")
+                  || e.getCause().getMessage().contains("csv_file")));
     }
   }
 
   @Test
   public void bulkAssignUsers_WithMissingCohortName_ThrowsException() {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("csvFile", Collections.singletonList(csvFilePart));
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
 
     when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
 
     // Act & Assert
     try {
-      controller.bulkAssignUsers(multipartInput).toCompletableFuture().get();
-      fail("Expected exception to be thrown for missing cohortName");
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
+      fail("Expected exception to be thrown for missing cohort_name");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("Missing cohortName")
-                  || e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")));
+              && (e.getCause().getMessage().contains("MISSING_COHORT_NAME")
+                  || e.getCause().getMessage().contains("cohort_name")));
+    }
+  }
+
+  @Test
+  public void bulkAssignUsers_WithMissingProjectKeyHeader_ThrowsException() {
+    // Arrange
+    String projectKey = null;
+    Map<String, List<InputPart>> formDataMap = new HashMap<>();
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
+
+    when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
+
+    // Act & Assert
+    try {
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
+      fail("Expected exception to be thrown for missing x-project-key header");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                  || e.getCause().getMessage().contains("x-project-key")));
+    }
+  }
+
+  @Test
+  public void bulkAssignUsers_WithInvalidProjectKeyFormat_ThrowsException() {
+    // Arrange
+    String projectKey = "invalid-format"; // Missing underscore
+    Map<String, List<InputPart>> formDataMap = new HashMap<>();
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
+
+    when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
+
+    // Act & Assert
+    try {
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid x-project-key format");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("INVALID_PROJECT_KEY_FORMAT")
+                  || e.getCause().getMessage().contains("x-project-key")));
+    }
+  }
+
+  @Test
+  public void bulkAssignUsers_WithInvalidTenantIdFormat_ThrowsException() {
+    // Arrange
+    String projectKey = "invalid-uuid_project-100"; // Invalid UUID format
+    Map<String, List<InputPart>> formDataMap = new HashMap<>();
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
+
+    when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
+
+    // Act & Assert
+    try {
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid tenantId format");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("INVALID_TENANT_ID_FORMAT")
+                  || e.getCause().getMessage().contains("UUID")));
     }
   }
 
   @Test
   public void bulkAssignUsers_WithServiceError_ReturnsServerError() throws Exception {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     String cohortName = "test-cohort";
     String csvContent = "550e8400-e29b-41d4-a716-446655440000";
-    byte[] csvBytes = csvContent.getBytes(StandardCharsets.UTF_8);
 
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("csvFile", Collections.singletonList(csvFilePart));
-    formDataMap.put("cohortName", Collections.singletonList(cohortNamePart));
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
 
     when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
     when(cohortNamePart.getBodyAsString()).thenReturn(cohortName);
-    when(csvFilePart.getBody(byte[].class, null)).thenReturn(csvBytes);
+    when(csvFilePart.getBody(java.io.InputStream.class, null))
+        .thenReturn(new java.io.ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8)));
 
     RuntimeException serviceError = new RuntimeException("Service error");
-    when(userCohortsService.assignUsersToCohort(eq(cohortName), any(InputPart.class)))
+    when(userCohortsService.assignUsersToCohort(eq(cohortName), eq(tenantId), eq(projectId), any(InputPart.class)))
         .thenReturn(Single.error(serviceError));
 
     // Act
-    CompletionStage<Response> responseStage = controller.bulkAssignUsers(multipartInput);
+    CompletionStage<Response> responseStage = controller.bulkAssignUsers(projectKey, multipartInput);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -151,85 +225,87 @@ public class BulkCohortAssignmentTest {
   }
 
   @Test
-  public void bulkAssignUsers_WithEmptyCohortName_ProcessesRequest() throws Exception {
+  public void bulkAssignUsers_WithEmptyCohortName_ThrowsException() {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     String cohortName = "   "; // Whitespace only
     String csvContent = "550e8400-e29b-41d4-a716-446655440000";
-    byte[] csvBytes = csvContent.getBytes(StandardCharsets.UTF_8);
 
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("csvFile", Collections.singletonList(csvFilePart));
-    formDataMap.put("cohortName", Collections.singletonList(cohortNamePart));
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
 
     when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
-    when(cohortNamePart.getBodyAsString()).thenReturn(cohortName);
-    when(csvFilePart.getBody(byte[].class, null)).thenReturn(csvBytes);
+    try {
+      when(cohortNamePart.getBodyAsString()).thenReturn(cohortName);
+      when(csvFilePart.getBody(java.io.InputStream.class, null))
+          .thenReturn(new java.io.ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8)));
+    } catch (IOException e) {
+      // Mock setup can throw, but we'll handle it in the test
+    }
 
-    BulkOperationResult operationResult = new BulkOperationResult(0, 0, 0, "No users processed");
-
-    when(userCohortsService.assignUsersToCohort(anyString(), any(InputPart.class)))
-        .thenReturn(Single.just(operationResult));
-
-    // Act
-    CompletionStage<Response> responseStage = controller.bulkAssignUsers(multipartInput);
-    Response response = responseStage.toCompletableFuture().get();
-
-    // Assert
-    assertNotNull(response);
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    // Act & Assert
+    try {
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
+      fail("Expected exception to be thrown for empty cohort_name");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("MISSING_COHORT_NAME")
+                  || e.getCause().getMessage().contains("cohort_name")));
+    }
   }
 
   @Test
   public void extractPart_WithValidInput_ReturnsTrimmedString() throws Exception {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     String expectedValue = "  test-value  ";
     String trimmedValue = "test-value";
+    String csvContent = "550e8400-e29b-41d4-a716-446655440000";
 
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("testField", Collections.singletonList(cohortNamePart));
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
 
     when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
     when(cohortNamePart.getBodyAsString()).thenReturn(expectedValue);
-
-    // Act - This tests the private extractPart method indirectly
-    // We test it through bulkAssignUsers which uses it
-    when(csvFilePart.getBody(byte[].class, null))
-        .thenReturn("test".getBytes(StandardCharsets.UTF_8));
-    formDataMap.put("csvFile", Collections.singletonList(csvFilePart));
+    when(csvFilePart.getBody(java.io.InputStream.class, null))
+        .thenReturn(new java.io.ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8)));
 
     BulkOperationResult operationResult = new BulkOperationResult(0, 0, 0, "Test");
 
-    when(userCohortsService.assignUsersToCohort(eq(trimmedValue), any(InputPart.class)))
+    when(userCohortsService.assignUsersToCohort(eq(trimmedValue), eq(tenantId), eq(projectId), any(InputPart.class)))
         .thenReturn(Single.just(operationResult));
 
-    CompletionStage<Response> responseStage = controller.bulkAssignUsers(multipartInput);
+    CompletionStage<Response> responseStage = controller.bulkAssignUsers(projectKey, multipartInput);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(userCohortsService).assignUsersToCohort(eq(trimmedValue), any(InputPart.class));
+    verify(userCohortsService).assignUsersToCohort(eq(trimmedValue), eq(tenantId), eq(projectId), any(InputPart.class));
   }
 
   @Test
-  public void extractPart_WithIOException_ThrowsRuntimeException() throws Exception {
+  public void extractPart_WithIOException_ThrowsRuntimeException() {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("testField", Collections.singletonList(cohortNamePart));
+    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
+    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
 
     when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
-    when(cohortNamePart.getBodyAsString()).thenThrow(new IOException("IO error"));
+    try {
+      when(cohortNamePart.getBodyAsString()).thenThrow(new IOException("IO error"));
+    } catch (Exception e) {
+      // Mock setup can throw, but we'll handle it in the test
+    }
 
     // Act & Assert
     try {
-      // This will trigger extractPart which will throw IOException
-      // and it should be wrapped in RuntimeException
-      Map<String, List<InputPart>> formDataMap2 = new HashMap<>();
-      formDataMap2.put("csvFile", Collections.singletonList(csvFilePart));
-      formDataMap2.put("cohortName", Collections.singletonList(cohortNamePart));
-      when(multipartInput.getFormDataMap()).thenReturn(formDataMap2);
-      when(cohortNamePart.getBodyAsString()).thenThrow(new IOException("IO error"));
-
-      controller.bulkAssignUsers(multipartInput).toCompletableFuture().get();
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
       fail("Expected RuntimeException to be thrown");
     } catch (Exception e) {
       assertTrue(
@@ -242,6 +318,7 @@ public class BulkCohortAssignmentTest {
   @Test
   public void getPart_WithNullParts_ThrowsException() {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
     formDataMap.put("otherField", Collections.singletonList(cohortNamePart));
 
@@ -249,7 +326,7 @@ public class BulkCohortAssignmentTest {
 
     // Act & Assert
     try {
-      controller.bulkAssignUsers(multipartInput).toCompletableFuture().get();
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
       fail("Expected exception to be thrown");
     } catch (Exception e) {
       assertNotNull(e);
@@ -259,14 +336,15 @@ public class BulkCohortAssignmentTest {
   @Test
   public void getPart_WithEmptyPartsList_ThrowsException() {
     // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("csvFile", Collections.emptyList());
+    formDataMap.put("csv_file", Collections.emptyList());
 
     when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
 
     // Act & Assert
     try {
-      controller.bulkAssignUsers(multipartInput).toCompletableFuture().get();
+      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
       fail("Expected exception to be thrown");
     } catch (Exception e) {
       assertNotNull(e);

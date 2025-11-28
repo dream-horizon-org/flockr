@@ -41,20 +41,20 @@ public class MapUserCohortsTest {
   @Test
   public void handle_WithValidAppendRequest_ReturnsSuccessResponse() throws Exception {
     // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
-    when(userCohortsService.mapUserCohorts(any(MapUserCohortsRequest.class)))
+    when(userCohortsService.mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
         .thenReturn(Single.just(true));
 
     // Act
-    CompletionStage<Response> responseStage = controller.handle(request);
+    CompletionStage<Response> responseStage = controller.handle(userIdHeader, projectKey, request);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -64,26 +64,26 @@ public class MapUserCohortsTest {
     assertTrue(response.getEntity() instanceof ResponseEntity.Success);
     ResponseEntity.Success<?> success = (ResponseEntity.Success<?>) response.getEntity();
     assertEquals(true, success.data());
-    verify(userCohortsService).mapUserCohorts(any(MapUserCohortsRequest.class));
+    verify(userCohortsService).mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class));
   }
 
   @Test
   public void handle_WithValidRemoveRequest_ReturnsSuccessResponse() throws Exception {
     // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_REMOVE);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
-    when(userCohortsService.mapUserCohorts(any(MapUserCohortsRequest.class)))
+    when(userCohortsService.mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
         .thenReturn(Single.just(true));
 
     // Act
-    CompletionStage<Response> responseStage = controller.handle(request);
+    CompletionStage<Response> responseStage = controller.handle(userIdHeader, projectKey, request);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -93,93 +93,195 @@ public class MapUserCohortsTest {
   }
 
   @Test
-  public void handle_WithGuestId_ReturnsSuccessResponse() throws Exception {
+  public void handle_WithMissingUserIdHeader_ThrowsException() {
     // Arrange
+    String userIdHeader = null;
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(null);
-    request.setGuestId("guest-123");
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
-
-    when(userCohortsService.mapUserCohorts(any(MapUserCohortsRequest.class)))
-        .thenReturn(Single.just(true));
-
-    // Act
-    CompletionStage<Response> responseStage = controller.handle(request);
-    Response response = responseStage.toCompletableFuture().get();
-
-    // Assert
-    assertNotNull(response);
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(userCohortsService).mapUserCohorts(any(MapUserCohortsRequest.class));
-  }
-
-  @Test
-  public void handle_WithBothUserIdAndGuestIdNull_ThrowsException() {
-    // Arrange
-    MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(null);
-    request.setGuestId(null);
-    request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
-    request.setAction(Constants.ACTION_APPEND);
-    request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
     // Act & Assert
     try {
-      controller.handle(request).toCompletableFuture().get();
-      fail("Expected exception to be thrown when both userId and guestId are null");
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown when userId header is missing");
     } catch (Exception e) {
       assertTrue(
           e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_REQUEST_PARAMS")
-                  || e.getCause().getMessage().contains("userId")
-                  || e.getCause().getMessage().contains("guestId")));
+              && (e.getCause().getMessage().contains("MISSING_USER_ID_HEADER")
+                  || e.getCause().getMessage().contains("userId")));
     }
   }
 
   @Test
-  public void handle_WithInvalidRequest_ThrowsException() {
+  public void handle_WithMissingProjectKeyHeader_ThrowsException() {
     // Arrange
+    String userIdHeader = "123";
+    String projectKey = null;
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    // Missing required fields - this should fail validation
-    request.setUserId(123L);
+    request.setCohortKey("test-cohort");
+    request.setAction(Constants.ACTION_APPEND);
+    request.setExpireAt("2025-12-31 23:59:59");
+
+    // Act & Assert
+    try {
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown when x-project-key header is missing");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                  || e.getCause().getMessage().contains("x-project-key")));
+    }
+  }
+
+  @Test
+  public void handle_WithInvalidProjectKeyFormat_ThrowsException() {
+    // Arrange
+    String userIdHeader = "123";
+    String projectKey = "invalid-format"; // Missing underscore
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
+    request.setCohortKey("test-cohort");
+    request.setAction(Constants.ACTION_APPEND);
+    request.setExpireAt("2025-12-31 23:59:59");
+
+    // Act & Assert
+    try {
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid x-project-key format");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("INVALID_PROJECT_KEY_FORMAT")
+                  || e.getCause().getMessage().contains("x-project-key")));
+    }
+  }
+
+  @Test
+  public void handle_WithNullRequest_ThrowsException() {
+    // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    MapUserCohortsRequest request = null;
+
+    // Act & Assert
+    try {
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown for null request");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("INVALID_REQUEST")
+                  || e.getCause().getMessage().contains("Request body")));
+    }
+  }
+
+  @Test
+  public void handle_WithMissingCohortKey_ThrowsException() {
+    // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey(null); // Missing cohortKey
-    request.setSource(null); // Missing source
+    request.setAction(Constants.ACTION_APPEND);
+    request.setExpireAt("2025-12-31 23:59:59");
+
+    // Act & Assert
+    try {
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown for missing cohort_key");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("MISSING_COHORT_KEY")
+                  || e.getCause().getMessage().contains("cohort_key")));
+    }
+  }
+
+  @Test
+  public void handle_WithMissingAction_ThrowsException() {
+    // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
+    request.setCohortKey("test-cohort");
     request.setAction(null); // Missing action
+    request.setExpireAt("2025-12-31 23:59:59");
+
+    // Act & Assert
+    try {
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown for missing action");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("MISSING_ACTION")
+                  || e.getCause().getMessage().contains("action")));
+    }
+  }
+
+  @Test
+  public void handle_WithMissingExpireAt_ThrowsException() {
+    // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
+    request.setCohortKey("test-cohort");
+    request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt(null); // Missing expireAt
 
     // Act & Assert
     try {
-      controller.handle(request).toCompletableFuture().get();
-      fail("Expected exception to be thrown for invalid request");
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown for missing expire_at");
     } catch (Exception e) {
-      assertNotNull(e);
-      // Validation should fail
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("MISSING_EXPIRE_AT")
+                  || e.getCause().getMessage().contains("expire_at")));
+    }
+  }
+
+  @Test
+  public void handle_WithInvalidAction_ThrowsException() {
+    // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
+    request.setCohortKey("test-cohort");
+    request.setAction("invalid-action"); // Invalid action
+    request.setExpireAt("2025-12-31 23:59:59");
+
+    // Act & Assert
+    try {
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid action");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("INVALID_ACTION")
+                  || e.getCause().getMessage().contains("action")));
     }
   }
 
   @Test
   public void handle_WithServiceReturningFalse_ReturnsFalseInResponse() throws Exception {
     // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
-    when(userCohortsService.mapUserCohorts(any(MapUserCohortsRequest.class)))
+    when(userCohortsService.mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
         .thenReturn(Single.just(false));
 
     // Act
-    CompletionStage<Response> responseStage = controller.handle(request);
+    CompletionStage<Response> responseStage = controller.handle(userIdHeader, projectKey, request);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -192,22 +294,22 @@ public class MapUserCohortsTest {
   @Test
   public void handle_WithServiceError_PropagatesError() {
     // Arrange
+    String userIdHeader = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String tenantId = "550e8400-e29b-41d4-a716-446655440000";
+    String projectId = "project-100";
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
     RuntimeException serviceError = new RuntimeException("Service error");
-    when(userCohortsService.mapUserCohorts(any(MapUserCohortsRequest.class)))
+    when(userCohortsService.mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
         .thenReturn(Single.error(serviceError));
 
     // Act & Assert
     try {
-      controller.handle(request).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
       fail("Expected exception to be propagated");
     } catch (Exception e) {
       assertNotNull(e);
@@ -216,49 +318,46 @@ public class MapUserCohortsTest {
   }
 
   @Test
-  public void handle_WithNullProjectId_ProcessesRequest() throws Exception {
+  public void handle_WithInvalidTenantIdFormat_ThrowsException() {
     // Arrange
+    String userIdHeader = "123";
+    String projectKey = "invalid-uuid_project-100"; // Invalid UUID format
     MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
     request.setCohortKey("test-cohort");
-    request.setSource(Constants.SOURCE_DREAM11);
-    request.setAction(Constants.ACTION_REMOVE);
-    request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(null); // null projectId is allowed
-
-    when(userCohortsService.mapUserCohorts(any(MapUserCohortsRequest.class)))
-        .thenReturn(Single.just(true));
-
-    // Act
-    CompletionStage<Response> responseStage = controller.handle(request);
-    Response response = responseStage.toCompletableFuture().get();
-
-    // Assert
-    assertNotNull(response);
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(userCohortsService).mapUserCohorts(any(MapUserCohortsRequest.class));
-  }
-
-  @Test
-  public void handle_WithValidationFailure_ThrowsException() {
-    // Arrange
-    MapUserCohortsRequest request = new MapUserCohortsRequest();
-    request.setUserId(123L);
-    request.setGuestId(null);
-    request.setCohortKey(""); // Empty cohortKey should fail validation
-    request.setSource(Constants.SOURCE_DREAM11);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
-    request.setProjectId(100L);
 
     // Act & Assert
     try {
-      controller.handle(request).toCompletableFuture().get();
-      fail("Expected exception to be thrown for validation failure");
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid tenantId format");
     } catch (Exception e) {
-      assertNotNull(e);
-      // Validation should fail
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("INVALID_TENANT_ID_FORMAT")
+                  || e.getCause().getMessage().contains("UUID")));
+    }
+  }
+
+  @Test
+  public void handle_WithInvalidUserId_ThrowsException() {
+    // Arrange
+    String userIdHeader = "-1";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
+    request.setCohortKey("test-cohort");
+    request.setAction(Constants.ACTION_APPEND);
+    request.setExpireAt("2025-12-31 23:59:59");
+
+    // Act & Assert
+    try {
+      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      fail("Expected exception to be thrown for invalid userId");
+    } catch (Exception e) {
+      assertTrue(
+          e.getCause() != null
+              && (e.getCause().getMessage().contains("INVALID_USER_ID")
+                  || e.getCause().getMessage().contains("userId")));
     }
   }
 }
