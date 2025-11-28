@@ -171,7 +171,8 @@ public class UserCohortServiceImplTest {
     String setName = tenantId + "_" + projectId;
     RuntimeException error = new RuntimeException("Aerospike connection failed");
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName))).thenReturn(Single.error(error));
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(setName)))
+        .thenReturn(Single.error(error));
 
     // Act & Assert
     try {
@@ -385,10 +386,10 @@ public class UserCohortServiceImplTest {
     String tenantId = "550e8400-e29b-41d4-a716-446655440000";
     String projectId = "project-100";
     String csvContent = "550e8400-e29b-41d4-a716-446655440000,6ba7b810-9dad-11d1-80b4-00c04fd430c8";
-    
+
     InputPart csvFilePart = mock(InputPart.class);
-    java.io.InputStream inputStream = new java.io.ByteArrayInputStream(
-        csvContent.getBytes(StandardCharsets.UTF_8));
+    java.io.InputStream inputStream =
+        new java.io.ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8));
     when(csvFilePart.getBody(java.io.InputStream.class, null)).thenReturn(inputStream);
 
     when(aerospikeClient.appendCohort(
@@ -413,7 +414,8 @@ public class UserCohortServiceImplTest {
         .handler(any());
 
     // Act
-    var result = service.assignUsersToCohort(cohortName, tenantId, projectId, csvFilePart).blockingGet();
+    var result =
+        service.assignUsersToCohort(cohortName, tenantId, projectId, csvFilePart).blockingGet();
 
     // Assert
     assertNotNull(result);
@@ -436,8 +438,7 @@ public class UserCohortServiceImplTest {
       service.assignUsersToCohort(cohortName, tenantId, projectId, csvFilePart).blockingGet();
       fail("Expected exception to be thrown for empty CSV");
     } catch (Exception e) {
-      assertTrue(
-          e.getMessage().contains("empty") || e.getMessage().contains("EMPTY_CSV_FILE"));
+      assertTrue(e.getMessage().contains("empty") || e.getMessage().contains("EMPTY_CSV_FILE"));
     }
   }
 
@@ -459,8 +460,7 @@ public class UserCohortServiceImplTest {
       service.assignUsersToCohort(cohortName, tenantId, projectId, csvFilePart).blockingGet();
       fail("Expected exception to be thrown for null CSV");
     } catch (Exception e) {
-      assertTrue(
-          e.getMessage().contains("empty") || e.getMessage().contains("EMPTY_CSV_FILE"));
+      assertTrue(e.getMessage().contains("empty") || e.getMessage().contains("EMPTY_CSV_FILE"));
     }
   }
 

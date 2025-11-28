@@ -6,8 +6,8 @@ import lombok.experimental.UtilityClass;
 /**
  * Utility class for generating Aerospike set names from tenant and project identifiers.
  *
- * <p>This utility provides methods to construct set names that combine tenantId (UUID) and projectId (String) for
- * multi-tenant isolation in Aerospike.
+ * <p>This utility provides methods to construct set names that combine tenantId (UUID) and
+ * projectId (String) for multi-tenant isolation in Aerospike.
  *
  * <p><strong>Set Name Format:</strong>
  *
@@ -16,8 +16,10 @@ import lombok.experimental.UtilityClass;
  * <p><strong>Examples:</strong>
  *
  * <ul>
- *   <li>{@code generateSetName("550e8400-e29b-41d4-a716-446655440000", "project-100")} returns {@code "550e8400-e29b-41d4-a716-446655440000_project-100"}
- *   <li>{@code generateSetName("6ba7b810-9dad-11d1-80b4-00c04fd430c8", "project-200")} returns {@code "6ba7b810-9dad-11d1-80b4-00c04fd430c8_project-200"}
+ *   <li>{@code generateSetName("550e8400-e29b-41d4-a716-446655440000", "project-100")} returns
+ *       {@code "550e8400-e29b-41d4-a716-446655440000_project-100"}
+ *   <li>{@code generateSetName("6ba7b810-9dad-11d1-80b4-00c04fd430c8", "project-200")} returns
+ *       {@code "6ba7b810-9dad-11d1-80b4-00c04fd430c8_project-200"}
  * </ul>
  *
  * @author Flockr Team
@@ -35,7 +37,8 @@ public class SetNameUtil {
    * @param tenantId the tenant identifier (UUID format), must not be null or blank
    * @param projectId the project identifier (String), must not be null or blank
    * @return the generated set name in format "{tenantId}_{projectId}"
-   * @throws IllegalArgumentException if tenantId is null/blank, invalid UUID, or projectId is null/blank
+   * @throws IllegalArgumentException if tenantId is null/blank, invalid UUID, or projectId is
+   *     null/blank
    */
   public static String generateSetName(String tenantId, String projectId) {
     if (tenantId == null || tenantId.trim().isEmpty()) {
@@ -44,12 +47,12 @@ public class SetNameUtil {
     if (projectId == null || projectId.trim().isEmpty()) {
       throw new IllegalArgumentException("projectId cannot be null or blank");
     }
-    
+
     // Validate tenantId is a valid UUID
     if (!BulkCohortAssignmentConstants.UUID_PATTERN.matcher(tenantId.trim()).matches()) {
       throw new IllegalArgumentException("tenantId must be a valid UUID format");
     }
-    
+
     return tenantId.trim() + "_" + projectId.trim();
   }
 
@@ -64,12 +67,12 @@ public class SetNameUtil {
     if (tenantId == null || tenantId.trim().isEmpty()) {
       throw new IllegalArgumentException("tenantId is required and cannot be null or blank");
     }
-    
+
     // Validate tenantId is a valid UUID
     if (!BulkCohortAssignmentConstants.UUID_PATTERN.matcher(tenantId.trim()).matches()) {
       throw new IllegalArgumentException("tenantId must be a valid UUID format");
     }
-    
+
     if (projectId == null || projectId.trim().isEmpty()) {
       throw new IllegalArgumentException("projectId is required and cannot be null or blank");
     }

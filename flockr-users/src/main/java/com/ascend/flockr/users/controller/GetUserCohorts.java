@@ -36,11 +36,12 @@ public class GetUserCohorts {
    *
    * <ul>
    *   <li>{@code userId} - User ID (required, must be positive)
-   *   <li>{@code x-project-key} - Combined tenant and project identifier in format "tenantId_projectId" (required)
+   *   <li>{@code x-project-key} - Combined tenant and project identifier in format
+   *       "tenantId_projectId" (required)
    * </ul>
    *
-   * <p>The set name used for Aerospike operations is generated from x-project-key to
-   * ensure multi-tenant isolation.
+   * <p>The set name used for Aerospike operations is generated from x-project-key to ensure
+   * multi-tenant isolation.
    *
    * @param userIdHeader the user ID from userId header
    * @param projectKey the combined tenant and project identifier from x-project-key header
@@ -52,8 +53,7 @@ public class GetUserCohorts {
   @Path("/get-cohorts")
   @Produces(MediaType.APPLICATION_JSON)
   public CompletionStage<Response> handle(
-      @HeaderParam("userId") String userIdHeader,
-      @HeaderParam("x-project-key") String projectKey) {
+      @HeaderParam("userId") String userIdHeader, @HeaderParam("x-project-key") String projectKey) {
 
     // Validate userId header is present
     if (userIdHeader == null || userIdHeader.trim().isEmpty()) {
@@ -89,7 +89,7 @@ public class GetUserCohorts {
 
     String tenantId = projectKeyParts[0].trim();
     String projectId = projectKeyParts[1].trim();
-    
+
     // Validate tenantId is not empty
     if (tenantId.isEmpty()) {
       log.error("Empty tenantId in x-project-key: {}", projectKey);
@@ -106,7 +106,11 @@ public class GetUserCohorts {
     try {
       SetNameUtil.validateTenantAndProject(tenantId, projectId);
     } catch (IllegalArgumentException e) {
-      log.error("Invalid tenantId or projectId: tenantId={}, projectId={}, error={}", tenantId, projectId, e.getMessage());
+      log.error(
+          "Invalid tenantId or projectId: tenantId={}, projectId={}, error={}",
+          tenantId,
+          projectId,
+          e.getMessage());
       // Check if it's a UUID validation error
       if (e.getMessage().contains("UUID")) {
         throw ExceptionUtil.getException(DefinedErrors.INVALID_TENANT_ID_FORMAT, tenantId);

@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 
@@ -86,10 +84,12 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * <p>Implementation handles both append and remove actions. For append operations, validates
    * expiry time. Returns {@code false} if Aerospike key is not found. Uses set name generated from
-   * tenantId and projectId for multi-tenant isolation. Uses default source since it's removed from API.
+   * tenantId and projectId for multi-tenant isolation. Uses default source since it's removed from
+   * API.
    */
   @Override
-  public Single<Boolean> mapUserCohorts(Long userId, String tenantId, String projectId, MapUserCohortsRequest request) {
+  public Single<Boolean> mapUserCohorts(
+      Long userId, String tenantId, String projectId, MapUserCohortsRequest request) {
     String userKey = String.valueOf(userId);
     // Use default source since it's removed from API
     String source = Constants.SOURCE_DREAM11;
@@ -153,7 +153,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
   public Single<BulkOperationResult> assignUsersToCohort(
       String cohortName, String tenantId, String projectId, InputPart csvFilePart) {
     String setName = SetNameUtil.generateSetName(tenantId, projectId);
-    
+
     // Read InputStream synchronously on request thread (required for JAX-RS context)
     java.io.InputStream inputStream;
     try {
@@ -166,42 +166,55 @@ public class UserCohortServiceImpl implements UserCohortsService {
       log.error("Failed to read InputStream from InputPart", e);
       return Single.error(ExceptionUtil.getException(DefinedErrors.EMPTY_CSV_FILE));
     }
-    
+
     // Immediately move to background thread for file I/O
-    return Single.fromCallable(() -> {
-          Path tempPath = persistCsvToTempFile(inputStream);
-          verifyFileIntegrity(tempPath);
-          return tempPath;
-        })
+    return Single.fromCallable(
+            () -> {
+              Path tempPath = persistCsvToTempFile(inputStream);
+              verifyFileIntegrity(tempPath);
+              return tempPath;
+            })
         .subscribeOn(io.reactivex.rxjava3.schedulers.Schedulers.io())
         .doOnError(error -> log.error("Error creating temp file", error))
-        .flatMap(tempPath -> processCsvAndAssign(tempPath, cohortName, setName)
-            .doOnSuccess(result -> log.info(
-                "Bulk assignment completed. cohort={}, total={}, success={}, failed={}", 
-                cohortName, result.getTotalProcessed(), result.getSuccessCount(), result.getFailedCount()))
-            .doOnError(error -> log.error("Error during CSV processing for cohort: {}", cohortName, error)));
+        .flatMap(
+            tempPath ->
+                processCsvAndAssign(tempPath, cohortName, setName)
+                    .doOnSuccess(
+                        result ->
+                            log.info(
+                                "Bulk assignment completed. cohort={}, total={}, success={}, failed={}",
+                                cohortName,
+                                result.getTotalProcessed(),
+                                result.getSuccessCount(),
+                                result.getFailedCount()))
+                    .doOnError(
+                        error ->
+                            log.error(
+                                "Error during CSV processing for cohort: {}", cohortName, error)));
   }
 
   /**
    * Saves the uploaded CSV file to a temporary location on disk using streaming with atomic write.
    *
    * <p>This method is designed for concurrent request handling:
+   *
    * <ul>
-   *   <li>Uses constant memory (8KB buffer) regardless of file size</li>
-   *   <li>Runs on IO scheduler to avoid blocking event loop</li>
-   *   <li>Generates unique temp file names (handled by Files.createTempFile)</li>
-   *   <li>Uses atomic rename for crash safety</li>
-   *   <li>Validates file size during streaming to prevent DoS</li>
+   *   <li>Uses constant memory (8KB buffer) regardless of file size
+   *   <li>Runs on IO scheduler to avoid blocking event loop
+   *   <li>Generates unique temp file names (handled by Files.createTempFile)
+   *   <li>Uses atomic rename for crash safety
+   *   <li>Validates file size during streaming to prevent DoS
    * </ul>
    *
    * <p>Uses a two-phase write pattern:
+   *
    * <ol>
-   *   <li>Write to a temporary file with .tmp extension</li>
-   *   <li>Atomically rename to .csv only after successful complete write</li>
+   *   <li>Write to a temporary file with .tmp extension
+   *   <li>Atomically rename to .csv only after successful complete write
    * </ol>
    *
-   * <p>This ensures that if the system crashes during write, we never have a partial .csv file.
-   * The .tmp file can be safely ignored or cleaned up.
+   * <p>This ensures that if the system crashes during write, we never have a partial .csv file. The
+   * .tmp file can be safely ignored or cleaned up.
    *
    * <p><strong>Note:</strong> The InputStream must be obtained from InputPart on the request thread
    * (where JAX-RS context is available) before calling this method.
@@ -236,12 +249,15 @@ public class UserCohortServiceImpl implements UserCohortsService {
 
           // Validate file size during streaming (prevent DoS)
           if (totalBytesRead > BulkCohortAssignmentConstants.MAX_SIZE) {
-            log.error("File size {} exceeds maximum {}", 
-                totalBytesRead, BulkCohortAssignmentConstants.MAX_SIZE);
+            log.error(
+                "File size {} exceeds maximum {}",
+                totalBytesRead,
+                BulkCohortAssignmentConstants.MAX_SIZE);
             Files.deleteIfExists(tempFile);
             throw ExceptionUtil.getException(
                 DefinedErrors.INVALID_REQUEST,
-                "File size exceeds maximum allowed size: " + BulkCohortAssignmentConstants.MAX_SIZE);
+                "File size exceeds maximum allowed size: "
+                    + BulkCohortAssignmentConstants.MAX_SIZE);
           }
 
           // Flush periodically to ensure data is written to disk
@@ -289,10 +305,11 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * Verifies that the CSV file is complete and readable before processing.
    *
    * <p>This method checks:
+   *
    * <ul>
-   *   <li>File exists</li>
-   *   <li>File is not empty</li>
-   *   <li>File is readable and contains at least one line</li>
+   *   <li>File exists
+   *   <li>File is not empty
+   *   <li>File is readable and contains at least one line
    * </ul>
    *
    * @param csvFile path to the CSV file to verify
@@ -350,7 +367,9 @@ public class UserCohortServiceImpl implements UserCohortsService {
         .distinct()
         .doOnNext(id -> total.incrementAndGet())
         .buffer(BulkCohortAssignmentConstants.BATCH_SIZE)
-        .doOnNext(batch -> log.info("Processing batch of {} UUIDs for cohort: {}", batch.size(), cohortName))
+        .doOnNext(
+            batch ->
+                log.info("Processing batch of {} UUIDs for cohort: {}", batch.size(), cohortName))
         .flatMap(
             batch ->
                 Flowable.fromIterable(batch)

@@ -38,7 +38,8 @@ public class MapUserCohorts {
    *
    * <ul>
    *   <li>{@code userId} - User ID (required, must be positive)
-   *   <li>{@code x-project-key} - Combined tenant and project identifier in format "tenantId_projectId" (required)
+   *   <li>{@code x-project-key} - Combined tenant and project identifier in format
+   *       "tenantId_projectId" (required)
    * </ul>
    *
    * <p>Request body should contain:
@@ -49,8 +50,8 @@ public class MapUserCohorts {
    *   <li>{@code expire_at} - Expiry time in format "yyyy-MM-dd HH:mm:ss" (for append action)
    * </ul>
    *
-   * <p>The set name used for Aerospike operations is generated from x-project-key to
-   * ensure multi-tenant isolation.
+   * <p>The set name used for Aerospike operations is generated from x-project-key to ensure
+   * multi-tenant isolation.
    *
    * @param userIdHeader the user ID from userId header
    * @param projectKey the combined tenant and project identifier from x-project-key header
@@ -101,7 +102,7 @@ public class MapUserCohorts {
 
     String tenantId = projectKeyParts[0].trim();
     String projectId = projectKeyParts[1].trim();
-    
+
     // Validate tenantId is not empty
     if (tenantId.isEmpty()) {
       log.error("Empty tenantId in x-project-key: {}", projectKey);
@@ -118,7 +119,11 @@ public class MapUserCohorts {
     try {
       SetNameUtil.validateTenantAndProject(tenantId, projectId);
     } catch (IllegalArgumentException e) {
-      log.error("Invalid tenantId or projectId: tenantId={}, projectId={}, error={}", tenantId, projectId, e.getMessage());
+      log.error(
+          "Invalid tenantId or projectId: tenantId={}, projectId={}, error={}",
+          tenantId,
+          projectId,
+          e.getMessage());
       // Check if it's a UUID validation error
       if (e.getMessage().contains("UUID")) {
         throw ExceptionUtil.getException(DefinedErrors.INVALID_TENANT_ID_FORMAT, tenantId);
@@ -150,7 +155,8 @@ public class MapUserCohorts {
     }
 
     // Validate action value
-    if (!request.getAction().equals(Constants.ACTION_APPEND) && !request.getAction().equals(Constants.ACTION_REMOVE)) {
+    if (!request.getAction().equals(Constants.ACTION_APPEND)
+        && !request.getAction().equals(Constants.ACTION_REMOVE)) {
       log.error("Invalid action value: {}", request.getAction());
       throw ExceptionUtil.getException(DefinedErrors.INVALID_ACTION, request.getAction());
     }

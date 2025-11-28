@@ -69,11 +69,13 @@ public class BulkCohortAssignmentTest {
     BulkOperationResult operationResult =
         new BulkOperationResult(1, 1, 0, "Processed 1 users successfully");
 
-    when(userCohortsService.assignUsersToCohort(eq(cohortName), eq(tenantId), eq(projectId), any(InputPart.class)))
+    when(userCohortsService.assignUsersToCohort(
+            eq(cohortName), eq(tenantId), eq(projectId), any(InputPart.class)))
         .thenReturn(Single.just(operationResult));
 
     // Act
-    CompletionStage<Response> responseStage = controller.bulkAssignUsers(projectKey, multipartInput);
+    CompletionStage<Response> responseStage =
+        controller.bulkAssignUsers(projectKey, multipartInput);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -210,11 +212,13 @@ public class BulkCohortAssignmentTest {
         .thenReturn(new java.io.ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8)));
 
     RuntimeException serviceError = new RuntimeException("Service error");
-    when(userCohortsService.assignUsersToCohort(eq(cohortName), eq(tenantId), eq(projectId), any(InputPart.class)))
+    when(userCohortsService.assignUsersToCohort(
+            eq(cohortName), eq(tenantId), eq(projectId), any(InputPart.class)))
         .thenReturn(Single.error(serviceError));
 
     // Act
-    CompletionStage<Response> responseStage = controller.bulkAssignUsers(projectKey, multipartInput);
+    CompletionStage<Response> responseStage =
+        controller.bulkAssignUsers(projectKey, multipartInput);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
@@ -239,7 +243,8 @@ public class BulkCohortAssignmentTest {
     try {
       when(cohortNamePart.getBodyAsString()).thenReturn(cohortName);
       when(csvFilePart.getBody(java.io.InputStream.class, null))
-          .thenReturn(new java.io.ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8)));
+          .thenReturn(
+              new java.io.ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8)));
     } catch (IOException e) {
       // Mock setup can throw, but we'll handle it in the test
     }
@@ -277,15 +282,18 @@ public class BulkCohortAssignmentTest {
 
     BulkOperationResult operationResult = new BulkOperationResult(0, 0, 0, "Test");
 
-    when(userCohortsService.assignUsersToCohort(eq(trimmedValue), eq(tenantId), eq(projectId), any(InputPart.class)))
+    when(userCohortsService.assignUsersToCohort(
+            eq(trimmedValue), eq(tenantId), eq(projectId), any(InputPart.class)))
         .thenReturn(Single.just(operationResult));
 
-    CompletionStage<Response> responseStage = controller.bulkAssignUsers(projectKey, multipartInput);
+    CompletionStage<Response> responseStage =
+        controller.bulkAssignUsers(projectKey, multipartInput);
     Response response = responseStage.toCompletableFuture().get();
 
     // Assert
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(userCohortsService).assignUsersToCohort(eq(trimmedValue), eq(tenantId), eq(projectId), any(InputPart.class));
+    verify(userCohortsService)
+        .assignUsersToCohort(eq(trimmedValue), eq(tenantId), eq(projectId), any(InputPart.class));
   }
 
   @Test

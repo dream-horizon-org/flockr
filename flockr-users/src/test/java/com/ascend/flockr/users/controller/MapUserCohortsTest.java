@@ -50,7 +50,8 @@ public class MapUserCohortsTest {
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    when(userCohortsService.mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
+    when(userCohortsService.mapUserCohorts(
+            eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
         .thenReturn(Single.just(true));
 
     // Act
@@ -64,7 +65,8 @@ public class MapUserCohortsTest {
     assertTrue(response.getEntity() instanceof ResponseEntity.Success);
     ResponseEntity.Success<?> success = (ResponseEntity.Success<?>) response.getEntity();
     assertEquals(true, success.data());
-    verify(userCohortsService).mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class));
+    verify(userCohortsService)
+        .mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class));
   }
 
   @Test
@@ -79,7 +81,8 @@ public class MapUserCohortsTest {
     request.setAction(Constants.ACTION_REMOVE);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    when(userCohortsService.mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
+    when(userCohortsService.mapUserCohorts(
+            eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
         .thenReturn(Single.just(true));
 
     // Act
@@ -277,7 +280,8 @@ public class MapUserCohortsTest {
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    when(userCohortsService.mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
+    when(userCohortsService.mapUserCohorts(
+            eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
         .thenReturn(Single.just(false));
 
     // Act
@@ -304,7 +308,8 @@ public class MapUserCohortsTest {
     request.setExpireAt("2025-12-31 23:59:59");
 
     RuntimeException serviceError = new RuntimeException("Service error");
-    when(userCohortsService.mapUserCohorts(eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
+    when(userCohortsService.mapUserCohorts(
+            eq(123L), eq(tenantId), eq(projectId), any(MapUserCohortsRequest.class)))
         .thenReturn(Single.error(serviceError));
 
     // Act & Assert

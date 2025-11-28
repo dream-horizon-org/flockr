@@ -52,7 +52,8 @@ public interface UserCohortsService {
    * @throws IllegalArgumentException if request validation fails
    * @since 1.0
    */
-  Single<Boolean> mapUserCohorts(Long userId, String tenantId, String projectId, MapUserCohortsRequest request);
+  Single<Boolean> mapUserCohorts(
+      Long userId, String tenantId, String projectId, MapUserCohortsRequest request);
 
   /**
    * Bulk assigns users from a CSV file to a cohort.

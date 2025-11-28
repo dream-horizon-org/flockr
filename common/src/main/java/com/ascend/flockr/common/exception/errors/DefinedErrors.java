@@ -124,7 +124,8 @@ public enum DefinedErrors implements RestError {
    *
    * <p>Thrown when the x-project-key header is missing from the request.
    */
-  MISSING_PROJECT_KEY_HEADER("MISSING_PROJECT_KEY_HEADER", "Missing required header: x-project-key", 400),
+  MISSING_PROJECT_KEY_HEADER(
+      "MISSING_PROJECT_KEY_HEADER", "Missing required header: x-project-key", 400),
 
   /**
    * Invalid x-project-key format error.
@@ -135,7 +136,10 @@ public enum DefinedErrors implements RestError {
    *
    * <p>Thrown when x-project-key does not match the expected format (tenantId_projectId).
    */
-  INVALID_PROJECT_KEY_FORMAT("INVALID_PROJECT_KEY_FORMAT", "Invalid x-project-key format: %s. Expected format: tenantId_projectId", 400),
+  INVALID_PROJECT_KEY_FORMAT(
+      "INVALID_PROJECT_KEY_FORMAT",
+      "Invalid x-project-key format: %s. Expected format: tenantId_projectId",
+      400),
 
   // ============================================================================
   // Tenant and Project ID Validation Errors
@@ -148,9 +152,13 @@ public enum DefinedErrors implements RestError {
    *
    * <p>Message format: "Invalid tenantId: %s. tenantId must be a valid UUID format"
    *
-   * <p>Thrown when tenantId does not match UUID format (e.g., 550e8400-e29b-41d4-a716-446655440000).
+   * <p>Thrown when tenantId does not match UUID format (e.g.,
+   * 550e8400-e29b-41d4-a716-446655440000).
    */
-  INVALID_TENANT_ID_FORMAT("INVALID_TENANT_ID_FORMAT", "Invalid tenantId: %s. tenantId must be a valid UUID format", 400),
+  INVALID_TENANT_ID_FORMAT(
+      "INVALID_TENANT_ID_FORMAT",
+      "Invalid tenantId: %s. tenantId must be a valid UUID format",
+      400),
 
   /**
    * Missing or empty tenantId error.
@@ -220,7 +228,8 @@ public enum DefinedErrors implements RestError {
    *
    * <p>Thrown when action value is not "append" or "remove".
    */
-  INVALID_ACTION("INVALID_ACTION", "Invalid action: %s. action must be either 'append' or 'remove'", 400),
+  INVALID_ACTION(
+      "INVALID_ACTION", "Invalid action: %s. action must be either 'append' or 'remove'", 400),
 
   // ============================================================================
   // Bulk Assignment Form Data Validation Errors

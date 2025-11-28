@@ -44,7 +44,8 @@ public class BulkCohortAssignment {
    * <p>Headers:
    *
    * <ul>
-   *   <li>{@code x-project-key} - Combined tenant and project identifier in format "tenantId_projectId" (required)
+   *   <li>{@code x-project-key} - Combined tenant and project identifier in format
+   *       "tenantId_projectId" (required)
    * </ul>
    *
    * <p>Accepts multipart form data with:
@@ -57,8 +58,8 @@ public class BulkCohortAssignment {
    * <p>The CSV file is processed line by line, with each line containing comma-separated UUIDs.
    * Invalid UUIDs are skipped and counted as failures.
    *
-   * <p>The set name used for Aerospike operations is generated from x-project-key to
-   * ensure multi-tenant isolation.
+   * <p>The set name used for Aerospike operations is generated from x-project-key to ensure
+   * multi-tenant isolation.
    *
    * <p>Response is returned only after all users in the CSV have been processed. The response
    * includes statistics about total processed, successful, and failed assignments.
@@ -74,8 +75,7 @@ public class BulkCohortAssignment {
   @Consumes(MediaType.MULTIPART_FORM_DATA)
   @Produces(MediaType.APPLICATION_JSON)
   public CompletionStage<Response> bulkAssignUsers(
-      @HeaderParam("x-project-key") String projectKey,
-      MultipartFormDataInput input) {
+      @HeaderParam("x-project-key") String projectKey, MultipartFormDataInput input) {
 
     // Validate x-project-key header is present
     if (projectKey == null || projectKey.trim().isEmpty()) {
@@ -92,7 +92,7 @@ public class BulkCohortAssignment {
 
     String tenantId = projectKeyParts[0].trim();
     String projectId = projectKeyParts[1].trim();
-    
+
     // Validate tenantId is not empty
     if (tenantId.isEmpty()) {
       log.error("Empty tenantId in x-project-key: {}", projectKey);
@@ -109,7 +109,11 @@ public class BulkCohortAssignment {
     try {
       SetNameUtil.validateTenantAndProject(tenantId, projectId);
     } catch (IllegalArgumentException e) {
-      log.error("Invalid tenantId or projectId: tenantId={}, projectId={}, error={}", tenantId, projectId, e.getMessage());
+      log.error(
+          "Invalid tenantId or projectId: tenantId={}, projectId={}, error={}",
+          tenantId,
+          projectId,
+          e.getMessage());
       // Check if it's a UUID validation error
       if (e.getMessage().contains("UUID")) {
         throw ExceptionUtil.getException(DefinedErrors.INVALID_TENANT_ID_FORMAT, tenantId);
@@ -121,7 +125,7 @@ public class BulkCohortAssignment {
     // Extract form data (using snake_case for API)
     String cohortName;
     InputPart filePart;
-    
+
     try {
       cohortName = extractPart(input, COHORT_NAME);
       if (cohortName == null || cohortName.trim().isEmpty()) {
@@ -195,7 +199,8 @@ public class BulkCohortAssignment {
         throw ExceptionUtil.getException(DefinedErrors.MISSING_COHORT_NAME);
       } else {
         // Fallback for unknown form fields - should not happen in normal operation
-        throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST, "Missing required form field: " + name);
+        throw ExceptionUtil.getException(
+            DefinedErrors.INVALID_REQUEST, "Missing required form field: " + name);
       }
     }
     return parts.get(0);
