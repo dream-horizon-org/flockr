@@ -37,7 +37,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
 
   private static final String SQL_CREATE_AUDIENCE =
       "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expire_date, created_by, name_vector) "
-          + "VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8), $9, to_tsvector('english', $3)) RETURNING id";
+          + "VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8), $9, to_tsvector('english', $10)) RETURNING id";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
       "SELECT id, tenant_id, project_id, name, description, "
