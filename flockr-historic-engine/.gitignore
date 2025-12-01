@@ -1,0 +1,92 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon\r
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Java
+hs_err_pid*
+replay_pid*
+
+# Build outputs
+/target/
+/out/
+/bin/
+/build/
+
+# Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Maven
+.mvn/timing.properties
+# Keep the Maven wrapper JAR tracked
+!.mvn/wrapper/maven-wrapper.jar
+
+dependency-reduced-pom.xml
+
+# IDEs/Editors
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Eclipse
+.project
+.classpath
+.settings/
+.factorypath
+
+# VS Code (optional; remove if you want to share settings)
+.vscode/
+
+# Coverage/Reports
+coverage/
+*.lcov
+*.exec
+.jacoco/
+
+# Sonar
+.sonar/
+.scannerwork/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Temporary files
+*.swp
+*.swo
+*.tmp
+*.temp
+~*
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# Local tooling artifacts
+.idea_modules/
+
+# LocalStack data
+localstack-data/
+
+# Test data
+test-data/
+artifacts/
+
