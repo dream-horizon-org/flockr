@@ -9,6 +9,7 @@ import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
 import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.ascend.flockr.admin.io.response.AudienceOwnerResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
+import io.ascend.flockr.admin.io.response.AuditLogResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
 import io.ascend.flockr.admin.service.AudienceService;
 import io.ascend.flockr.admin.util.ErrorHandler;
@@ -313,5 +314,34 @@ public class AudienceController {
 
     return ErrorHandler.handleAsync(
         audienceService.getAudienceOwners(tenantId, projectId, audienceId), "getAudienceOwners");
+  }
+
+  @GET
+  @Path("/v1/audiences/{audienceId}/audit")
+  @Consumes(MediaType.WILDCARD)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Get audience audit log",
+      description = "Retrieves audit log entries for a given audience with optional pagination")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successful Response",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid parameters",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  public CompletionStage<ResponseEntity.Success<PaginatedResponse<AuditLogResponse>>> auditLog(
+      @PathParam("audienceId") Long audienceId,
+      @QueryParam("pageSize") @Min(1) @DefaultValue("10") Integer pageSize,
+      @QueryParam("pageNum") @Min(0) @DefaultValue("0") Integer pageNum,
+      @QueryParam("withPagination") @DefaultValue("false") boolean withPagination) {
+    return ErrorHandler.handleAsync(
+        audienceService.getAudienceAuditLog(audienceId, pageSize, pageNum, withPagination),
+        "auditLog");
   }
 }

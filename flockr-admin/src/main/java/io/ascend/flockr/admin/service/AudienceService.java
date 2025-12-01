@@ -8,6 +8,7 @@ import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.ascend.flockr.admin.io.response.AudienceOwnerResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
+import io.ascend.flockr.admin.io.response.AuditLogResponse;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
@@ -122,4 +123,30 @@ public interface AudienceService {
    */
   Single<List<AudienceOwnerResponse>> getAudienceOwners(
       String tenantId, String projectId, Long audienceId);
+
+  /**
+   * Retrieves audit log entries for an audience, grouped by calendar date and optionally paginated.
+   *
+   * <p>Each group in the returned data represents a date (local system timezone) and contains a
+   * list of audit items that occurred on that date. Items include action, actor (createdBy),
+   * timestamp and optional details (e.g., owner email acted upon, rule action/type, error info).
+   *
+   * <p>Pagination behavior:
+   * <ul>
+   *   <li>If {@code withPagination == false}, the method fetches a single page (limit and offset
+   *       derived from {@code pageSize}/{@code pageNum}) and sets {@code hasMore} based on whether
+   *       the returned item count equals {@code pageSize}.</li>
+   *   <li>If {@code withPagination == true}, the method also fetches the total count and computes
+   *       {@code hasMore} using {@code (page + 1) * pageSize < totalCount}.</li>
+   * </ul>
+   *
+   * @param audienceId the identifier of the audience whose audit logs are requested
+   * @param pageSize the maximum number of records to return per page (defaults applied if null/invalid)
+   * @param pageNum the 0-based page index (defaults applied if null/invalid)
+   * @param withPagination whether to compute {@code hasMore} using a total count query
+   * @return a Single emitting a {@link PaginatedResponse} whose data is a list of date-grouped
+   *     {@link AuditLogResponse} entries
+   */
+  Single<PaginatedResponse<AuditLogResponse>> getAudienceAuditLog(
+      Long audienceId, Integer pageSize, Integer pageNum, boolean withPagination);
 }
