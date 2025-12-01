@@ -4,11 +4,18 @@ import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.domain.audience.AudienceOwner;
+import io.ascend.flockr.admin.domain.audit.AuditLogAction;
+import io.ascend.flockr.admin.domain.audit.AuditLogDefinition;
+import io.ascend.flockr.admin.domain.audit.AuditLogValue;
+import io.ascend.flockr.admin.domain.audit.TaskType;
+import io.ascend.flockr.admin.domain.rule.RuleAction;
 import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.rxjava3.sqlclient.Row;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.List;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -45,6 +52,19 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
           + "SET status = 'INACTIVE', updated_at = CURRENT_TIMESTAMP "
           + "WHERE audience_id = $1 AND tenant_id = $2 AND project_id = $3 "
           + "AND owner_email = $4 AND status = 'ACTIVE'";
+
+  // Audit log queries
+  private static final String FIND_AUDIT_BY_AUDIENCE_ID =
+      "SELECT id, audience_id, task_id, action, created_by, created_at, name, rule_action, type, old_value, new_value "
+          + "FROM audience_audit_logs WHERE audience_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3";
+
+  private static final String COUNT_AUDIT_BY_AUDIENCE_ID =
+      "SELECT COUNT(1) FROM audience_audit_logs WHERE audience_id = $1";
+
+  private static final String INSERT_AUDIT =
+      "INSERT INTO audience_audit_logs "
+          + "(audience_id, task_id, action, created_by, created_at, name, rule_action, type, old_value, new_value) "
+          + "VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9) RETURNING id";
 
   /**
    * Retrieves all active owners for a specific audience.
@@ -120,4 +140,98 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
         .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to remove owner")))
         .toSingle();
   }
+
+  @Override
+  public Single<List<AuditLogDefinition>> findByAudienceId(
+      Long cohortId, Integer pageSize, Integer pageNum) {
+    int limit = pageSize != null ? pageSize : 10;
+    int offset = (pageNum != null ? pageNum : 0);
+    return postgresReaderClient.fetchAll(
+        FIND_AUDIT_BY_AUDIENCE_ID,
+        Tuple.of(cohortId, limit, offset),
+        AUDIT_LOG_ROW_MAPPER);
+  }
+
+  @Override
+  public Single<Integer> findCountByAudienceId(Long cohortId) {
+    return postgresReaderClient.fetchOne(
+        COUNT_AUDIT_BY_AUDIENCE_ID, Tuple.of(cohortId), row -> row.getInteger(0));
+  }
+
+  @Override
+  public Single<Long> insertAuditLog(
+      Long audienceId,
+      Long taskId,
+      AuditLogAction action,
+      AuditLogValue value,
+      String createdBy,
+      String name,
+      RuleAction ruleAction,
+      TaskType type) {
+    final Tuple params =
+        io.vertx.rxjava3.sqlclient.Tuple.tuple()
+            .addLong(audienceId)
+            .addLong(taskId)
+            .addString(action != null ? action.name() : null)
+            .addString(createdBy)
+            .addString(name)
+            .addString(ruleAction != null ? ruleAction.name() : null)
+            .addString(type != null ? type.ref() : null)
+            .addValue(
+                value != null
+                    ? io.vertx.core.json.JsonObject.mapFrom(value.getOldValue())
+                    : null)
+            .addValue(
+                value != null
+                    ? io.vertx.core.json.JsonObject.mapFrom(value.getNewValue())
+                    : null);
+
+    return postgresWriterClient
+        .<Long>executeWithTransaction(
+            conn ->
+                postgresWriterClient
+                    .executeAndGenerateId(conn, INSERT_AUDIT, params)
+                    .toMaybe())
+        .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to insert audit log")))
+        .toSingle();
+  }
+
+  private static final Function<Row, AuditLogDefinition> AUDIT_LOG_ROW_MAPPER =
+      row -> {
+        AuditLogDefinition def = new AuditLogDefinition();
+        def.setId(row.getLong("id"));
+        def.setCohortId(row.getLong("audience_id"));
+        def.setTaskId(row.getLong("task_id"));
+        String actionStr = row.getString("action");
+        if (actionStr != null) {
+          try {
+            def.setAction(AuditLogAction.valueOf(actionStr));
+          } catch (IllegalArgumentException e) {
+            def.setAction(null);
+          }
+        }
+        def.setCreatedBy(row.getString("created_by"));
+        // created_at is TIMESTAMPTZ; convert to epoch seconds like service expects
+        Long createdAtEpoch =
+            row.getOffsetDateTime("created_at") != null
+                ? row.getOffsetDateTime("created_at").toEpochSecond()
+                : null;
+        def.setCreatedAt(createdAtEpoch);
+        def.setName(row.getString("name"));
+        String ruleActionStr = row.getString("rule_action");
+        if (ruleActionStr != null) {
+          try {
+            def.setRuleAction(RuleAction.valueOf(ruleActionStr));
+          } catch (IllegalArgumentException e) {
+            def.setRuleAction(null);
+          }
+        }
+        String typeRef = row.getString("type");
+        def.setType(typeRef != null ? TaskType.fromRef(typeRef) : null);
+        AuditLogValue v = new AuditLogValue();
+        v.setOldValue(row.getValue("old_value"));
+        v.setNewValue(row.getValue("new_value"));
+        def.setValue(v);
+        return def;
+      };
 }

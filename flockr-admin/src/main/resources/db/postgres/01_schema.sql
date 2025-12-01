@@ -113,3 +113,28 @@ CREATE INDEX idx_audience_owners_tenant_project ON audience_owners(tenant_id, pr
 CREATE INDEX idx_audience_owners_email ON audience_owners(owner_email);
 CREATE INDEX idx_audience_owners_status ON audience_owners(status) WHERE status = 'ACTIVE';
 CREATE INDEX idx_audience_owners_lookup ON audience_owners(audience_id, tenant_id, project_id, status);
+
+CREATE TABLE IF NOT EXISTS audience_audit_logs (
+  id           BIGSERIAL PRIMARY KEY,
+  audience_id  BIGINT NOT NULL REFERENCES audiences(id) ON DELETE CASCADE,
+  task_id      BIGINT,
+
+  -- enums stored as strings (mapper parses them)
+  action       VARCHAR(64) NOT NULL,      -- AuditLogAction enum name
+  rule_action  VARCHAR(64),               -- RuleAction enum name
+  type         VARCHAR(32),               -- TaskType.ref (e.g. 'real-time', 'historic')
+
+  name         TEXT,                      -- display/name when value is absent
+  old_value    JSONB,                     -- AuditLogValue.oldValue
+  new_value    JSONB,                     -- AuditLogValue.newValue
+
+  created_by   VARCHAR(255) NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Optimizes ORDER BY created_at DESC with LIMIT/OFFSET and COUNT(*)
+CREATE INDEX IF NOT EXISTS idx_audience_audit_logs_audience_created_at
+  ON audience_audit_logs (audience_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_audience_audit_logs_audience
+  ON audience_audit_logs (audience_id);
