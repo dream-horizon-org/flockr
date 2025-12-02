@@ -37,17 +37,17 @@ public class AudienceRepositoryImpl implements AudienceRepository {
   private final PostgresWriterClient postgresWriterClient;
 
   private static final String SQL_CREATE_AUDIENCE =
-      "INSERT INTO audiences (tenant_id, project_id, name, description, sinks, custom_audience_config, type, expire_date, created_by, name_vector) "
-          + "VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8), $9, to_tsvector('english', $10)) RETURNING id";
+      "INSERT INTO audiences (x_project_id, name, description, sinks, custom_audience_config, type, expire_date, created_by, name_vector) "
+          + "VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7), $8, to_tsvector('english', $9)) RETURNING id";
 
   private static final String SQL_GET_AUDIENCE_BY_ID =
-      "SELECT id, tenant_id, project_id, name, description, "
+      "SELECT id, x_project_id, name, description, "
           + "EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at, "
           + "EXTRACT(EPOCH FROM updated_at)::BIGINT AS updated_at, "
           + "EXTRACT(EPOCH FROM last_audience_updated_at)::BIGINT AS last_audience_updated_at, "
           + "user_count, custom_audience_config, type, verified, "
           + "EXTRACT(EPOCH FROM expire_date)::BIGINT AS expire_date, sinks, created_by "
-          + "FROM audiences WHERE id = $1 AND tenant_id = $2 AND project_id = $3";
+          + "FROM audiences WHERE id = $1 AND x_project_id = $2";
 
   /**
    * {@inheritDoc}
@@ -62,8 +62,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
 
     Tuple params =
         Tuple.tuple()
-            .addValue(audienceMeta.getTenantId())
-            .addValue(audienceMeta.getProjectId())
+            .addValue(audienceMeta.getXProjectId())
             .addValue(audienceMeta.getName())
             .addValue(audienceMeta.getDescription())
             .addArrayOfLong(sinksList.toArray(new Long[0]))
@@ -91,16 +90,15 @@ public class AudienceRepositoryImpl implements AudienceRepository {
    * milliseconds.
    */
   @Override
-  public Single<AudienceMeta> getAudienceById(String tenantId, String projectId, Long id) {
+  public Single<AudienceMeta> getAudienceById(String xProjectId, Long id) {
     return postgresReaderClient.fetchOne(
         SQL_GET_AUDIENCE_BY_ID,
-        Tuple.of(id, tenantId, projectId),
+        Tuple.of(id, xProjectId),
         row -> {
           AudienceMeta.AudienceMetaBuilder builder =
               AudienceMeta.builder()
                   .audienceId(row.getLong(AudienceConstants.ID))
-                  .tenantId(row.getString(AudienceConstants.TENANT_ID))
-                  .projectId(row.getString(AudienceConstants.PROJECT_ID))
+                  .xProjectId(row.getString(AudienceConstants.X_PROJECT_ID))
                   .name(row.getString(AudienceConstants.NAME))
                   .description(row.getString(AudienceConstants.DESCRIPTION))
                   .type(row.getString(AudienceConstants.TYPE))
@@ -176,21 +174,20 @@ public class AudienceRepositoryImpl implements AudienceRepository {
    * <p><strong>Example Usage:</strong>
    *
    * <pre>{@code
-   * // Get first 20 audiences for tenant/project, sorted by creation date
-   * repository.getAudiencesList("tenant1", "project1", null, null, null, 20, 0);
+   * // Get first 20 audiences for project, sorted by creation date
+   * repository.getAudiencesList("xproject1", null, null, null, 20, 0);
    *
    * // Search for "marketing" audiences, get top 10 by relevance
-   * repository.getAudiencesList("tenant1", "project1", "marketing", null, null, 10, 0);
+   * repository.getAudiencesList("xproject1", "marketing", null, null, 10, 0);
    *
    * // Get verified audiences created by specific user
-   * repository.getAudiencesList("tenant1", "project1", null, "john.doe", true, 50, 0);
+   * repository.getAudiencesList("xproject1", null, "john.doe", true, 50, 0);
    *
    * // Combined: search + filters + deep pagination
-   * repository.getAudiencesList("tenant1", "project1", "campaign", "admin", true, 20, 100);
+   * repository.getAudiencesList("xproject1", "campaign", "admin", true, 20, 100);
    * }</pre>
    *
-   * @param tenantId the tenant identifier from the request header
-   * @param projectId the project identifier from the request header
+   * @param xProjectId the encrypted project identifier from the request header
    * @param nameSearch optional search term for full-text search against audience names and
    *     descriptions. If provided, results are ranked by relevance using {@code ts_rank()}.
    *     Supports stemming (e.g., "running" matches "run") and multi-word queries. Pass {@code null}
@@ -212,8 +209,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
    */
   @Override
   public Single<List<AudienceMetaResponse>> getAudiencesList(
-      String tenantId,
-      String projectId,
+      String xProjectId,
       String nameSearch,
       String createdBy,
       Boolean verified,
@@ -239,13 +235,8 @@ public class AudienceRepositoryImpl implements AudienceRepository {
     }
 
     sql.append("  FROM audiences a ");
-    sql.append("  WHERE a.tenant_id = $")
-        .append(paramIndex++)
-        .append(" AND a.project_id = $")
-        .append(paramIndex++)
-        .append(" ");
-    params.add(tenantId);
-    params.add(projectId);
+    sql.append("  WHERE a.x_project_id = $").append(paramIndex++).append(" ");
+    params.add(xProjectId);
 
     // Add filters
     if (nameSearch != null && !nameSearch.isBlank()) {

@@ -18,6 +18,9 @@ public final class AudienceOwnersConstants {
   /** Audience identifier foreign key column name. */
   public static final String AUDIENCE_ID = "audience_id";
 
+  /** Encrypted project identifier column name (amalgamation of tenantId and projectId). */
+  public static final String X_PROJECT_ID = "x_project_id";
+
   /** Owner email address column name. */
   public static final String OWNER_EMAIL = "owner_email";
 

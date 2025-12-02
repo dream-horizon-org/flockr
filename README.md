@@ -319,31 +319,124 @@ http://localhost:8080/swagger-ui/
 
 ### Key API Endpoints
 
+**All API endpoints require the `X-Project-Id` header** containing an encrypted project identifier (amalgamation of tenantId and projectId).
+
+**Optional `email` header** can be provided for actor tracking (defaults to 'system' if not provided).
+
 #### Audiences API
 
-```
-GET    /v1/audiences              # List all audiences
-GET    /v1/audiences/{id}         # Get audience by ID
-POST   /v1/audiences              # Create new audience
-PUT    /v1/audiences/{id}         # Update audience
-DELETE /v1/audiences/{id}         # Delete audience
+```bash
+# List all audiences
+GET /v1/audiences
+Headers:
+  X-Project-Id: <encrypted-project-id>
+  
+# Get audience by ID
+GET /v1/audiences/{id}
+Headers:
+  X-Project-Id: <encrypted-project-id>
+  
+# Create new audience
+POST /v1/audiences
+Headers:
+  X-Project-Id: <encrypted-project-id>
+  email: user@example.com  # Optional, defaults to 'system'
+Body:
+  {
+    "name": "High Value Customers",
+    "description": "Customers with LTV > $1000",
+    "type": "STANDARD",
+    "sinkIds": [1, 2],
+    "expireDate": 1735689600000
+  }
+
+# Create rules for an audience
+POST /v1/audiences/{audienceId}/rules
+Headers:
+  X-Project-Id: <encrypted-project-id>
+  email: user@example.com  # Optional, defaults to 'system'
+Body:
+  {
+    "rules": [...]
+  }
+
+# Get rule details
+GET /v1/audiences/{audienceId}/rules/{ruleId}
+Headers:
+  X-Project-Id: <encrypted-project-id>
+
+# Get audience owners
+GET /v1/audiences/{audienceId}/owners
+Headers:
+  X-Project-Id: <encrypted-project-id>
+
+# Update audience owner
+POST /v1/audiences/{audienceId}/owners
+Headers:
+  X-Project-Id: <encrypted-project-id>
+  email: user@example.com  # Optional, defaults to 'system'
+Body:
+  {
+    "action": "ADD",
+    "email": "newowner@example.com"
+  }
 ```
 
 #### Data Connectors API
 
-```
-GET    /v1/data-connectors         # List data connectors
-GET    /v1/data-connectors/{id}    # Get connector by ID
-POST   /v1/data-connectors         # Create new connector
-PUT    /v1/data-connectors/{id}    # Update connector
-DELETE /v1/data-connectors/{id}    # Delete connector
+```bash
+# List connector types
+GET /v1/connectors/types?kind=SOURCE
+
+# List data sources
+GET /v1/datasources?pageSize=10&pageNum=0
+
+# List data sinks
+GET /v1/datasinks?pageSize=10&pageNum=0
+
+# Onboard a data source
+POST /v1/datasources/onboard
+Headers:
+  email: user@example.com  # Optional, defaults to 'system'
+Body:
+  {
+    "name": "User Events Kafka",
+    "typeId": 1,
+    "config": {
+      "topic": "user-events",
+      "bootstrapServersUrl": "localhost:9092"
+    }
+  }
+
+# Onboard a data sink
+POST /v1/datasinks/onboard
+Headers:
+  email: user@example.com  # Optional, defaults to 'system'
+Body:
+  {
+    "name": "S3 Export Bucket",
+    "typeId": 3,
+    "config": {
+      "bucket": "my-audience-exports",
+      "folderPath": "audiences/",
+      "region": "us-east-1"
+    }
+  }
 ```
 
 #### Health Check
 
+```bash
+GET /health
+# No headers required
 ```
-GET    /health                     # Application health status
-```
+
+### Header Reference
+
+| Header | Required | Description | Example |
+|--------|----------|-------------|---------|
+| `X-Project-Id` | Yes (for most endpoints) | Encrypted amalgamation of tenantId and projectId | `eyJ0ZW5hbnRJZCI6InRlbmFudDEiLCJwcm9qZWN0SWQiOiJwcm9qMSJ9` |
+| `email` | No | Actor email/username for audit tracking. Defaults to 'system' if not provided | `user@example.com` |
 
 **Full API specification**: [Swagger YAML](./flockr-admin/src/main/resources/webroot/swagger/swagger.yaml)
 

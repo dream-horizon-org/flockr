@@ -23,36 +23,32 @@ public interface AudienceOwnerRepository {
   /**
    * Finds all active owners for a specific audience.
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
+   * @param xProjectId the encrypted project identifier
    * @param audienceId the audience identifier
    * @return a Single emitting a list of active audience owners
    */
-  Single<List<AudienceOwner>> findOwners(String tenantId, String projectId, Long audienceId);
+  Single<List<AudienceOwner>> findOwners(String xProjectId, Long audienceId);
 
   /**
    * Adds a new owner to an audience.
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
+   * @param xProjectId the encrypted project identifier
    * @param audienceId the audience identifier
    * @param ownerEmail the email of the owner to add
-   * @param userEmail the email of the user performing the action
+   * @param userEmail the email of the user performing the action (defaults to 'system' if null)
    * @return a Single emitting true if the owner was successfully added
    */
-  Single<Boolean> addOwner(
-      String tenantId, String projectId, Long audienceId, String ownerEmail, String userEmail);
+  Single<Boolean> addOwner(String xProjectId, Long audienceId, String ownerEmail, String userEmail);
 
   /**
    * Removes an owner from an audience (soft delete by setting status to INACTIVE).
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
+   * @param xProjectId the encrypted project identifier
    * @param audienceId the audience identifier
    * @param ownerEmail the email of the owner to remove
-   * @param userEmail the email of the user performing the action
+   * @param userEmail the email of the user performing the action (defaults to 'system' if null)
    * @return a Single emitting true if the owner was successfully removed
    */
   Single<Boolean> removeOwner(
-      String tenantId, String projectId, Long audienceId, String ownerEmail, String userEmail);
+      String xProjectId, Long audienceId, String ownerEmail, String userEmail);
 }

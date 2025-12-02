@@ -31,12 +31,11 @@ public interface AudienceRepository {
   /**
    * Retrieves an audience by its unique identifier.
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
+   * @param xProjectId the encrypted project identifier
    * @param id the unique audience identifier
    * @return a Single emitting the audience metadata, or an error if not found
    */
-  Single<AudienceMeta> getAudienceById(String tenantId, String projectId, Long id);
+  Single<AudienceMeta> getAudienceById(String xProjectId, Long id);
 
   /**
    * Retrieves a paginated list of audiences with filtering options.
@@ -44,8 +43,7 @@ public interface AudienceRepository {
    * <p>This method supports full-text search on audience names, filtering by creator and
    * verification status, and pagination using limit and offset.
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
+   * @param xProjectId the encrypted project identifier
    * @param nameSearch optional search term for full-text search against audience names
    * @param createdBy optional filter for the creator username
    * @param verified optional filter for verification status
@@ -54,8 +52,7 @@ public interface AudienceRepository {
    * @return a Single emitting a list of audience metadata responses with rule counts
    */
   Single<List<AudienceMetaResponse>> getAudiencesList(
-      String tenantId,
-      String projectId,
+      String xProjectId,
       String nameSearch,
       String createdBy,
       Boolean verified,

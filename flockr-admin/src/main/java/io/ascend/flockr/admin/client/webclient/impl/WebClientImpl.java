@@ -3,8 +3,6 @@ package io.ascend.flockr.admin.client.webclient.impl;
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.config.WebClientConfig;
-import io.ascend.flockr.admin.constants.web.WebConstants;
-import io.ascend.flockr.admin.util.CommonUtil;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.netty.handler.timeout.TimeoutException;
 import io.reactivex.rxjava3.core.Completable;
@@ -113,28 +111,6 @@ public class WebClientImpl implements WebClient {
         circuitBreaker.getState());
   }
 
-  private void pushCircuitBreakerMetricsToDD() {
-    if (Objects.isNull(circuitBreaker)) return;
-
-    String tag = CommonUtil.getCircuitBreakerTag(circuitBreaker.getName());
-    CircuitBreaker.Metrics metrics = circuitBreaker.getMetrics();
-
-    pushGaugeMetricToDD(WebConstants.STATE, circuitBreaker.getState().getOrder(), tag);
-    pushGaugeMetricToDD(WebConstants.BUFFERED_CALLS_COUNT, metrics.getNumberOfBufferedCalls(), tag);
-    pushGaugeMetricToDD(
-        WebConstants.NOT_PERMITTED_CALLS_COUNT, metrics.getNumberOfNotPermittedCalls(), tag);
-    pushGaugeMetricToDD(
-        WebConstants.SUCCESSFUL_CALLS_COUNT, metrics.getNumberOfSuccessfulCalls(), tag);
-    pushGaugeMetricToDD(WebConstants.FAILED_CALLS_COUNT, metrics.getNumberOfFailedCalls(), tag);
-    pushGaugeMetricToDD(WebConstants.SLOW_CALLS_COUNT, metrics.getNumberOfSlowCalls(), tag);
-    pushGaugeMetricToDD(
-        WebConstants.SLOW_SUCCESSFUL_CALLS_COUNT, metrics.getNumberOfSlowSuccessfulCalls(), tag);
-    pushGaugeMetricToDD(
-        WebConstants.SLOW_FAILED_CALLS_COUNT, metrics.getNumberOfSlowFailedCalls(), tag);
-    pushGaugeMetricToDD(WebConstants.SLOW_CALL_RATE, metrics.getSlowCallRate(), tag);
-    pushGaugeMetricToDD(WebConstants.FAILURE_RATE, metrics.getFailureRate(), tag);
-  }
-
   private <T extends Number> void pushGaugeMetricToDD(
       String aspectName, T metricValue, String... tags) {}
 
@@ -156,7 +132,6 @@ public class WebClientImpl implements WebClient {
       log.error(
           "Error while making request to resource: {}", request.host() + request.uri(), throwable);
       printCircuitBreakerState();
-      pushCircuitBreakerMetricsToDD();
     };
   }
 
@@ -167,7 +142,6 @@ public class WebClientImpl implements WebClient {
           request.host() + request.uri(),
           bufferHttpResponse.bodyAsString());
       printCircuitBreakerState();
-      pushCircuitBreakerMetricsToDD();
     };
   }
 

@@ -12,8 +12,8 @@ import lombok.NoArgsConstructor;
  * Domain model representing audience metadata.
  *
  * <p>An audience represents a group of users defined by rules and configurations. This class
- * contains all metadata associated with an audience, including tenant/project identifiers, name,
- * description, type, custom configuration, associated data sinks, verification status, and
+ * contains all metadata associated with an audience, including the encrypted project identifier,
+ * name, description, type, custom configuration, associated data sinks, verification status, and
  * timestamps.
  *
  * @author Prithu Sharma
@@ -25,11 +25,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AudienceMeta {
-  /** The tenant identifier that owns this audience. */
-  private String tenantId;
-
-  /** The project identifier within the tenant. */
-  private String projectId;
+  /** The encrypted project identifier (amalgamation of tenantId and projectId). */
+  private String xProjectId;
 
   /** The unique identifier of the audience. */
   private Long audienceId;

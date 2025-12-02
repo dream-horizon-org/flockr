@@ -18,11 +18,8 @@ public final class RuleConstants {
   /** Audience identifier foreign key column name. */
   public static final String AUDIENCE_ID = "audience_id";
 
-  /** Tenant identifier column name. */
-  public static final String TENANT_ID = "tenant_id";
-
-  /** Project identifier column name. */
-  public static final String PROJECT_ID = "project_id";
+  /** Encrypted project identifier column name (amalgamation of tenantId and projectId). */
+  public static final String X_PROJECT_ID = "x_project_id";
 
   /** Rule name column name. */
   public static final String NAME = "name";
