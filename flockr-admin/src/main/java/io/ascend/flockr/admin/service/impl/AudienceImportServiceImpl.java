@@ -165,7 +165,7 @@ public class AudienceImportServiceImpl implements AudienceImportService {
         audience.getAudienceId());
 
     for (DataSinkDetails sink : sinks) {
-      log.trace(
+      log.debug(
           "Would push {} records to sink: {} (type: {})",
           batch.size(),
           sink.getName(),
