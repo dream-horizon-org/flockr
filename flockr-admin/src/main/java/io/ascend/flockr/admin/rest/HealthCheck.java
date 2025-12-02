@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
  * <p>This endpoint is hidden from Swagger documentation and is typically used by load balancers and
  * monitoring systems to verify the application is running and healthy.
  *
- * @author Flockr Team
  * @since 1.0
  */
 @Path("/healthcheck")

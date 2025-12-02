@@ -10,7 +10,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
  *
  * <p>Validates SQL query syntax using JSqlParser to ensure queries are syntactically correct.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Slf4j

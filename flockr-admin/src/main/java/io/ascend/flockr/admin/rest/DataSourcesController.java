@@ -45,7 +45,7 @@ import lombok.RequiredArgsConstructor;
  *   <li>Listing data sources and sinks with pagination
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Path("/")

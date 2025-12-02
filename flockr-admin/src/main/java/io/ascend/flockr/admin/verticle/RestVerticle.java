@@ -23,7 +23,6 @@ import io.vertx.core.http.HttpServerOptions;
  *   <li>Scans for REST controllers in the {@link Constants#PACKAGE_NAME} package
  * </ul>
  *
- * @author Flockr Team
  * @since 1.0
  */
 public class RestVerticle extends AbstractRestVerticle {

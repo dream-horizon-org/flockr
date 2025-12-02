@@ -9,7 +9,6 @@ import io.reactivex.rxjava3.core.Single;
  * <p>This service provides methods to check the health status of the application and its
  * dependencies.
  *
- * @author Flockr Team
  * @since 1.0
  */
 public interface HealthCheckService {

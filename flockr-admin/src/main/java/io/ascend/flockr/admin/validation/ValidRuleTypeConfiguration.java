@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * <p>This annotation ensures that when ruleType is STREAM, the configuration type is also STREAM,
  * and when ruleType is BATCH, the configuration type is also BATCH.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Target({ElementType.TYPE})

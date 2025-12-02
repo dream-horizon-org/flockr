@@ -8,7 +8,7 @@ import io.reactivex.rxjava3.core.Single;
  * <p>This DAO provides methods to verify the health status of critical system dependencies and
  * maintenance states.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public interface HealthCheckDAO {

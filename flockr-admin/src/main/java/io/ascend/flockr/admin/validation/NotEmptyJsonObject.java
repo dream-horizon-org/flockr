@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * <p>This annotation can be used on JsonObject fields to ensure they contain at least one key-value
  * pair.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})

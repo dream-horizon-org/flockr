@@ -6,9 +6,21 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+/**
+ * Request object for onboarding a new data sink.
+ *
+ * <p>Data sinks are external destinations where computed audience data is exported.
+ *
+ * @since 1.0
+ */
 @Data
 public class OnboardDataSinkRequest {
+  /** The name of the data sink. Must not be empty. */
   @NotEmpty private String name;
-  @NotNull private Long typeId; // references data_connector_types.id
-  @NotEmptyJsonObject private JsonObject config; // arbitrary connector specific config
+
+  /** The ID of the connector type (references data_connector_types.id). */
+  @NotNull private Long typeId;
+
+  /** The connector-specific configuration (validated against the type's schema). */
+  @NotEmptyJsonObject private JsonObject config;
 }

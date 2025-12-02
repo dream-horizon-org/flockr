@@ -18,7 +18,8 @@ import lombok.extern.slf4j.Slf4j;
  * <p>This utility uses the NetworkNT json-schema-validator library to validate Vert.x JsonObjects
  * against JSON Schema specifications stored in the database.
  *
- * @author Flockr Team
+ *
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Slf4j

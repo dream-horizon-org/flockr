@@ -9,7 +9,7 @@ import jakarta.validation.ConstraintValidatorContext;
  *
  * <p>Validates that a JsonObject is not null. Empty JsonObjects are considered valid.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public class NotNullJsonObjectValidator

@@ -16,7 +16,7 @@ import java.util.List;
  *   <li>Querying audiences with filtering and pagination
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public interface AudienceRepository {

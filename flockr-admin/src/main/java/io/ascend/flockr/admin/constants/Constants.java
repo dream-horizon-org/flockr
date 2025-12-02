@@ -14,7 +14,6 @@ import lombok.experimental.UtilityClass;
  *   <li>Common string delimiters
  * </ul>
  *
- * @author Flockr Team
  * @since 1.0
  */
 @UtilityClass

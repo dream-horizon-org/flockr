@@ -39,7 +39,7 @@ import lombok.RequiredArgsConstructor;
  *
  * <p>All endpoints require tenant and project identifiers via headers (X-Tenant-Id, X-Project-Id).
  *
- * @author
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Path("/")

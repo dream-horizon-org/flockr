@@ -28,7 +28,7 @@ import lombok.RequiredArgsConstructor;
  *
  * <p>All write operations are executed within database transactions to ensure atomicity.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @RequiredArgsConstructor(onConstructor = @__(@Inject))

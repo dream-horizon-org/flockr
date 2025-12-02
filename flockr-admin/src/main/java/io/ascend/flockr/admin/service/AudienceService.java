@@ -23,7 +23,7 @@ import java.util.List;
  *   <li>Listing audiences with filtering and pagination
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public interface AudienceService {

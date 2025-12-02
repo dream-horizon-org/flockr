@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p>This DAO checks the health status of the PostgreSQL reader connection and retrieves
  * maintenance mode status from the application context.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Slf4j

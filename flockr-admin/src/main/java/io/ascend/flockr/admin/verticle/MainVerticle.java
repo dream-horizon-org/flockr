@@ -25,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>Gracefully shutting down all clients (PostgreSQL readers/writers, WebClient) when stopped
  * </ul>
  *
- * @author Flockr Team
  * @since 1.0
  */
 @Slf4j
@@ -92,11 +91,13 @@ public class MainVerticle extends AbstractVerticle {
    * @return a Completable that completes when all clients are closed
    */
   private Completable stopClients() {
-    PostgresReaderClient mySQLReaderClient = GuiceInjector.getInstance(PostgresReaderClient.class);
-    PostgresWriterClient mySQLWriterClient = GuiceInjector.getInstance(PostgresWriterClient.class);
+    PostgresReaderClient postgresReaderClient =
+        GuiceInjector.getInstance(PostgresReaderClient.class);
+    PostgresWriterClient postgresWriterClient =
+        GuiceInjector.getInstance(PostgresWriterClient.class);
     WebClient webClient = GuiceInjector.getInstance(WebClient.class);
 
     return Completable.mergeArray(
-        mySQLReaderClient.close(), mySQLWriterClient.close(), webClient.close());
+        postgresReaderClient.close(), postgresWriterClient.close(), webClient.close());
   }
 }

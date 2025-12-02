@@ -10,6 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.experimental.UtilityClass;
 
+/**
+ * @author Prithu Sharma
+ * @since 1.0
+*/
 @UtilityClass
 public final class RuleHelpers {
 
@@ -60,17 +64,26 @@ public final class RuleHelpers {
         .build();
   }
 
+  /**
+   * Extracts all unique source IDs from a rule's configuration.
+   *
+   * <p>For STREAM rules, this extracts source IDs from all event definitions across all pattern
+   * steps. For BATCH rules, this extracts the single source ID from the batch configuration.
+   *
+   * @param ruleMeta the rule metadata containing the configuration
+   * @return a list of unique source IDs referenced by the rule
+   */
   public static List<Long> extractSourceIdFromRuleMeta(RuleMeta<SourceInfo> ruleMeta) {
     List<Long> sourceIds = new ArrayList<>();
     if (ruleMeta.getRuleType() == RuleType.STREAM) {
       StreamConfiguration<SourceInfo> streamConfiguration =
           (StreamConfiguration<SourceInfo>) ruleMeta.getConfiguration();
       sourceIds =
-          streamConfiguration.getPattern().getPattern().parallelStream()
+          streamConfiguration.getPattern().getPattern().stream()
               .flatMap(
                   step -> {
                     StreamConfiguration.StepData<SourceInfo> stepData = step.getData();
-                    return stepData.getEvent().parallelStream()
+                    return stepData.getEvent().stream()
                         .map(eventDefinition -> eventDefinition.getSourceInfo().getId());
                   })
               .distinct()

@@ -25,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>Handling deployment failures
  * </ul>
  *
- * @author Flockr Team
  * @since 1.0
  */
 @Slf4j

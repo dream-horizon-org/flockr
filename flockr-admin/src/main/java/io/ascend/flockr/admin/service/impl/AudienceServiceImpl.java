@@ -42,7 +42,7 @@ import lombok.extern.slf4j.Slf4j;
  * and transforming basic {@link SourceInfo} configurations into {@link SourceInfoEnriched}
  * configurations that include complete connector metadata.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Slf4j
@@ -181,19 +181,25 @@ public class AudienceServiceImpl implements AudienceService {
    * Single} emitting an empty list. Otherwise, it delegates to the {@link DataConnectorRepository}
    * to fetch the data and logs the outcome.
    *
+   * <p>This method validates that all requested sinks are found. If any sink is missing from the
+   * database, an error is emitted to ensure data consistency.
+   *
    * @param sinkIds the list of sink identifiers for which details are to be fetched
    * @return a {@link Single} emitting the list of {@link DataSinkDetails} corresponding to the
    *     requested sink IDs
+   * @throws RuntimeException if not all requested sinks are found in the database
    */
   private Single<List<DataSinkDetails>> getDataSinksInBatch(List<Long> sinkIds) {
     if (sinkIds == null || sinkIds.isEmpty()) {
       return Single.just(List.of());
     }
-    log.info("Fetching data sinks for sinkIds: {}", sinkIds);
+    log.debug("Fetching {} data sinks in batch", sinkIds.size());
 
     return dataConnectorRepository
         .getDataSinksByIds(sinkIds)
-        .doOnSuccess(sinks -> log.info("Successfully fetched {} data sinks", sinks.size()))
+        .filter(list -> list.size() == sinkIds.size())
+        .switchIfEmpty(Single.error(new RuntimeException("Fetched sink metadata partially")))
+        .doOnSuccess(sinks -> log.debug("Successfully fetched {} data sinks", sinks.size()))
         .doOnError(
             error -> log.error("Failed to fetch data sinks in batch: {}", error.getMessage()));
   }
@@ -673,16 +679,21 @@ public class AudienceServiceImpl implements AudienceService {
   /**
    * Validates and adds a new owner to the audience.
    *
-   * <p>Validations: - No duplicate owners. - Optional verifier checks (if enabled via
-   * configuration).
+   * <p>Validations performed:
    *
-   * @param existingOwners current owners
+   * <ul>
+   *   <li>No duplicate owners - rejects if the email is already an active owner
+   * </ul>
+   *
+   * @param tenantId the tenant identifier
+   * @param projectId the project identifier
+   * @param existingOwners current active owners of the audience
    * @param audienceId audience identifier
    * @param request request containing target owner email
    * @param performedBy acting user's email (recorded as {@code added_by})
-   * @param audienceName audience display name (for audit/logging)
-   * @param isVerified whether the audience is verified (may enforce stricter rules)
-   * @param verifiers optional list of allowed verifier emails
+   * @param audienceName audience display name (for logging)
+   * @param isVerified whether the audience is verified (reserved for future use)
+   * @param verifiers optional list of allowed verifier emails (reserved for future use)
    * @return a {@link Single} emitting {@code true} if an insert occurred
    */
   private Single<Boolean> validateAndAddOwner(
@@ -696,6 +707,24 @@ public class AudienceServiceImpl implements AudienceService {
       Boolean isVerified,
       List<String> verifiers) {
 
+    // Check for duplicate owners
+    boolean alreadyOwner =
+        existingOwners.stream().anyMatch(o -> o.getOwnerEmail().equals(request.getEmail()));
+    if (alreadyOwner) {
+      return Single.error(
+          new RestException(
+              "DUPLICATE_OWNER",
+              "User " + request.getEmail() + " is already an owner of this audience",
+              org.apache.http.HttpStatus.SC_CONFLICT));
+    }
+
+    log.info(
+        "Adding owner {} to audience {} (name: {}) by user {}",
+        request.getEmail(),
+        audienceId,
+        audienceName,
+        performedBy);
+
     return audienceOwnerRepository.addOwner(
         tenantId, projectId, audienceId, request.getEmail(), performedBy);
   }
@@ -703,9 +732,16 @@ public class AudienceServiceImpl implements AudienceService {
   /**
    * Validates and removes an existing owner from the audience.
    *
-   * <p>Validations: - Target owner must exist. - Must not remove the last remaining owner.
+   * <p>Validations performed:
    *
-   * @param existingOwners current owners
+   * <ul>
+   *   <li>Target owner must exist - rejects if the email is not an active owner
+   *   <li>Cannot remove the last owner - rejects if this would leave the audience with no owners
+   * </ul>
+   *
+   * @param tenantId the tenant identifier
+   * @param projectId the project identifier
+   * @param existingOwners current active owners of the audience
    * @param audienceId audience identifier
    * @param request request containing target owner email
    * @param performedBy acting user's email (recorded as {@code removed_by})
@@ -718,6 +754,32 @@ public class AudienceServiceImpl implements AudienceService {
       Long audienceId,
       UpdateAudienceOwnerRequest request,
       String performedBy) {
+
+    // Check if target owner exists
+    boolean ownerExists =
+        existingOwners.stream().anyMatch(o -> o.getOwnerEmail().equals(request.getEmail()));
+    if (!ownerExists) {
+      return Single.error(
+          new RestException(
+              "OWNER_NOT_FOUND",
+              "User " + request.getEmail() + " is not an owner of this audience",
+              org.apache.http.HttpStatus.SC_NOT_FOUND));
+    }
+
+    // Check if this is the last owner
+    if (existingOwners.size() <= 1) {
+      return Single.error(
+          new RestException(
+              "LAST_OWNER",
+              "Cannot remove the last owner of an audience",
+              org.apache.http.HttpStatus.SC_BAD_REQUEST));
+    }
+
+    log.info(
+        "Removing owner {} from audience {} by user {}",
+        request.getEmail(),
+        audienceId,
+        performedBy);
 
     return audienceOwnerRepository.removeOwner(
         tenantId, projectId, audienceId, request.getEmail(), performedBy);

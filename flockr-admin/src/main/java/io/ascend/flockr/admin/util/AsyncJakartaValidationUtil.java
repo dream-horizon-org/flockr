@@ -44,7 +44,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p><b>Note:</b> This class uses static injection via Guice. Ensure {@code
  * requestStaticInjection(AsyncJakartaValidationUtil.class)} is called in your Guice module.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  * @see jakarta.validation.Validator
  * @see io.vertx.core.Vertx#executeBlocking

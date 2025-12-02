@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
  *
  * <p>Used for representing individual audience owners with their associated metadata.
  *
- * @author Flockr Team
  * @since 1.0
  */
 @Data

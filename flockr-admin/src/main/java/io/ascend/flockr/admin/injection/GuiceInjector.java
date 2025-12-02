@@ -16,7 +16,7 @@ import lombok.Synchronized;
  * <p><strong>Thread Safety:</strong> All methods are synchronized to ensure thread-safe access to
  * the singleton instance.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public final class GuiceInjector {

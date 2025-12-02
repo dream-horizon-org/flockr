@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * <p>This annotation ensures that the SQL query string is syntactically valid and can be parsed
  * successfully.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})

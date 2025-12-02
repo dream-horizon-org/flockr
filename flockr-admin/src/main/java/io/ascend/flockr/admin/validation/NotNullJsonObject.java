@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
  * allows empty JsonObjects. Use {@link NotEmptyJsonObject} if you also want to ensure the
  * JsonObject is not empty.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})

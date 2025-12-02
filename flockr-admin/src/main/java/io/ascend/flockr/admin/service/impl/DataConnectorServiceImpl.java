@@ -33,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p>The service validates connector configurations against their respective JSON schemas before
  * persisting them to ensure data integrity.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Slf4j
@@ -42,11 +42,23 @@ public class DataConnectorServiceImpl implements DataConnectorService {
 
   private final DataConnectorRepository repository;
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation delegates to the repository to fetch all active connector types of the
+   * specified kind.
+   */
   @Override
   public Single<List<DataConnectorType>> listTypes(String kind) {
     return repository.listConnectorTypes(kind);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation validates the config against the connector type's JSON schema before
+   * persisting.
+   */
   @Override
   public Single<DataSourceDetails> onboardSource(
       OnboardDataSourceRequest request, String createdBy) {
@@ -79,6 +91,12 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                                 .build()));
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation validates the config against the connector type's JSON schema before
+   * persisting.
+   */
   @Override
   public Single<DataSinkDetails> onboardSink(OnboardDataSinkRequest request, String createdBy) {
     return repository
@@ -110,6 +128,12 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                                 .build()));
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation wraps the repository results in a paginated response with hasMore
+   * detection.
+   */
   @Override
   public Single<PaginatedResponse<DataSourceDetails>> listSources(int page, int pageSize) {
     return repository
@@ -120,6 +144,12 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                     new PaginatedResponse.PageInfo(page, pageSize, list.size() == pageSize), list));
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation wraps the repository results in a paginated response with hasMore
+   * detection.
+   */
   @Override
   public Single<PaginatedResponse<DataSinkDetails>> listSinks(int page, int pageSize) {
     return repository
@@ -130,6 +160,11 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                     new PaginatedResponse.PageInfo(page, pageSize, list.size() == pageSize), list));
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation validates that kind is either SOURCE or SINK before persisting.
+   */
   @Override
   public Single<DataConnectorType> onboardConnectorType(
       OnboardConnectorTypeRequest request, String createdBy) {
@@ -147,6 +182,11 @@ public class DataConnectorServiceImpl implements DataConnectorService {
         .flatMap(repository::getConnectorTypeById);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation delegates directly to the repository.
+   */
   @Override
   public Single<DataConnectorType> getConnectorTypeById(Long typeId) {
     return repository.getConnectorTypeById(typeId);

@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>All write operations are executed within database transactions to ensure atomicity.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Slf4j

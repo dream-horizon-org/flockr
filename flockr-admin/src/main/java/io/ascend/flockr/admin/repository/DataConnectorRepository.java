@@ -19,7 +19,7 @@ import java.util.List;
  *   <li>Batch retrieval operations for sources and sinks
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public interface DataConnectorRepository {

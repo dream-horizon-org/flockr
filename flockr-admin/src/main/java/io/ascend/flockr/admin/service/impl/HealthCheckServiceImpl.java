@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
  * <p>This service verifies the health status of critical system dependencies including database
  * connections and checks for maintenance mode status.
  *
- * @author Flockr Team
  * @since 1.0
  */
 @RequiredArgsConstructor(onConstructor_ = @Inject)
@@ -23,15 +22,22 @@ public class HealthCheckServiceImpl implements HealthCheckService {
 
   private final HealthCheckDAO healthCheckDAO;
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation checks the PostgreSQL reader connection and maintenance mode status.
+   * Throws an exception if the database connection is unhealthy.
+   */
   @Override
   public Single<HealthCheckResponse> healthCheck() {
     return Single.zip(
         healthCheckDAO.isPostgresReaderUp(),
         healthCheckDAO.isUnderMaintenance(),
         (postgresReaderUp, isUnderMaintenance) -> {
-          if (!postgresReaderUp)
+          if (!postgresReaderUp) {
             throw ExceptionUtil.getException(ErrorEnum.REST_HEALTH_CHECK_FAILED);
-          else return new HealthCheckResponse(true, isUnderMaintenance);
+          }
+          return new HealthCheckResponse(true, isUnderMaintenance);
         });
   }
 }

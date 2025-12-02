@@ -11,6 +11,9 @@ import java.io.IOException;
  * Custom Jackson deserializer for Vert.x JsonObject.
  *
  * <p>Converts JSON nodes to Vert.x JsonObject instances during deserialization.
+ *
+ * @author Prithu Sharma
+ * @since 1.0
  */
 public class JsonObjectDeserializer extends JsonDeserializer<JsonObject> {
 

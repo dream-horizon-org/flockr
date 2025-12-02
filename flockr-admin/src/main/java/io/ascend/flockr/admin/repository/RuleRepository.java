@@ -16,7 +16,7 @@ import java.util.List;
  *   <li>Retrieving all rules associated with an audience
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public interface RuleRepository {

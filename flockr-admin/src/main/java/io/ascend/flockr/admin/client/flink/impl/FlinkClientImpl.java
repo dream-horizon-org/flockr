@@ -26,6 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Implementation of FlinkClient that interacts with Apache Flink REST API. Uses Vert.x WebClient
  * for HTTP communication with the Flink cluster.
+ *
+ * @author Prithu Sharma
+ * @since 1.0
  */
 @Slf4j
 public class FlinkClientImpl implements FlinkClient {

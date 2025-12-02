@@ -20,7 +20,7 @@ import io.vertx.rxjava3.ext.web.client.HttpResponse;
  *   <li>Configuring circuit breaker for resilience
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public interface WebClient {

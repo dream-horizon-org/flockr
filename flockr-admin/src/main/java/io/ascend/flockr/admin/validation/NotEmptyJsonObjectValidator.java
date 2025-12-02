@@ -9,7 +9,7 @@ import jakarta.validation.ConstraintValidatorContext;
  *
  * <p>Validates that a JsonObject is not null and contains at least one key-value pair.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public class NotEmptyJsonObjectValidator

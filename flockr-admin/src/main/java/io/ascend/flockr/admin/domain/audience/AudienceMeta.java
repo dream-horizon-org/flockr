@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
  * description, type, custom configuration, associated data sinks, verification status, and
  * timestamps.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Data

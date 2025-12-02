@@ -11,6 +11,7 @@ import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>Optimized paginated queries with full-text search support
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Slf4j
@@ -111,7 +112,7 @@ public class AudienceRepositoryImpl implements AudienceRepository {
                   .updatedAt(row.getLong(AudienceConstants.UPDATED_AT))
                   .createdBy(row.getString(AudienceConstants.CREATED_BY))
                   .customAudienceConfig(row.getJsonObject(AudienceConstants.CUSTOM_AUDIENCE_CONFIG))
-                  .sinks(List.of(row.getArrayOfLongs(AudienceConstants.SINKS)));
+                  .sinks(Arrays.asList(row.getArrayOfLongs(AudienceConstants.SINKS)));
 
           return builder.build();
         });

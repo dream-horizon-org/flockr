@@ -18,7 +18,7 @@ import org.apache.http.HttpStatus;
  *   <li>An HTTP status code
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 @Getter

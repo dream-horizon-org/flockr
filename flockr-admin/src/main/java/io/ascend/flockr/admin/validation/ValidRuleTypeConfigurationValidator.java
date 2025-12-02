@@ -10,7 +10,7 @@ import jakarta.validation.ConstraintValidatorContext;
  *
  * <p>Validates that the ruleType field matches the configuration type in the Rule object.
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public class ValidRuleTypeConfigurationValidator

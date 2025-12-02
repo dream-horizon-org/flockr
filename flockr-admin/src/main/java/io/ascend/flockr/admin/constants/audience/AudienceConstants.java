@@ -8,7 +8,6 @@ import lombok.experimental.UtilityClass;
  * <p>This class provides static final constants for all column names in the audience/audiences
  * table, ensuring type-safe references to database columns throughout the application.
  *
- * @author Flockr Team
  * @since 1.0
  */
 @UtilityClass

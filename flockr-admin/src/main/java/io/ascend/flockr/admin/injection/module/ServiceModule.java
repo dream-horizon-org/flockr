@@ -36,7 +36,7 @@ import jakarta.validation.Validator;
  *   <li>Service implementations
  * </ul>
  *
- * @author Flockr Team
+ * @author Prithu Sharma
  * @since 1.0
  */
 public class ServiceModule extends DefaultModule {
