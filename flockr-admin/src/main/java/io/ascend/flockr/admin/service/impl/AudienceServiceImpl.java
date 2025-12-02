@@ -18,6 +18,7 @@ import io.ascend.flockr.admin.repository.AudienceRepository;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.ascend.flockr.admin.repository.RuleRepository;
 import io.ascend.flockr.admin.service.AudienceService;
+import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.RuleHelpers;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
@@ -200,9 +201,11 @@ public class AudienceServiceImpl implements AudienceService {
   /**
    * Creates rules for a given audience using the data from the request.
    *
-   * <p>Each rule in the request is converted to a {@link RuleMeta} with {@link SourceInfo}
-   * configuration and tenant, project, creator and status values before being persisted via the
-   * {@link RuleRepository}.
+   * <p>This method first validates the request asynchronously on a worker thread to avoid blocking
+   * the event loop (SQL query parsing can be CPU-intensive). After validation succeeds, each rule
+   * in the request is converted to a {@link RuleMeta} with {@link SourceInfo} configuration and
+   * tenant, project, creator and status values before being persisted via the {@link
+   * RuleRepository}.
    *
    * @param tenantId the tenant identifier from the request header
    * @param projectId the project identifier from the request header
@@ -213,36 +216,60 @@ public class AudienceServiceImpl implements AudienceService {
   @Override
   public Single<Boolean> createRules(
       String tenantId, String projectId, CreateRulesRequest request) {
-    List<RuleMeta<SourceInfo>> list = new ArrayList<>();
-    for (CreateRulesRequest.Rule rule : request.getRules()) {
-      RuleMeta<SourceInfo> ruleMeta =
-          RuleMeta.builder()
-              .tenantId(tenantId)
-              .projectId(projectId)
-              .audienceId(request.getAudienceId())
-              .name(rule.getName())
-              .description(rule.getDescription())
-              .startTime(rule.getStartTime())
-              .endTime(rule.getEndTime())
-              .ruleAction(rule.getRuleAction())
-              .status(RuleStatus.SCHEDULED)
-              .ruleType(rule.getRuleType())
-              .configuration(rule.getConfiguration())
-              .createdBy(DEFAULT_CREATOR)
-              .build();
-      list.add(ruleMeta);
-    }
-    return ruleRepository
-        .createRules(list)
+
+    log.info("Creating rules for audience: {}", request.getAudienceId());
+
+    // Validate request asynchronously on worker thread (non-blocking)
+    return AsyncJakartaValidationUtil.validate(request)
+        .doOnSuccess(
+            validRequest ->
+                log.debug("Validation successful for {} rules", validRequest.getRules().size()))
+        .flatMap(
+            validRequest -> {
+              // Convert rules to RuleMeta objects
+              List<RuleMeta<SourceInfo>> list = new ArrayList<>();
+              for (CreateRulesRequest.Rule rule : validRequest.getRules()) {
+                RuleMeta<SourceInfo> ruleMeta =
+                    RuleMeta.builder()
+                        .tenantId(tenantId)
+                        .projectId(projectId)
+                        .audienceId(validRequest.getAudienceId())
+                        .name(rule.getName())
+                        .description(rule.getDescription())
+                        .startTime(rule.getStartTime())
+                        .endTime(rule.getEndTime())
+                        .ruleAction(rule.getRuleAction())
+                        .status(RuleStatus.SCHEDULED)
+                        .ruleType(rule.getRuleType())
+                        .configuration(rule.getConfiguration())
+                        .createdBy(DEFAULT_CREATOR)
+                        .build();
+                list.add(ruleMeta);
+              }
+
+              // Persist rules to database
+              return ruleRepository.createRules(list);
+            })
         .doOnSuccess(
             success ->
-                log.info("Created {} rules for audience {}", list.size(), request.getAudienceId()))
+                log.info(
+                    "Successfully created {} rules for audience {}",
+                    request.getRules().size(),
+                    request.getAudienceId()))
         .doOnError(
-            error ->
+            error -> {
+              if (error instanceof AsyncJakartaValidationUtil.ValidationException) {
+                log.warn(
+                    "Validation failed for audience {}: {}",
+                    request.getAudienceId(),
+                    error.getMessage());
+              } else {
                 log.error(
                     "Failed to create rules for audience {}: {}",
                     request.getAudienceId(),
-                    error.getMessage()));
+                    error.getMessage());
+              }
+            });
   }
 
   /**

@@ -41,7 +41,6 @@ import lombok.extern.slf4j.Slf4j;
 public class DataConnectorServiceImpl implements DataConnectorService {
 
   private final DataConnectorRepository repository;
-  private final JsonSchemaValidationUtil schemaValidator;
 
   @Override
   public Single<List<DataConnectorType>> listTypes(String kind) {
@@ -167,7 +166,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
           "Validating config against schema for connector type: {} (ID: {})",
           connectorType.getType(),
           connectorType.getId());
-      schemaValidator.validate(config, schema);
+      JsonSchemaValidationUtil.validate(config, schema);
     } else {
       log.warn(
           "No schema found for connector type ID: {}, skipping schema validation",

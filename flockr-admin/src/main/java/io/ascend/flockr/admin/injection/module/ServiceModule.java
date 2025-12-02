@@ -1,7 +1,8 @@
 package io.ascend.flockr.admin.injection.module;
 
 import com.google.inject.Singleton;
-import com.google.inject.multibindings.Multibinder;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
 import io.ascend.flockr.admin.client.flink.FlinkClient;
 import io.ascend.flockr.admin.client.flink.impl.FlinkClientImpl;
 import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
@@ -15,14 +16,12 @@ import io.ascend.flockr.admin.repository.*;
 import io.ascend.flockr.admin.repository.impl.*;
 import io.ascend.flockr.admin.service.*;
 import io.ascend.flockr.admin.service.impl.*;
+import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.CircuitBreakerFactory;
 import io.ascend.flockr.admin.util.json.JsonSchemaValidationUtil;
-import io.ascend.flockr.admin.util.validator.AthenaConfigValidator;
-import io.ascend.flockr.admin.util.validator.ConfigValidator;
-import io.ascend.flockr.admin.util.validator.ConfigValidatorRegistry;
-import io.ascend.flockr.admin.util.validator.KafkaConfigValidator;
-import io.ascend.flockr.admin.util.validator.S3FolderSinkValidator;
 import io.vertx.rxjava3.core.Vertx;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 
 /**
  * Guice module that configures all service bindings for the Flockr application.
@@ -71,14 +70,16 @@ public class ServiceModule extends DefaultModule {
     bindConfigs();
     /* Bind Clients */
     bindClients();
-    /* Bind DAOs */
-    bindDAOs();
     /* Bind Utilities */
     bindUtilities();
+    /* Bind DAOs */
+    bindDAOs();
     /* Bind Services */
     bindServices();
     /* Static Binding */
+    requestStaticInjection(JsonSchemaValidationUtil.class);
     requestStaticInjection(CircuitBreakerFactory.class);
+    requestStaticInjection(AsyncJakartaValidationUtil.class); // ← Add static injection
   }
 
   /**
@@ -129,32 +130,18 @@ public class ServiceModule extends DefaultModule {
   }
 
   /**
-   * Binds config validators using Multibinder for extensibility.
-   *
-   * <p>Uses Guice Multibinder to collect all ConfigValidator implementations, allowing new
-   * validators to be added by simply binding them to the ConfigValidator interface.
-   */
-  private void bindValidators() {
-    // Use Multibinder to collect all ConfigValidator implementations
-    Multibinder<ConfigValidator> multibinder =
-        Multibinder.newSetBinder(binder(), ConfigValidator.class);
-
-    // Bind individual validators
-    multibinder.addBinding().to(AthenaConfigValidator.class).in(Singleton.class);
-    multibinder.addBinding().to(KafkaConfigValidator.class).in(Singleton.class);
-    multibinder.addBinding().to(S3FolderSinkValidator.class).in(Singleton.class);
-
-    // Bind registry (will automatically receive Set<ConfigValidator> via injection)
-    bind(ConfigValidatorRegistry.class).in(Singleton.class);
-  }
-
-  /**
    * Binds utility classes as singletons.
    *
-   * <p>Binds JSON schema validation utilities.
+   * <p>Binds JSON schema validation utilities and Jakarta Bean Validator for async validation.
    */
   private void bindUtilities() {
-    bind(JsonSchemaValidationUtil.class).in(Singleton.class);
+    bind(JsonSchemaFactory.class)
+        .toInstance(
+            JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4))
+                .build());
+
+    // Bind Jakarta Validator for static injection into AsyncValidationUtil
+    bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
   }
 
   /**

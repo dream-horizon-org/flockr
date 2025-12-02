@@ -3,14 +3,13 @@ package io.ascend.flockr.admin.util.json;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import io.ascend.flockr.admin.exception.ConfigValidationException;
 import io.vertx.core.json.JsonObject;
 import java.util.Set;
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -23,20 +22,11 @@ import lombok.extern.slf4j.Slf4j;
  * @since 1.0
  */
 @Slf4j
-@Singleton
+@UtilityClass
 public class JsonSchemaValidationUtil {
 
-  private final JsonSchemaFactory schemaFactory;
-  private final ObjectMapper objectMapper;
-
-  @Inject
-  public JsonSchemaValidationUtil(ObjectMapper objectMapper) {
-    // Use Draft 7 (most common) or Draft 2020-12
-    this.schemaFactory =
-        JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4))
-            .build();
-    this.objectMapper = objectMapper;
-  }
+  @Inject private static JsonSchemaFactory schemaFactory;
+  @Inject private static ObjectMapper objectMapper;
 
   /**
    * Validates a JsonObject against a JSON Schema.
@@ -45,7 +35,7 @@ public class JsonSchemaValidationUtil {
    * @param schema the JSON Schema as JsonObject (must be valid JSON Schema format)
    * @throws ConfigValidationException if validation fails or schema is invalid
    */
-  public void validate(JsonObject data, JsonObject schema) {
+  public static void validate(JsonObject data, JsonObject schema) {
     if (schema == null || schema.isEmpty()) {
       log.warn("Schema is null or empty, skipping validation");
       return;
@@ -95,7 +85,7 @@ public class JsonSchemaValidationUtil {
    * @param errors the set of validation errors
    * @return formatted error message
    */
-  private String buildValidationErrorMessage(Set<ValidationMessage> errors) {
+  private static String buildValidationErrorMessage(Set<ValidationMessage> errors) {
     if (errors.isEmpty()) {
       return "Unknown validation error";
     }

@@ -136,7 +136,7 @@ public class AudienceController {
           String projectId,
       @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
           Long audienceId,
-      @Valid CreateRulesRequest requestBody) {
+      CreateRulesRequest requestBody) {
 
     requestBody.setAudienceId(audienceId);
     return ErrorHandler.handleAsync(
