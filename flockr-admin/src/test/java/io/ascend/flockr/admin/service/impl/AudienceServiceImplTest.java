@@ -34,8 +34,7 @@ public class AudienceServiceImplTest {
   private static AudienceMeta buildAudienceMeta(boolean expired, String name, Boolean verified) {
     Long expireAt = expired ? 0L : System.currentTimeMillis() + 3_600_000L; // ms
     return AudienceMeta.builder()
-        .tenantId("t1")
-        .projectId("p1")
+        .xProjectId("p1")
         .audienceId(42L)
         .name(name)
         .verified(verified)
@@ -64,8 +63,7 @@ public class AudienceServiceImplTest {
         buildService(
             audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
-    String tenantId = "t1";
-    String projectId = "p1";
+    String xProjectId = "p1";
     Long audienceId = 42L;
     String actor = "actor@example.com";
     String target = "target@example.com";
@@ -74,20 +72,19 @@ public class AudienceServiceImplTest {
     request.setAction(UpdateAudienceOwnerAction.ADD);
     request.setEmail(target);
 
-    when(audienceRepository.getAudienceById(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceRepository.getAudienceById(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(buildAudienceMeta(false, "aud", false)));
-    when(audienceOwnerRepository.findOwners(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceOwnerRepository.findOwners(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(ownersWith(actor)));
-    when(audienceOwnerRepository.addOwner(
-            eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
+    when(audienceOwnerRepository.addOwner(eq(xProjectId), eq(audienceId), eq(target), eq(actor)))
         .thenReturn(Single.just(true));
 
-    TestObserver<Void> to =
-        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
+    TestObserver<Boolean> to =
+        service.updateAudienceOwner(xProjectId, audienceId, actor, request).test();
     to.assertComplete();
+    to.assertValue(true);
 
-    verify(audienceOwnerRepository)
-        .addOwner(eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor));
+    verify(audienceOwnerRepository).addOwner(eq(xProjectId), eq(audienceId), eq(target), eq(actor));
   }
 
   @Test
@@ -100,8 +97,7 @@ public class AudienceServiceImplTest {
         buildService(
             audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
-    String tenantId = "t1";
-    String projectId = "p1";
+    String xProjectId = "p1";
     Long audienceId = 42L;
     String actor = "actor@example.com";
     String target = "target@example.com";
@@ -110,24 +106,24 @@ public class AudienceServiceImplTest {
     request.setAction(UpdateAudienceOwnerAction.REMOVE);
     request.setEmail(target);
 
-    when(audienceRepository.getAudienceById(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceRepository.getAudienceById(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(buildAudienceMeta(false, "aud", false)));
-    when(audienceOwnerRepository.findOwners(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceOwnerRepository.findOwners(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(ownersWith(actor, target)));
-    when(audienceOwnerRepository.removeOwner(
-            eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
+    when(audienceOwnerRepository.removeOwner(eq(xProjectId), eq(audienceId), eq(target), eq(actor)))
         .thenReturn(Single.just(true));
 
-    TestObserver<Void> to =
-        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
+    TestObserver<Boolean> to =
+        service.updateAudienceOwner(xProjectId, audienceId, actor, request).test();
     to.assertComplete();
+    to.assertValue(true);
 
     verify(audienceOwnerRepository)
-        .removeOwner(eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor));
+        .removeOwner(eq(xProjectId), eq(audienceId), eq(target), eq(actor));
   }
 
   @Test
-  public void updateAudienceOwner_unauthorizedActor_throwsForbidden() {
+  public void updateAudienceOwner_unauthorizedActor_throwsIllegalAccessException() {
     AudienceRepository audienceRepository = mock(AudienceRepository.class);
     AudienceOwnerRepository audienceOwnerRepository = mock(AudienceOwnerRepository.class);
     RuleRepository ruleRepository = mock(RuleRepository.class);
@@ -136,8 +132,7 @@ public class AudienceServiceImplTest {
         buildService(
             audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
-    String tenantId = "t1";
-    String projectId = "p1";
+    String xProjectId = "p1";
     Long audienceId = 42L;
     String actor = "actor@example.com";
 
@@ -145,14 +140,14 @@ public class AudienceServiceImplTest {
     request.setAction(UpdateAudienceOwnerAction.ADD);
     request.setEmail("someone@example.com");
 
-    when(audienceRepository.getAudienceById(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceRepository.getAudienceById(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(buildAudienceMeta(false, "aud", false)));
-    when(audienceOwnerRepository.findOwners(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceOwnerRepository.findOwners(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(ownersWith("different.owner@example.com")));
 
-    TestObserver<Void> to =
-        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
-    to.assertError(RestException.class);
+    TestObserver<Boolean> to =
+        service.updateAudienceOwner(xProjectId, audienceId, actor, request).test();
+    to.assertError(IllegalAccessException.class);
   }
 
   @Test
@@ -165,8 +160,7 @@ public class AudienceServiceImplTest {
         buildService(
             audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
-    String tenantId = "t1";
-    String projectId = "p1";
+    String xProjectId = "p1";
     Long audienceId = 42L;
     String actor = "actor@example.com";
 
@@ -174,16 +168,16 @@ public class AudienceServiceImplTest {
     request.setAction(UpdateAudienceOwnerAction.ADD);
     request.setEmail("someone@example.com");
 
-    when(audienceRepository.getAudienceById(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceRepository.getAudienceById(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(buildAudienceMeta(true, "aud", false)));
 
-    TestObserver<Void> to =
-        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
+    TestObserver<Boolean> to =
+        service.updateAudienceOwner(xProjectId, audienceId, actor, request).test();
     to.assertError(RestException.class);
   }
 
   @Test
-  public void updateAudienceOwner_remove_returnsFalse_emitsError() {
+  public void updateAudienceOwner_remove_returnsFalse_returnsFalse() {
     AudienceRepository audienceRepository = mock(AudienceRepository.class);
     AudienceOwnerRepository audienceOwnerRepository = mock(AudienceOwnerRepository.class);
     RuleRepository ruleRepository = mock(RuleRepository.class);
@@ -192,8 +186,7 @@ public class AudienceServiceImplTest {
         buildService(
             audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
 
-    String tenantId = "t1";
-    String projectId = "p1";
+    String xProjectId = "p1";
     Long audienceId = 42L;
     String actor = "actor@example.com";
     String target = "target@example.com";
@@ -202,16 +195,16 @@ public class AudienceServiceImplTest {
     request.setAction(UpdateAudienceOwnerAction.REMOVE);
     request.setEmail(target);
 
-    when(audienceRepository.getAudienceById(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceRepository.getAudienceById(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(buildAudienceMeta(false, "aud", false)));
-    when(audienceOwnerRepository.findOwners(eq(tenantId), eq(projectId), eq(audienceId)))
+    when(audienceOwnerRepository.findOwners(eq(xProjectId), eq(audienceId)))
         .thenReturn(Single.just(ownersWith(actor, target)));
-    when(audienceOwnerRepository.removeOwner(
-            eq(tenantId), eq(projectId), eq(audienceId), eq(target), eq(actor)))
+    when(audienceOwnerRepository.removeOwner(eq(xProjectId), eq(audienceId), eq(target), eq(actor)))
         .thenReturn(Single.just(false));
 
-    TestObserver<Void> to =
-        service.updateAudienceOwner(tenantId, projectId, audienceId, actor, request).test();
-    to.assertError(RestException.class);
+    TestObserver<Boolean> to =
+        service.updateAudienceOwner(xProjectId, audienceId, actor, request).test();
+    to.assertComplete();
+    to.assertValue(false);
   }
 }

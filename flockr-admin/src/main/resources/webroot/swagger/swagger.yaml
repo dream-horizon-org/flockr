@@ -21,15 +21,9 @@ paths:
         \ counts. Supports filtering by name, creator, and verification status."
       operationId: getAudiencesList
       parameters:
-      - name: X-Tenant-Id
-        in: header
-        description: Tenant identifier
-        required: true
-        schema:
-          type: string
       - name: X-Project-Id
         in: header
-        description: Project identifier
+        description: Encrypted project identifier
         required: true
         schema:
           type: string
@@ -92,18 +86,18 @@ paths:
       description: Creates a new audience and returns the audience ID
       operationId: createAudience
       parameters:
-      - name: X-Tenant-Id
-        in: header
-        description: Tenant identifier
-        required: true
-        schema:
-          type: string
       - name: X-Project-Id
         in: header
-        description: Project identifier
+        description: Encrypted project identifier (amalgamation of tenantId and projectId)
         required: true
         schema:
           type: string
+      - name: email
+        in: header
+        description: Actor email/username (defaults to 'system' if not provided)
+        schema:
+          type: string
+          default: system
       requestBody:
         content:
           application/json:
@@ -136,18 +130,18 @@ paths:
       description: Creates rules for a specific audience
       operationId: createRules
       parameters:
-      - name: X-Tenant-Id
-        in: header
-        description: Tenant identifier
-        required: true
-        schema:
-          type: string
       - name: X-Project-Id
         in: header
-        description: Project identifier
+        description: Encrypted project identifier
         required: true
         schema:
           type: string
+      - name: email
+        in: header
+        description: Actor email/username (defaults to 'system' if not provided)
+        schema:
+          type: string
+          default: system
       - name: audienceId
         in: path
         description: ID of the audience
@@ -187,15 +181,9 @@ paths:
       description: Retrieves detailed information about a specific audience
       operationId: getAudienceDetails
       parameters:
-      - name: X-Tenant-Id
-        in: header
-        description: Tenant identifier
-        required: true
-        schema:
-          type: string
       - name: X-Project-Id
         in: header
-        description: Project identifier
+        description: Encrypted project identifier
         required: true
         schema:
           type: string
@@ -235,15 +223,9 @@ paths:
       description: Retrieves all owners (active and inactive) for a specific audience
       operationId: getAudienceOwners
       parameters:
-      - name: X-Tenant-Id
-        in: header
-        description: Tenant identifier
-        required: true
-        schema:
-          type: string
       - name: X-Project-Id
         in: header
-        description: Project identifier
+        description: Encrypted project identifier
         required: true
         schema:
           type: string
@@ -287,15 +269,9 @@ paths:
         must be an existing owner.
       operationId: updateAudienceOwner
       parameters:
-      - name: X-Tenant-Id
-        in: header
-        description: Tenant identifier
-        required: true
-        schema:
-          type: string
       - name: X-Project-Id
         in: header
-        description: Project identifier
+        description: Encrypted project identifier
         required: true
         schema:
           type: string
@@ -308,17 +284,15 @@ paths:
           format: int64
       - name: email
         in: header
-        description: Email of the logged-in user
-        required: true
+        description: Email of the logged-in user (defaults to 'system' if not provided)
         schema:
           type: string
+          default: system
       requestBody:
-        description: Payload indicating action (ADD/REMOVE) and target owner email
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateAudienceOwnerRequest'
-        required: true
       responses:
         "200":
           description: Audience owner updated successfully
@@ -359,15 +333,9 @@ paths:
         audience
       operationId: getRuleDetails
       parameters:
-      - name: X-Tenant-Id
-        in: header
-        description: Tenant identifier
-        required: true
-        schema:
-          type: string
       - name: X-Project-Id
         in: header
-        description: Project identifier
+        description: Encrypted project identifier
         required: true
         schema:
           type: string
@@ -746,7 +714,7 @@ components:
       - source
       type: object
       allOf:
-      - $ref: '#/components/schemas/RuleConfigurationSourceInfo'
+      - $ref: '#/components/schemas/RuleConfigurationSourceInfoEnriched'
       - type: object
         properties:
           source:
@@ -950,11 +918,171 @@ components:
     StreamConfiguration:
       type: object
       allOf:
-      - $ref: '#/components/schemas/RuleConfigurationSourceInfo'
+      - $ref: '#/components/schemas/RuleConfigurationSourceInfoEnriched'
       - type: object
         properties:
           pattern:
             $ref: '#/components/schemas/PatternDefinitionSourceInfo'
+    AudienceDetailsResponse:
+      type: object
+      properties:
+        audienceMeta:
+          $ref: '#/components/schemas/AudienceMeta'
+        sinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSinkDetails'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleMetaSourceInfoEnriched'
+    AudienceMeta:
+      type: object
+      properties:
+        audienceId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        customAudienceConfig:
+          $ref: '#/components/schemas/JsonObject'
+        sinks:
+          type: array
+          items:
+            type: integer
+            format: int64
+        verified:
+          type: boolean
+        userCount:
+          type: integer
+          format: int64
+        expireDate:
+          type: integer
+          format: int64
+        lastAudienceUpdatedAt:
+          type: integer
+          format: int64
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+        createdBy:
+          type: string
+        xprojectId:
+          type: string
+    DataSinkDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        typeId:
+          type: integer
+          format: int64
+        type:
+          type: string
+        config:
+          $ref: '#/components/schemas/JsonObject'
+        status:
+          type: string
+        createdBy:
+          type: string
+    RuleConfigurationSourceInfoEnriched:
+      required:
+      - configuration_type
+      type: object
+      properties:
+        configuration_type:
+          type: string
+      discriminator:
+        propertyName: configuration_type
+    RuleMetaSourceInfoEnriched:
+      type: object
+      properties:
+        ruleId:
+          type: integer
+          format: int64
+        audienceId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: integer
+          format: int64
+        endTime:
+          type: integer
+          format: int64
+        ruleAction:
+          type: string
+          enum:
+          - ADD
+          - REMOVE
+        ruleType:
+          type: string
+          enum:
+          - STREAM
+          - BATCH
+        status:
+          type: string
+          enum:
+          - SCHEDULED
+          - RUNNING
+          - FAILED
+          - COMPLETED
+        configuration:
+          $ref: '#/components/schemas/RuleConfigurationSourceInfoEnriched'
+        createdBy:
+          type: string
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+        xprojectId:
+          type: string
+    SuccessAudienceDetailsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AudienceDetailsResponse'
+    AudienceOwnerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        audienceId:
+          type: integer
+          format: int64
+        ownerEmail:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+    SuccessListAudienceOwnerResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AudienceOwnerResponse'
     UpdateAudienceOwnerRequest:
       required:
       - action
@@ -989,25 +1117,6 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/DataConnectorType'
-    DataSinkDetails:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        typeId:
-          type: integer
-          format: int64
-        type:
-          type: string
-        config:
-          $ref: '#/components/schemas/JsonObject'
-        status:
-          type: string
-        createdBy:
-          type: string
     PageInfo:
       type: object
       properties:

@@ -12,7 +12,6 @@ import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
 import io.ascend.flockr.admin.service.AudienceService;
 import io.ascend.flockr.admin.util.ErrorHandler;
-import io.reactivex.rxjava3.core.Single;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -37,7 +36,7 @@ import lombok.RequiredArgsConstructor;
  *   <li>Listing audiences with filtering and pagination
  * </ul>
  *
- * <p>All endpoints require tenant and project identifiers via headers (X-Tenant-Id, X-Project-Id).
+ * <p>All endpoints require encrypted project identifier via X-Project-Id header.
  *
  * @author Prithu Sharma
  * @since 1.0
@@ -69,13 +68,20 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Long>> createAudience(
-      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-          String tenantId,
-      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
-          String projectId,
+      @Parameter(
+              description = "Encrypted project identifier (amalgamation of tenantId and projectId)",
+              required = true)
+          @HeaderParam("X-Project-Id")
+          String xProjectId,
+      @Parameter(
+              description = "Actor email/username (defaults to 'system' if not provided)",
+              required = false)
+          @HeaderParam("email")
+          @DefaultValue("system")
+          String actor,
       @Valid CreateAudienceRequest requestBody) {
     return ErrorHandler.handleAsync(
-        audienceService.createAudience(tenantId, projectId, requestBody), "createAudience");
+        audienceService.createAudience(xProjectId, requestBody, actor), "createAudience");
   }
 
   @GET
@@ -99,15 +105,14 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<AudienceDetailsResponse>> getAudienceDetails(
-      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-          String tenantId,
-      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
-          String projectId,
+      @Parameter(description = "Encrypted project identifier", required = true)
+          @HeaderParam("X-Project-Id")
+          String xProjectId,
       @Parameter(description = "ID of the audience to retrieve", required = true)
           @PathParam("audienceId")
           Long audienceId) {
     return ErrorHandler.handleAsync(
-        audienceService.getAudienceDetails(tenantId, projectId, audienceId), "getAudienceDetails");
+        audienceService.getAudienceDetails(xProjectId, audienceId), "getAudienceDetails");
   }
 
   @POST
@@ -130,17 +135,22 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Boolean>> createRules(
-      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-          String tenantId,
-      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
-          String projectId,
+      @Parameter(description = "Encrypted project identifier", required = true)
+          @HeaderParam("X-Project-Id")
+          String xProjectId,
+      @Parameter(
+              description = "Actor email/username (defaults to 'system' if not provided)",
+              required = false)
+          @HeaderParam("email")
+          @DefaultValue("system")
+          String actor,
       @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
           Long audienceId,
       CreateRulesRequest requestBody) {
 
     requestBody.setAudienceId(audienceId);
     return ErrorHandler.handleAsync(
-        audienceService.createRules(tenantId, projectId, requestBody), "createRules");
+        audienceService.createRules(xProjectId, requestBody, actor), "createRules");
   }
 
   @GET
@@ -167,16 +177,15 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<RuleDetailsResponse>> getRuleDetails(
-      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-          String tenantId,
-      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
-          String projectId,
+      @Parameter(description = "Encrypted project identifier", required = true)
+          @HeaderParam("X-Project-Id")
+          String xProjectId,
       @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
           Long audienceId,
       @Parameter(description = "ID of the rule to retrieve", required = true) @PathParam("ruleId")
           Long ruleId) {
     return ErrorHandler.handleAsync(
-        audienceService.getRuleDetails(tenantId, projectId, audienceId, ruleId), "getRuleDetails");
+        audienceService.getRuleDetails(xProjectId, audienceId, ruleId), "getRuleDetails");
   }
 
   @GET
@@ -200,11 +209,9 @@ public class AudienceController {
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<PaginatedResponse<AudienceMetaResponse>>>
       getAudiencesList(
-          @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-              String tenantId,
-          @Parameter(description = "Project identifier", required = true)
+          @Parameter(description = "Encrypted project identifier", required = true)
               @HeaderParam("X-Project-Id")
-              String projectId,
+              String xProjectId,
           @Parameter(description = "Search audiences by name (partial match)")
               @QueryParam("nameSearch")
               String nameSearch,
@@ -224,8 +231,41 @@ public class AudienceController {
               int page) {
     return ErrorHandler.handleAsync(
         audienceService.getAudiencesList(
-            tenantId, projectId, nameSearch, createdBy, verified, page, pageSize),
+            xProjectId, nameSearch, createdBy, verified, page, pageSize),
         "getAudiencesList");
+  }
+
+  @GET
+  @Path("/v1/audiences/{audienceId}/owners")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Get all audience owners",
+      description = "Retrieves all owners (active and inactive) for a specific audience")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successfully retrieved audience owners",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
+  @ApiResponse(
+      responseCode = "400",
+      description = "Bad Request due to invalid/missing parameters",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "Audience not found",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  @ApiResponse(
+      responseCode = "500",
+      description = "Internal Server Error",
+      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  public CompletionStage<ResponseEntity.Success<java.util.List<AudienceOwnerResponse>>>
+      getAudienceOwners(
+          @Parameter(description = "Encrypted project identifier", required = true)
+              @HeaderParam("X-Project-Id")
+              String xProjectId,
+          @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
+              Long audienceId) {
+    return ErrorHandler.handleAsync(
+        audienceService.getAudienceOwners(xProjectId, audienceId), "getAudienceOwners");
   }
 
   @POST
@@ -256,62 +296,22 @@ public class AudienceController {
       responseCode = "500",
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-  public CompletionStage<ResponseEntity.Success<String>> updateAudienceOwner(
-      @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-          String tenantId,
-      @Parameter(description = "Project identifier", required = true) @HeaderParam("X-Project-Id")
-          String projectId,
+  public CompletionStage<ResponseEntity.Success<Boolean>> updateAudienceOwner(
+      @Parameter(description = "Encrypted project identifier", required = true)
+          @HeaderParam("X-Project-Id")
+          String xProjectId,
       @Parameter(description = "ID of the audience whose owner is to be updated", required = true)
           @PathParam("audienceId")
           Long audienceId,
-      @Parameter(description = "Email of the logged-in user", required = true) @HeaderParam("email")
-          String userEmail,
       @Parameter(
-              description = "Payload indicating action (ADD/REMOVE) and target owner email",
-              required = true)
-          @Valid
-          UpdateAudienceOwnerRequest requestBody) {
-
+              description = "Email of the logged-in user (defaults to 'system' if not provided)",
+              required = false)
+          @HeaderParam("email")
+          @DefaultValue("system")
+          String email,
+      @Valid UpdateAudienceOwnerRequest requestBody) {
     return ErrorHandler.handleAsync(
-        audienceService
-            .updateAudienceOwner(tenantId, projectId, audienceId, userEmail, requestBody)
-            .andThen(Single.just("Audience owner updated successfully")),
-        "updateAudienceOwner");
-  }
-
-  @GET
-  @Path("/v1/audiences/{audienceId}/owners")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Operation(
-      summary = "Get all audience owners",
-      description = "Retrieves all owners (active and inactive) for a specific audience")
-  @ApiResponse(
-      responseCode = "200",
-      description = "Successfully retrieved audience owners",
-      content = @Content(schema = @Schema(implementation = ResponseEntity.Success.class)))
-  @ApiResponse(
-      responseCode = "400",
-      description = "Bad Request due to invalid/missing parameters",
-      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-  @ApiResponse(
-      responseCode = "404",
-      description = "Audience not found",
-      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-  @ApiResponse(
-      responseCode = "500",
-      description = "Internal Server Error",
-      content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-  public CompletionStage<ResponseEntity.Success<java.util.List<AudienceOwnerResponse>>>
-      getAudienceOwners(
-          @Parameter(description = "Tenant identifier", required = true) @HeaderParam("X-Tenant-Id")
-              String tenantId,
-          @Parameter(description = "Project identifier", required = true)
-              @HeaderParam("X-Project-Id")
-              String projectId,
-          @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
-              Long audienceId) {
-
-    return ErrorHandler.handleAsync(
-        audienceService.getAudienceOwners(tenantId, projectId, audienceId), "getAudienceOwners");
+        audienceService.updateAudienceOwner(xProjectId, audienceId, email, requestBody),
+        "updateOwnerAction");
   }
 }

@@ -24,11 +24,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RuleMeta<T extends SourceInfo> {
-  /** The tenant identifier that owns this rule. */
-  private String tenantId;
-
-  /** The project identifier within the tenant. */
-  private String projectId;
+  /** The encrypted project identifier (amalgamation of tenantId and projectId). */
+  private String xProjectId;
 
   /** The unique identifier of the rule. */
   private Long ruleId;

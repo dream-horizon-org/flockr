@@ -4,6 +4,8 @@ import com.google.inject.Inject;
 import io.ascend.flockr.admin.domain.dataconnectors.DataConnectorType;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
+import io.ascend.flockr.admin.exception.ErrorEnum;
+import io.ascend.flockr.admin.exception.ResourceNotFoundException;
 import io.ascend.flockr.admin.io.request.OnboardConnectorTypeRequest;
 import io.ascend.flockr.admin.io.request.OnboardDataSinkRequest;
 import io.ascend.flockr.admin.io.request.OnboardDataSourceRequest;
@@ -14,6 +16,7 @@ import io.ascend.flockr.admin.util.json.JsonSchemaValidationUtil;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
+import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -64,10 +67,25 @@ public class DataConnectorServiceImpl implements DataConnectorService {
       OnboardDataSourceRequest request, String createdBy) {
     return repository
         .getConnectorTypeById(request.getTypeId())
+        .onErrorResumeNext(
+            error -> {
+              if (error instanceof NoSuchElementException) {
+                return Single.error(
+                    new ResourceNotFoundException("ConnectorType", request.getTypeId()));
+              }
+              return Single.error(error);
+            })
         .map(
             type -> {
               if (!"SOURCE".equalsIgnoreCase(type.getKind())) {
-                throw new IllegalArgumentException("Provided typeId is not a SOURCE");
+                throw ErrorEnum.INVALID_ARGUMENT
+                            .toException("Provided typeId is not a SOURCE connector type")
+                            .getCause()
+                        != null
+                    ? ErrorEnum.INVALID_ARGUMENT.toException(
+                        "Provided typeId is not a SOURCE connector type")
+                    : ErrorEnum.INVALID_ARGUMENT.toException(
+                        "Provided typeId " + request.getTypeId() + " is not a SOURCE");
               }
               validateConfigAgainstSchema(request.getConfig(), type);
               request.getConfig().put("connectorType", type.getType());
@@ -101,10 +119,19 @@ public class DataConnectorServiceImpl implements DataConnectorService {
   public Single<DataSinkDetails> onboardSink(OnboardDataSinkRequest request, String createdBy) {
     return repository
         .getConnectorTypeById(request.getTypeId())
+        .onErrorResumeNext(
+            error -> {
+              if (error instanceof NoSuchElementException) {
+                return Single.error(
+                    new ResourceNotFoundException("ConnectorType", request.getTypeId()));
+              }
+              return Single.error(error);
+            })
         .map(
             type -> {
               if (!"SINK".equalsIgnoreCase(type.getKind())) {
-                throw new IllegalArgumentException("Provided typeId is not a SINK");
+                throw ErrorEnum.INVALID_ARGUMENT.toException(
+                    "Provided typeId " + request.getTypeId() + " is not a SINK");
               }
               validateConfigAgainstSchema(request.getConfig(), type);
               request.getConfig().put("connectorType", type.getType());
@@ -171,7 +198,8 @@ public class DataConnectorServiceImpl implements DataConnectorService {
     // Validate kind is either SOURCE or SINK
     String kind = request.getKind().toUpperCase();
     if (!"SOURCE".equals(kind) && !"SINK".equals(kind)) {
-      return Single.error(new IllegalArgumentException("Kind must be either 'SOURCE' or 'SINK'"));
+      return Single.error(
+          ErrorEnum.INVALID_ARGUMENT.toException("Kind must be either 'SOURCE' or 'SINK'"));
     }
 
     JsonObject configSchemaJson = request.getConfigSchema();
@@ -179,17 +207,36 @@ public class DataConnectorServiceImpl implements DataConnectorService {
     return repository
         .createConnectorType(
             kind, request.getType(), request.getDisplayName(), createdBy, configSchemaJson)
-        .flatMap(repository::getConnectorTypeById);
+        .flatMap(
+            typeId ->
+                repository
+                    .getConnectorTypeById(typeId)
+                    .onErrorResumeNext(
+                        error -> {
+                          if (error instanceof NoSuchElementException) {
+                            return Single.error(
+                                new ResourceNotFoundException("ConnectorType", typeId));
+                          }
+                          return Single.error(error);
+                        }));
   }
 
   /**
    * {@inheritDoc}
    *
-   * <p>This implementation delegates directly to the repository.
+   * <p>This implementation delegates directly to the repository with proper not found handling.
    */
   @Override
   public Single<DataConnectorType> getConnectorTypeById(Long typeId) {
-    return repository.getConnectorTypeById(typeId);
+    return repository
+        .getConnectorTypeById(typeId)
+        .onErrorResumeNext(
+            error -> {
+              if (error instanceof NoSuchElementException) {
+                return Single.error(new ResourceNotFoundException("ConnectorType", typeId));
+              }
+              return Single.error(error);
+            });
   }
 
   /**

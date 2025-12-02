@@ -18,28 +18,78 @@ import org.apache.http.HttpStatus;
  *   <li>An HTTP status code
  * </ul>
  *
+ * <p>Usage example:
+ *
+ * <pre>{@code
+ * // Creating a RestException from an error enum
+ * throw ErrorEnum.AUDIENCE_NOT_FOUND.toException();
+ *
+ * // With custom message
+ * throw ErrorEnum.AUDIENCE_NOT_FOUND.toException("Audience with ID 123 not found");
+ * }</pre>
+ *
  * @author Prithu Sharma
  * @since 1.0
  */
 @Getter
 @AllArgsConstructor
 public enum ErrorEnum implements RestError {
+
+  // Health Check Errors
   REST_HEALTH_CHECK_FAILED(
-      "flockr_REST_HEALTH_CHECK_FAILED",
-      "HealthCheck Failed for flockr service",
+      "HEALTH_CHECK_FAILED",
+      "HealthCheck failed for flockr service",
       HttpStatus.SC_INTERNAL_SERVER_ERROR),
 
+  // Resource Not Found Errors (404)
   AUDIENCE_NOT_FOUND("AUDIENCE_NOT_FOUND", "Audience not found", HttpStatus.SC_NOT_FOUND),
 
+  RULE_NOT_FOUND("RULE_NOT_FOUND", "Rule not found", HttpStatus.SC_NOT_FOUND),
+
+  DATA_SOURCE_NOT_FOUND("DATA_SOURCE_NOT_FOUND", "Data source not found", HttpStatus.SC_NOT_FOUND),
+
+  DATA_SINK_NOT_FOUND("DATA_SINK_NOT_FOUND", "Data sink not found", HttpStatus.SC_NOT_FOUND),
+
+  OWNER_NOT_FOUND("OWNER_NOT_FOUND", "Owner not found", HttpStatus.SC_NOT_FOUND),
+
+  RESOURCE_NOT_FOUND("RESOURCE_NOT_FOUND", "Requested resource not found", HttpStatus.SC_NOT_FOUND),
+
+  // Conflict Errors (409)
   AUDIENCE_ALREADY_EXISTS(
       "AUDIENCE_ALREADY_EXISTS",
       "An audience with the same name already exists in this project",
       HttpStatus.SC_CONFLICT),
 
-  RULE_NOT_FOUND("RULE_NOT_FOUND", "Rule not found", HttpStatus.SC_NOT_FOUND),
+  DUPLICATE_OWNER(
+      "DUPLICATE_OWNER", "User is already an owner of this audience", HttpStatus.SC_CONFLICT),
 
+  DUPLICATE_RESOURCE("DUPLICATE_RESOURCE", "Resource already exists", HttpStatus.SC_CONFLICT),
+
+  // Forbidden Errors (403)
+  FORBIDDEN("FORBIDDEN", "Access denied", HttpStatus.SC_FORBIDDEN),
+
+  NOT_AUTHORIZED(
+      "NOT_AUTHORIZED", "User not authorized to perform this action", HttpStatus.SC_FORBIDDEN),
+
+  // Bad Request Errors (400)
   INVALID_REQUEST_BODY(
       "INVALID_REQUEST_BODY", "Invalid request body parameters", HttpStatus.SC_BAD_REQUEST),
+
+  INVALID_ARGUMENT("INVALID_ARGUMENT", "Invalid argument provided", HttpStatus.SC_BAD_REQUEST),
+
+  MISSING_REQUIRED_FIELD(
+      "MISSING_REQUIRED_FIELD", "Required field is missing", HttpStatus.SC_BAD_REQUEST),
+
+  INVALID_REFERENCE(
+      "INVALID_REFERENCE", "Referenced resource does not exist", HttpStatus.SC_BAD_REQUEST),
+
+  CONSTRAINT_VIOLATION("CONSTRAINT_VIOLATION", "Data validation failed", HttpStatus.SC_BAD_REQUEST),
+
+  AUDIENCE_EXPIRED(
+      "AUDIENCE_EXPIRED", "Audience is expired and cannot be modified", HttpStatus.SC_BAD_REQUEST),
+
+  LAST_OWNER(
+      "LAST_OWNER", "Cannot remove the last owner of an audience", HttpStatus.SC_BAD_REQUEST),
 
   CONFIG_VALIDATION_FAILED(
       "CONFIG_VALIDATION_FAILED",
@@ -56,13 +106,18 @@ public enum ErrorEnum implements RestError {
       "No validator found for the specified connector type",
       HttpStatus.SC_BAD_REQUEST),
 
+  // Server Errors (500)
   DATABASE_ERROR(
       "DATABASE_ERROR", "Database operation failed", HttpStatus.SC_INTERNAL_SERVER_ERROR),
 
   INTERNAL_ERROR(
       "INTERNAL_ERROR",
       "An unexpected internal error occurred",
-      HttpStatus.SC_INTERNAL_SERVER_ERROR);
+      HttpStatus.SC_INTERNAL_SERVER_ERROR),
+
+  // Service Unavailable (503)
+  SERVICE_UNAVAILABLE(
+      "SERVICE_UNAVAILABLE", "Service is currently unavailable", HttpStatus.SC_SERVICE_UNAVAILABLE);
 
   /** The unique error code identifier. */
   private final String errorCode;
@@ -72,6 +127,46 @@ public enum ErrorEnum implements RestError {
 
   /** HTTP status code associated with this error. */
   private final int httpStatusCode;
+
+  /**
+   * Creates a RestException from this error enum with the default message.
+   *
+   * @return a new RestException based on this error
+   */
+  public RestException toException() {
+    return new RestException(errorCode, errorMessage, httpStatusCode);
+  }
+
+  /**
+   * Creates a RestException from this error enum with a custom message.
+   *
+   * @param customMessage the custom message to use instead of the default
+   * @return a new RestException with the custom message
+   */
+  public RestException toException(String customMessage) {
+    return new RestException(errorCode, customMessage, httpStatusCode);
+  }
+
+  /**
+   * Creates a RestException from this error enum with a cause.
+   *
+   * @param cause the underlying cause of the exception
+   * @return a new RestException with the cause
+   */
+  public RestException toException(Throwable cause) {
+    return new RestException(errorCode, errorMessage, httpStatusCode, cause);
+  }
+
+  /**
+   * Creates a RestException from this error enum with a custom message and cause.
+   *
+   * @param customMessage the custom message to use
+   * @param cause the underlying cause of the exception
+   * @return a new RestException with the custom message and cause
+   */
+  public RestException toException(String customMessage, Throwable cause) {
+    return new RestException(errorCode, customMessage, httpStatusCode, cause);
+  }
 
   /**
    * Handles an exception by returning it if it's already a RestException, otherwise returns the

@@ -31,22 +31,19 @@ public interface RuleRepository {
   /**
    * Retrieves a rule by its unique identifier.
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
+   * @param xProjectId the encrypted project identifier
    * @param ruleId the unique rule identifier
    * @return a Single emitting the rule metadata with source information
    */
-  Single<RuleMeta<SourceInfo>> getRuleById(String tenantId, String projectId, Long ruleId);
+  Single<RuleMeta<SourceInfo>> getRuleById(String xProjectId, Long ruleId);
 
   /**
    * Retrieves all rules associated with a specific audience.
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
+   * @param xProjectId the encrypted project identifier
    * @param audienceId the audience identifier
    * @return a Single emitting a list of rule metadata objects ordered by creation date (newest
    *     first)
    */
-  Single<List<RuleMeta<SourceInfo>>> getRulesByAudienceId(
-      String tenantId, String projectId, Long audienceId);
+  Single<List<RuleMeta<SourceInfo>>> getRulesByAudienceId(String xProjectId, Long audienceId);
 }

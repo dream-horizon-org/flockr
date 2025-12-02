@@ -9,7 +9,7 @@ import io.ascend.flockr.admin.io.ResponseEntity;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerAction;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerRequest;
 import io.ascend.flockr.admin.service.AudienceService;
-import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Single;
 import java.util.concurrent.CompletionStage;
 import org.junit.Assert;
 import org.junit.Test;
@@ -22,7 +22,6 @@ public class AudienceControllerTest {
     AudienceService audienceService = mock(AudienceService.class);
     AudienceController controller = new AudienceController(audienceService);
 
-    String tenantId = "t1";
     String projectId = "p1";
     Long audienceId = 42L;
     String actingEmail = "actor@example.com";
@@ -32,19 +31,18 @@ public class AudienceControllerTest {
     request.setEmail("target@example.com");
 
     when(audienceService.updateAudienceOwner(
-            eq(tenantId), eq(projectId), eq(audienceId), eq(actingEmail), eq(request)))
-        .thenReturn(Completable.complete());
+            eq(projectId), eq(audienceId), eq(actingEmail), eq(request)))
+        .thenReturn(Single.just(Boolean.TRUE));
 
     // Act
-    CompletionStage<ResponseEntity.Success<String>> stage =
-        controller.updateAudienceOwner(tenantId, projectId, audienceId, actingEmail, request);
-    ResponseEntity.Success<String> response = stage.toCompletableFuture().join();
+    CompletionStage<ResponseEntity.Success<Boolean>> stage =
+        controller.updateAudienceOwner(projectId, audienceId, actingEmail, request);
+    ResponseEntity.Success<Boolean> response = stage.toCompletableFuture().join();
 
     // Assert
     Assert.assertNotNull(response);
-    Assert.assertEquals("audience owner's updated successfully", response.data());
+    Assert.assertEquals(Boolean.TRUE, response.data());
     verify(audienceService)
-        .updateAudienceOwner(
-            eq(tenantId), eq(projectId), eq(audienceId), eq(actingEmail), eq(request));
+        .updateAudienceOwner(eq(projectId), eq(audienceId), eq(actingEmail), eq(request));
   }
 }

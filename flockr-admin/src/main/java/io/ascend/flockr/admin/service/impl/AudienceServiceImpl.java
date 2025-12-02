@@ -1,12 +1,13 @@
 package io.ascend.flockr.admin.service.impl;
 
-import com.dream11.rest.exception.RestException;
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
-import io.ascend.flockr.admin.domain.audience.AudienceOwner;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.domain.rule.*;
+import io.ascend.flockr.admin.exception.ErrorEnum;
+import io.ascend.flockr.admin.exception.ForbiddenAccessException;
+import io.ascend.flockr.admin.exception.ResourceNotFoundException;
 import io.ascend.flockr.admin.io.request.*;
 import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
 import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
@@ -20,7 +21,6 @@ import io.ascend.flockr.admin.repository.RuleRepository;
 import io.ascend.flockr.admin.service.AudienceService;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.RuleHelpers;
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -52,36 +52,38 @@ public class AudienceServiceImpl implements AudienceService {
   private final AudienceOwnerRepository audienceOwnerRepository;
   private final RuleRepository ruleRepository;
   private final DataConnectorRepository dataConnectorRepository;
-  private static final String DEFAULT_CREATOR = "dummy_user";
+  private static final String DEFAULT_ACTOR = "system";
   private static final int DEFAULT_PAGE = 0;
   private static final int DEFAULT_LIMIT = 10;
 
   /**
    * Creates a new audience using the data provided in the request.
    *
-   * <p>Tenant and project identifiers are applied before the audience metadata is persisted via the
+   * <p>Encrypted project identifier is applied before the audience metadata is persisted via the
    * {@link AudienceRepository}.
    *
-   * @param tenantId the tenant identifier from the request header
-   * @param projectId the project identifier from the request header
+   * @param xProjectId the encrypted project identifier from the request header
    * @param request the request payload containing audience metadata and configuration
+   * @param actor the email/username of the user performing the action (defaults to 'system' if
+   *     null)
    * @return a {@link Single} emitting the generated audience identifier
    */
   @Override
   public Single<Long> createAudience(
-      String tenantId, String projectId, CreateAudienceRequest request) {
+      String xProjectId, CreateAudienceRequest request, String actor) {
+
+    String createdBy = (actor != null && !actor.isBlank()) ? actor : DEFAULT_ACTOR;
 
     AudienceMeta audienceMeta =
         AudienceMeta.builder()
-            .tenantId(tenantId)
-            .projectId(projectId)
+            .xProjectId(xProjectId)
             .name(request.getName())
             .description(request.getDescription())
             .customAudienceConfig(request.getCustomAudienceConfig())
             .type(request.getType())
             .expireDate(request.getExpireDate())
             .sinks(request.getSinkIds())
-            .createdBy(DEFAULT_CREATOR)
+            .createdBy(createdBy)
             .build();
 
     return audienceRepository.createAudience(audienceMeta);
@@ -95,25 +97,32 @@ public class AudienceServiceImpl implements AudienceService {
    * rules for the given audience. Rule configurations are transformed from {@link SourceInfo} to
    * {@link SourceInfoEnriched} using the corresponding {@link DataSourceDetails}.
    *
-   * @param tenantId the tenant identifier from the request header
-   * @param projectId the project identifier from the request header
+   * @param xProjectId the encrypted project identifier from the request header
    * @param audienceId the unique identifier of the audience
    * @return a {@link Single} emitting an {@link AudienceDetailsResponse} with enriched audience
    *     details
    */
   @Override
-  public Single<AudienceDetailsResponse> getAudienceDetails(
-      String tenantId, String projectId, Long audienceId) {
+  public Single<AudienceDetailsResponse> getAudienceDetails(String xProjectId, Long audienceId) {
 
     Single<AudienceMeta> audienceMetaSingle =
-        audienceRepository.getAudienceById(tenantId, projectId, audienceId).cache();
+        audienceRepository
+            .getAudienceById(xProjectId, audienceId)
+            .onErrorResumeNext(
+                error -> {
+                  if (error instanceof NoSuchElementException) {
+                    return Single.error(new ResourceNotFoundException("Audience", audienceId));
+                  }
+                  return Single.error(error);
+                })
+            .cache();
 
     Single<List<DataSinkDetails>> sinkDetailsListSingle =
         audienceMetaSingle.map(AudienceMeta::getSinks).flatMap(this::getDataSinksInBatch);
 
     Single<List<RuleMeta<SourceInfo>>> ruleMetaListSingle =
         audienceMetaSingle
-            .flatMap(meta -> ruleRepository.getRulesByAudienceId(tenantId, projectId, audienceId))
+            .flatMap(meta -> ruleRepository.getRulesByAudienceId(xProjectId, audienceId))
             .cache();
 
     Single<List<DataSourceDetails>> dataSourceDetailsSingle =
@@ -151,8 +160,7 @@ public class AudienceServiceImpl implements AudienceService {
                 ruleMetasSourceEnriched.add(
                     RuleMeta.<SourceInfoEnriched>builder()
                         .ruleId(sourceInfoRuleMeta.getRuleId())
-                        .tenantId(sourceInfoRuleMeta.getTenantId())
-                        .projectId(sourceInfoRuleMeta.getProjectId())
+                        .xProjectId(sourceInfoRuleMeta.getXProjectId())
                         .audienceId(sourceInfoRuleMeta.getAudienceId())
                         .name(sourceInfoRuleMeta.getName())
                         .description(sourceInfoRuleMeta.getDescription())
@@ -198,7 +206,11 @@ public class AudienceServiceImpl implements AudienceService {
     return dataConnectorRepository
         .getDataSinksByIds(sinkIds)
         .filter(list -> list.size() == sinkIds.size())
-        .switchIfEmpty(Single.error(new RuntimeException("Fetched sink metadata partially")))
+        .switchIfEmpty(
+            Single.error(
+                new ResourceNotFoundException(
+                    "DATA_SINK_PARTIAL_FETCH",
+                    "Some data sinks could not be found. Requested: " + sinkIds.size())))
         .doOnSuccess(sinks -> log.debug("Successfully fetched {} data sinks", sinks.size()))
         .doOnError(
             error -> log.error("Failed to fetch data sinks in batch: {}", error.getMessage()));
@@ -210,20 +222,22 @@ public class AudienceServiceImpl implements AudienceService {
    * <p>This method first validates the request asynchronously on a worker thread to avoid blocking
    * the event loop (SQL query parsing can be CPU-intensive). After validation succeeds, each rule
    * in the request is converted to a {@link RuleMeta} with {@link SourceInfo} configuration and
-   * tenant, project, creator and status values before being persisted via the {@link
+   * encrypted project ID, actor and status values before being persisted via the {@link
    * RuleRepository}.
    *
-   * @param tenantId the tenant identifier from the request header
-   * @param projectId the project identifier from the request header
+   * @param xProjectId the encrypted project identifier from the request header
    * @param request the request containing the audience identifier and rule definitions
+   * @param actor the email/username of the user performing the action (defaults to 'system' if
+   *     null)
    * @return a {@link Single} emitting {@code true} if the rules were created successfully,
    *     otherwise propagating an error
    */
   @Override
-  public Single<Boolean> createRules(
-      String tenantId, String projectId, CreateRulesRequest request) {
+  public Single<Boolean> createRules(String xProjectId, CreateRulesRequest request, String actor) {
 
     log.info("Creating rules for audience: {}", request.getAudienceId());
+
+    String createdBy = (actor != null && !actor.isBlank()) ? actor : DEFAULT_ACTOR;
 
     // Validate request asynchronously on worker thread (non-blocking)
     return AsyncJakartaValidationUtil.validate(request)
@@ -237,8 +251,7 @@ public class AudienceServiceImpl implements AudienceService {
               for (CreateRulesRequest.Rule rule : validRequest.getRules()) {
                 RuleMeta<SourceInfo> ruleMeta =
                     RuleMeta.builder()
-                        .tenantId(tenantId)
-                        .projectId(projectId)
+                        .xProjectId(xProjectId)
                         .audienceId(validRequest.getAudienceId())
                         .name(rule.getName())
                         .description(rule.getDescription())
@@ -248,7 +261,7 @@ public class AudienceServiceImpl implements AudienceService {
                         .status(RuleStatus.SCHEDULED)
                         .ruleType(rule.getRuleType())
                         .configuration(rule.getConfiguration())
-                        .createdBy(DEFAULT_CREATOR)
+                        .createdBy(createdBy)
                         .build();
                 list.add(ruleMeta);
               }
@@ -284,17 +297,25 @@ public class AudienceServiceImpl implements AudienceService {
    * <p>The rule configuration is enriched by replacing {@link SourceInfo} entries with {@link
    * SourceInfoEnriched} using the corresponding {@link DataSourceDetails}.
    *
-   * @param tenantId the tenant identifier from the request header
-   * @param projectId the project identifier from the request header
+   * @param xProjectId the encrypted project identifier from the request header
    * @param audienceId the identifier of the audience to which the rule belongs
    * @param ruleId the identifier of the rule whose details are to be retrieved
    * @return a {@link Single} emitting a {@link RuleDetailsResponse} with enriched rule details
    */
   @Override
   public Single<RuleDetailsResponse> getRuleDetails(
-      String tenantId, String projectId, Long audienceId, Long ruleId) {
+      String xProjectId, Long audienceId, Long ruleId) {
     Single<RuleMeta<SourceInfo>> ruleMetaSingle =
-        ruleRepository.getRuleById(tenantId, projectId, ruleId).cache();
+        ruleRepository
+            .getRuleById(xProjectId, ruleId)
+            .onErrorResumeNext(
+                error -> {
+                  if (error instanceof NoSuchElementException) {
+                    return Single.error(new ResourceNotFoundException("Rule", ruleId));
+                  }
+                  return Single.error(error);
+                })
+            .cache();
 
     Single<List<DataSourceDetails>> sourceDetails =
         ruleMetaSingle
@@ -319,8 +340,7 @@ public class AudienceServiceImpl implements AudienceService {
               // Build RuleMeta<SourceInfoEnriched>
               return RuleMeta.<SourceInfoEnriched>builder()
                   .ruleId(ruleMeta.getRuleId())
-                  .tenantId(ruleMeta.getTenantId())
-                  .projectId(ruleMeta.getProjectId())
+                  .xProjectId(ruleMeta.getXProjectId())
                   .audienceId(ruleMeta.getAudienceId())
                   .name(ruleMeta.getName())
                   .description(ruleMeta.getDescription())
@@ -358,7 +378,11 @@ public class AudienceServiceImpl implements AudienceService {
     return dataConnectorRepository
         .getDataSourcesByIds(sourceIds)
         .filter(list -> list.size() == sourceIds.size())
-        .switchIfEmpty(Single.error(new RuntimeException("Fetched source metadata partially")))
+        .switchIfEmpty(
+            Single.error(
+                new ResourceNotFoundException(
+                    "DATA_SOURCE_PARTIAL_FETCH",
+                    "Some data sources could not be found. Requested: " + sourceIds.size())))
         .doOnSuccess(sources -> log.debug("Successfully fetched {} data sources", sources.size()))
         .doOnError(
             error -> log.error("Failed to fetch data sources in batch: {}", error.getMessage()));
@@ -553,8 +577,7 @@ public class AudienceServiceImpl implements AudienceService {
    * <p>This method supports filtering by name search, creator, and verification status. Results can
    * be paginated using page (0-indexed) and pageSize parameters similar to data connector listings.
    *
-   * @param tenantId the tenant identifier from the request header
-   * @param projectId the project identifier from the request header
+   * @param xProjectId the project identifier from the request header
    * @param nameSearch optional name search filter (partial match)
    * @param createdBy optional creator filter (exact match)
    * @param verified optional verification status filter
@@ -566,8 +589,7 @@ public class AudienceServiceImpl implements AudienceService {
    */
   @Override
   public Single<PaginatedResponse<AudienceMetaResponse>> getAudiencesList(
-      String tenantId,
-      String projectId,
+      String xProjectId,
       String nameSearch,
       String createdBy,
       Boolean verified,
@@ -579,8 +601,7 @@ public class AudienceServiceImpl implements AudienceService {
     int offset = resolvedPage * resolvedPageSize;
 
     return audienceRepository
-        .getAudiencesList(
-            tenantId, projectId, nameSearch, createdBy, verified, resolvedPageSize, offset)
+        .getAudiencesList(xProjectId, nameSearch, createdBy, verified, resolvedPageSize, offset)
         .map(
             audiences ->
                 new PaginatedResponse<>(
@@ -599,81 +620,67 @@ public class AudienceServiceImpl implements AudienceService {
    * Adds or removes a audience owner.
    *
    * <p>Preconditions: - The audience must exist and must not be expired. - The acting user (from
-   * {@code userEmail}) must already be an owner of the audience.
+   * {@code actor}) must already be an owner of the audience.
    *
    * <p>Behavior: - When {@code action == add}, inserts the target owner if not already present. -
    * When {@code action == remove}, marks the target owner as removed, preventing removal of the
    * last owner.
    *
-   * <p>Postconditions: - Returns a completed {@link Completable} on success. - Emits an {@link
-   * IllegalStateException} if the audience is expired or the user is unauthorized. - Emits an
-   * {@link IllegalStateException} if the update results in no changes.
+   * <p>Postconditions: - Returns a completed {@link io.reactivex.rxjava3.core.Completable} on
+   * success. - Emits an {@link IllegalStateException} if the audience is expired or the user is
+   * unauthorized. - Emits an {@link IllegalStateException} if the update results in no changes.
    *
+   * @param xProjectId the encrypted project identifier
    * @param audienceId the identifier of the audience to update
-   * @param userEmail the acting user's email (must already be a audience owner)
+   * @param actor the acting user's email (must already be a audience owner), defaults to 'system'
    * @param req the request containing the action (add/remove) and the target owner email
-   * @return a {@link Completable} that completes on success or errors on failure
+   * @return a {@link io.reactivex.rxjava3.core.Completable} that completes on success or errors on
+   *     failure
    */
   @Override
-  public Completable updateAudienceOwner(
-      String tenantId,
-      String projectId,
-      Long audienceId,
-      String userEmail,
-      UpdateAudienceOwnerRequest req) {
+  public Single<Boolean> updateAudienceOwner(
+      String xProjectId, Long audienceId, String actor, UpdateAudienceOwnerRequest req) {
+    String performedBy = actor != null ? actor : DEFAULT_ACTOR;
     return audienceRepository
-        .getAudienceById(tenantId, projectId, audienceId)
+        .getAudienceById(xProjectId, audienceId)
+        .onErrorResumeNext(
+            error -> {
+              if (error instanceof NoSuchElementException) {
+                return Single.error(new ResourceNotFoundException("Audience", audienceId));
+              }
+              return Single.error(error);
+            })
         .flatMap(
             (AudienceMeta audience) -> {
               Long expireDate = audience.getExpireDate(); // epoch seconds as per repository mapping
               long nowSec = System.currentTimeMillis() / 1000;
               if (expireDate != null && expireDate <= nowSec) {
-                return Single.error(
-                    new RestException(
-                        "AUDIENCE_EXPIRED",
-                        "Audience is expired and cannot be modified",
-                        org.apache.http.HttpStatus.SC_BAD_REQUEST));
+                return Single.error(ErrorEnum.AUDIENCE_EXPIRED.toException());
               }
               return audienceOwnerRepository
-                  .findOwners(tenantId, projectId, audienceId)
+                  .findOwners(xProjectId, audienceId)
                   .flatMap(
                       owners -> {
                         // Checking if logged-in user has permission
                         boolean authorized =
-                            owners.stream().anyMatch(o -> o.getOwnerEmail().equals(userEmail));
+                            owners.stream().anyMatch(o -> o.getOwnerEmail().equals(performedBy));
                         if (!authorized) {
                           return Single.error(
-                              new RestException(
-                                  "FORBIDDEN",
-                                  "User is not authorized to update audience owners",
-                                  org.apache.http.HttpStatus.SC_FORBIDDEN));
+                              new ForbiddenAccessException(
+                                  "NOT_AUTHORIZED",
+                                  "User "
+                                      + performedBy
+                                      + " is not authorized to update audience owners"));
                         }
                         if (req.getAction() == UpdateAudienceOwnerAction.ADD) {
                           List<String> verifiers = List.of();
                           return validateAndAddOwner(
-                              tenantId,
-                              projectId,
-                              owners,
-                              audienceId,
-                              req,
-                              userEmail,
-                              audience.getName(),
-                              audience.getVerified(),
-                              verifiers);
+                              xProjectId, audienceId, req.getEmail(), verifiers, performedBy);
                         }
                         return validateAndRemoveOwner(
-                            tenantId, projectId, owners, audienceId, req, userEmail);
+                            xProjectId, audienceId, req.getEmail(), performedBy);
                       });
-            })
-        .flatMapCompletable(
-            ok ->
-                ok
-                    ? Completable.complete()
-                    : Completable.error(
-                        new RestException(
-                            "OWNER_UPDATE_FAILED",
-                            "Failed to update audience owners",
-                            org.apache.http.HttpStatus.SC_CONFLICT)));
+            });
   }
 
   /**
@@ -685,48 +692,39 @@ public class AudienceServiceImpl implements AudienceService {
    *   <li>No duplicate owners - rejects if the email is already an active owner
    * </ul>
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
-   * @param existingOwners current active owners of the audience
+   * @param xProjectId the encrypted project identifier
    * @param audienceId audience identifier
-   * @param request request containing target owner email
-   * @param performedBy acting user's email (recorded as {@code added_by})
-   * @param audienceName audience display name (for logging)
-   * @param isVerified whether the audience is verified (reserved for future use)
+   * @param ownerEmail target owner email to add
    * @param verifiers optional list of allowed verifier emails (reserved for future use)
+   * @param performedBy acting user's email (recorded as {@code added_by})
    * @return a {@link Single} emitting {@code true} if an insert occurred
    */
   private Single<Boolean> validateAndAddOwner(
-      String tenantId,
-      String projectId,
-      List<AudienceOwner> existingOwners,
+      String xProjectId,
       Long audienceId,
-      UpdateAudienceOwnerRequest request,
-      String performedBy,
-      String audienceName,
-      Boolean isVerified,
-      List<String> verifiers) {
+      String ownerEmail,
+      List<String> verifiers,
+      String performedBy) {
 
-    // Check for duplicate owners
-    boolean alreadyOwner =
-        existingOwners.stream().anyMatch(o -> o.getOwnerEmail().equals(request.getEmail()));
-    if (alreadyOwner) {
-      return Single.error(
-          new RestException(
-              "DUPLICATE_OWNER",
-              "User " + request.getEmail() + " is already an owner of this audience",
-              org.apache.http.HttpStatus.SC_CONFLICT));
-    }
+    return audienceOwnerRepository
+        .findOwners(xProjectId, audienceId)
+        .flatMap(
+            existingOwners -> {
+              // Check for duplicate owners
+              boolean alreadyOwner =
+                  existingOwners.stream().anyMatch(o -> o.getOwnerEmail().equals(ownerEmail));
+              if (alreadyOwner) {
+                return Single.error(
+                    ErrorEnum.DUPLICATE_OWNER.toException(
+                        "User " + ownerEmail + " is already an owner of this audience"));
+              }
 
-    log.info(
-        "Adding owner {} to audience {} (name: {}) by user {}",
-        request.getEmail(),
-        audienceId,
-        audienceName,
-        performedBy);
+              log.info(
+                  "Adding owner {} to audience {} by user {}", ownerEmail, audienceId, performedBy);
 
-    return audienceOwnerRepository.addOwner(
-        tenantId, projectId, audienceId, request.getEmail(), performedBy);
+              return audienceOwnerRepository.addOwner(
+                  xProjectId, audienceId, ownerEmail, performedBy);
+            });
   }
 
   /**
@@ -739,50 +737,42 @@ public class AudienceServiceImpl implements AudienceService {
    *   <li>Cannot remove the last owner - rejects if this would leave the audience with no owners
    * </ul>
    *
-   * @param tenantId the tenant identifier
-   * @param projectId the project identifier
-   * @param existingOwners current active owners of the audience
+   * @param xProjectId the encrypted project identifier
    * @param audienceId audience identifier
-   * @param request request containing target owner email
+   * @param ownerEmail target owner email to remove
    * @param performedBy acting user's email (recorded as {@code removed_by})
    * @return a {@link Single} emitting {@code true} if an update occurred
    */
   private Single<Boolean> validateAndRemoveOwner(
-      String tenantId,
-      String projectId,
-      List<AudienceOwner> existingOwners,
-      Long audienceId,
-      UpdateAudienceOwnerRequest request,
-      String performedBy) {
+      String xProjectId, Long audienceId, String ownerEmail, String performedBy) {
 
-    // Check if target owner exists
-    boolean ownerExists =
-        existingOwners.stream().anyMatch(o -> o.getOwnerEmail().equals(request.getEmail()));
-    if (!ownerExists) {
-      return Single.error(
-          new RestException(
-              "OWNER_NOT_FOUND",
-              "User " + request.getEmail() + " is not an owner of this audience",
-              org.apache.http.HttpStatus.SC_NOT_FOUND));
-    }
+    return audienceOwnerRepository
+        .findOwners(xProjectId, audienceId)
+        .flatMap(
+            existingOwners -> {
+              // Check if target owner exists
+              boolean ownerExists =
+                  existingOwners.stream().anyMatch(o -> o.getOwnerEmail().equals(ownerEmail));
+              if (!ownerExists) {
+                return Single.error(
+                    ErrorEnum.OWNER_NOT_FOUND.toException(
+                        "User " + ownerEmail + " is not an owner of this audience"));
+              }
 
-    // Check if this is the last owner
-    if (existingOwners.size() <= 1) {
-      return Single.error(
-          new RestException(
-              "LAST_OWNER",
-              "Cannot remove the last owner of an audience",
-              org.apache.http.HttpStatus.SC_BAD_REQUEST));
-    }
+              // Check if this is the last owner
+              if (existingOwners.size() <= 1) {
+                return Single.error(ErrorEnum.LAST_OWNER.toException());
+              }
 
-    log.info(
-        "Removing owner {} from audience {} by user {}",
-        request.getEmail(),
-        audienceId,
-        performedBy);
+              log.info(
+                  "Removing owner {} from audience {} by user {}",
+                  ownerEmail,
+                  audienceId,
+                  performedBy);
 
-    return audienceOwnerRepository.removeOwner(
-        tenantId, projectId, audienceId, request.getEmail(), performedBy);
+              return audienceOwnerRepository.removeOwner(
+                  xProjectId, audienceId, ownerEmail, performedBy);
+            });
   }
 
   /**
@@ -791,30 +781,40 @@ public class AudienceServiceImpl implements AudienceService {
    * <p>This method fetches all owners (active and inactive) associated with an audience and
    * transforms them into response objects.
    *
-   * @param tenantId the tenant identifier from the request header
-   * @param projectId the project identifier from the request header
+   * @param xProjectId the encrypted project identifier from the request header
    * @param audienceId the identifier of the audience
    * @return a {@link Single} emitting a list of {@link AudienceOwnerResponse}
    */
   @Override
-  public Single<List<AudienceOwnerResponse>> getAudienceOwners(
-      String tenantId, String projectId, Long audienceId) {
-    return audienceOwnerRepository
-        .findOwners(tenantId, projectId, audienceId)
-        .map(
-            owners ->
-                owners.stream()
+  public Single<List<AudienceOwnerResponse>> getAudienceOwners(String xProjectId, Long audienceId) {
+    // First verify audience exists
+    return audienceRepository
+        .getAudienceById(xProjectId, audienceId)
+        .onErrorResumeNext(
+            error -> {
+              if (error instanceof NoSuchElementException) {
+                return Single.error(new ResourceNotFoundException("Audience", audienceId));
+              }
+              return Single.error(error);
+            })
+        .flatMap(
+            audience ->
+                audienceOwnerRepository
+                    .findOwners(xProjectId, audienceId)
                     .map(
-                        owner ->
-                            AudienceOwnerResponse.builder()
-                                .id(owner.getId())
-                                .audienceId(owner.getAudienceId())
-                                .ownerEmail(owner.getOwnerEmail())
-                                .status(owner.getStatus())
-                                .createdAt(owner.getCreatedAt())
-                                .updatedAt(owner.getUpdatedAt())
-                                .build())
-                    .toList())
+                        owners ->
+                            owners.stream()
+                                .map(
+                                    owner ->
+                                        AudienceOwnerResponse.builder()
+                                            .id(owner.getId())
+                                            .audienceId(owner.getAudienceId())
+                                            .ownerEmail(owner.getOwnerEmail())
+                                            .status(owner.getStatus())
+                                            .createdAt(owner.getCreatedAt())
+                                            .updatedAt(owner.getUpdatedAt())
+                                            .build())
+                                .toList()))
         .doOnSuccess(
             owners ->
                 log.info(
