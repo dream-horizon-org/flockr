@@ -13,7 +13,7 @@ import lombok.experimental.UtilityClass;
 /**
  * @author Prithu Sharma
  * @since 1.0
-*/
+ */
 @UtilityClass
 public final class RuleHelpers {
 

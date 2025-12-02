@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * Base interface for rule configurations.
  *
  * <p>This interface serves as the polymorphic base for different rule configuration types. The
- * Jackson annotations enable automatic serialization/deserialization based on the
- * {@code configuration_type} property in the JSON.
+ * Jackson annotations enable automatic serialization/deserialization based on the {@code
+ * configuration_type} property in the JSON.
  *
  * <p>Implementations:
  *
