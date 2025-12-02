@@ -8,7 +8,6 @@ import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.ascend.flockr.admin.io.response.AudienceOwnerResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
@@ -99,9 +98,9 @@ public interface AudienceService {
    * @param userEmail the acting user's email (must already be an owner), defaults to 'system' if
    *     null
    * @param updateAudienceOwnerRequest the request containing the action and target owner email
-   * @return a Completable that completes on success or errors on failure
+   * @return a Single emitting true if the update was successful, false otherwise
    */
-  Completable updateAudienceOwner(
+  Single<Boolean> updateAudienceOwner(
       String xProjectId,
       Long audienceId,
       String userEmail,

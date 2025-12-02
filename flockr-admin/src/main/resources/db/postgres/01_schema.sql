@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS data_sources (
     type_id BIGINT NOT NULL,
     config JSONB NOT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
-    created_by VARCHAR(128) DEFAULT 'system',
+    created_by VARCHAR(128) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_data_sources_type FOREIGN KEY (type_id) REFERENCES data_connector_types(id)
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS data_sinks (
     type_id BIGINT NOT NULL,
     config JSONB NOT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
-    created_by VARCHAR(128) DEFAULT 'system',
+    created_by VARCHAR(128) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_data_sinks_type FOREIGN KEY (type_id) REFERENCES data_connector_types(id)
@@ -49,7 +49,7 @@ CREATE TABLE audiences (
     description TEXT NOT NULL,
     status VARCHAR(50) DEFAULT 'ACTIVE' NOT NULL,
     sinks BIGINT[] NOT NULL,
-    created_by VARCHAR(255) DEFAULT 'system' NOT NULL,
+    created_by VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_audience_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -77,7 +77,7 @@ CREATE TABLE rules (
     rule_type VARCHAR(50) NOT NULL,
     status VARCHAR(50) DEFAULT 'SCHEDULED' NOT NULL,
     configuration JSONB NOT NULL,
-    created_by VARCHAR(255) DEFAULT 'system' NOT NULL,
+    created_by VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FOREIGN KEY (audience_id) REFERENCES audiences(id)

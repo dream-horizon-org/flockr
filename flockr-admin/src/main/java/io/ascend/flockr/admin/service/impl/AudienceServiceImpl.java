@@ -1,11 +1,13 @@
 package io.ascend.flockr.admin.service.impl;
 
-import com.dream11.rest.exception.RestException;
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.domain.rule.*;
+import io.ascend.flockr.admin.exception.ErrorEnum;
+import io.ascend.flockr.admin.exception.ForbiddenAccessException;
+import io.ascend.flockr.admin.exception.ResourceNotFoundException;
 import io.ascend.flockr.admin.io.request.*;
 import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
 import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
@@ -19,7 +21,6 @@ import io.ascend.flockr.admin.repository.RuleRepository;
 import io.ascend.flockr.admin.service.AudienceService;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.RuleHelpers;
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -105,7 +106,16 @@ public class AudienceServiceImpl implements AudienceService {
   public Single<AudienceDetailsResponse> getAudienceDetails(String xProjectId, Long audienceId) {
 
     Single<AudienceMeta> audienceMetaSingle =
-        audienceRepository.getAudienceById(xProjectId, audienceId).cache();
+        audienceRepository
+            .getAudienceById(xProjectId, audienceId)
+            .onErrorResumeNext(
+                error -> {
+                  if (error instanceof NoSuchElementException) {
+                    return Single.error(new ResourceNotFoundException("Audience", audienceId));
+                  }
+                  return Single.error(error);
+                })
+            .cache();
 
     Single<List<DataSinkDetails>> sinkDetailsListSingle =
         audienceMetaSingle.map(AudienceMeta::getSinks).flatMap(this::getDataSinksInBatch);
@@ -196,7 +206,11 @@ public class AudienceServiceImpl implements AudienceService {
     return dataConnectorRepository
         .getDataSinksByIds(sinkIds)
         .filter(list -> list.size() == sinkIds.size())
-        .switchIfEmpty(Single.error(new RuntimeException("Fetched sink metadata partially")))
+        .switchIfEmpty(
+            Single.error(
+                new ResourceNotFoundException(
+                    "DATA_SINK_PARTIAL_FETCH",
+                    "Some data sinks could not be found. Requested: " + sinkIds.size())))
         .doOnSuccess(sinks -> log.debug("Successfully fetched {} data sinks", sinks.size()))
         .doOnError(
             error -> log.error("Failed to fetch data sinks in batch: {}", error.getMessage()));
@@ -292,7 +306,16 @@ public class AudienceServiceImpl implements AudienceService {
   public Single<RuleDetailsResponse> getRuleDetails(
       String xProjectId, Long audienceId, Long ruleId) {
     Single<RuleMeta<SourceInfo>> ruleMetaSingle =
-        ruleRepository.getRuleById(xProjectId, ruleId).cache();
+        ruleRepository
+            .getRuleById(xProjectId, ruleId)
+            .onErrorResumeNext(
+                error -> {
+                  if (error instanceof NoSuchElementException) {
+                    return Single.error(new ResourceNotFoundException("Rule", ruleId));
+                  }
+                  return Single.error(error);
+                })
+            .cache();
 
     Single<List<DataSourceDetails>> sourceDetails =
         ruleMetaSingle
@@ -355,7 +378,11 @@ public class AudienceServiceImpl implements AudienceService {
     return dataConnectorRepository
         .getDataSourcesByIds(sourceIds)
         .filter(list -> list.size() == sourceIds.size())
-        .switchIfEmpty(Single.error(new RuntimeException("Fetched source metadata partially")))
+        .switchIfEmpty(
+            Single.error(
+                new ResourceNotFoundException(
+                    "DATA_SOURCE_PARTIAL_FETCH",
+                    "Some data sources could not be found. Requested: " + sourceIds.size())))
         .doOnSuccess(sources -> log.debug("Successfully fetched {} data sources", sources.size()))
         .doOnError(
             error -> log.error("Failed to fetch data sources in batch: {}", error.getMessage()));
@@ -550,8 +577,7 @@ public class AudienceServiceImpl implements AudienceService {
    * <p>This method supports filtering by name search, creator, and verification status. Results can
    * be paginated using page (0-indexed) and pageSize parameters similar to data connector listings.
    *
-   * @param tenantId the tenant identifier from the request header
-   * @param projectId the project identifier from the request header
+   * @param xProjectId the project identifier from the request header
    * @param nameSearch optional name search filter (partial match)
    * @param createdBy optional creator filter (exact match)
    * @param verified optional verification status filter
@@ -600,32 +626,36 @@ public class AudienceServiceImpl implements AudienceService {
    * When {@code action == remove}, marks the target owner as removed, preventing removal of the
    * last owner.
    *
-   * <p>Postconditions: - Returns a completed {@link Completable} on success. - Emits an {@link
-   * IllegalStateException} if the audience is expired or the user is unauthorized. - Emits an
-   * {@link IllegalStateException} if the update results in no changes.
+   * <p>Postconditions: - Returns a completed {@link io.reactivex.rxjava3.core.Completable} on
+   * success. - Emits an {@link IllegalStateException} if the audience is expired or the user is
+   * unauthorized. - Emits an {@link IllegalStateException} if the update results in no changes.
    *
    * @param xProjectId the encrypted project identifier
    * @param audienceId the identifier of the audience to update
    * @param actor the acting user's email (must already be a audience owner), defaults to 'system'
    * @param req the request containing the action (add/remove) and the target owner email
-   * @return a {@link Completable} that completes on success or errors on failure
+   * @return a {@link io.reactivex.rxjava3.core.Completable} that completes on success or errors on
+   *     failure
    */
   @Override
-  public Completable updateAudienceOwner(
+  public Single<Boolean> updateAudienceOwner(
       String xProjectId, Long audienceId, String actor, UpdateAudienceOwnerRequest req) {
     String performedBy = actor != null ? actor : DEFAULT_ACTOR;
     return audienceRepository
         .getAudienceById(xProjectId, audienceId)
+        .onErrorResumeNext(
+            error -> {
+              if (error instanceof NoSuchElementException) {
+                return Single.error(new ResourceNotFoundException("Audience", audienceId));
+              }
+              return Single.error(error);
+            })
         .flatMap(
             (AudienceMeta audience) -> {
               Long expireDate = audience.getExpireDate(); // epoch seconds as per repository mapping
               long nowSec = System.currentTimeMillis() / 1000;
               if (expireDate != null && expireDate <= nowSec) {
-                return Single.error(
-                    new RestException(
-                        "AUDIENCE_EXPIRED",
-                        "Audience is expired and cannot be modified",
-                        org.apache.http.HttpStatus.SC_BAD_REQUEST));
+                return Single.error(ErrorEnum.AUDIENCE_EXPIRED.toException());
               }
               return audienceOwnerRepository
                   .findOwners(xProjectId, audienceId)
@@ -636,10 +666,11 @@ public class AudienceServiceImpl implements AudienceService {
                             owners.stream().anyMatch(o -> o.getOwnerEmail().equals(performedBy));
                         if (!authorized) {
                           return Single.error(
-                              new RestException(
-                                  "FORBIDDEN",
-                                  "User is not authorized to update audience owners",
-                                  org.apache.http.HttpStatus.SC_FORBIDDEN));
+                              new ForbiddenAccessException(
+                                  "NOT_AUTHORIZED",
+                                  "User "
+                                      + performedBy
+                                      + " is not authorized to update audience owners"));
                         }
                         if (req.getAction() == UpdateAudienceOwnerAction.ADD) {
                           List<String> verifiers = List.of();
@@ -649,16 +680,7 @@ public class AudienceServiceImpl implements AudienceService {
                         return validateAndRemoveOwner(
                             xProjectId, audienceId, req.getEmail(), performedBy);
                       });
-            })
-        .flatMapCompletable(
-            ok ->
-                ok
-                    ? Completable.complete()
-                    : Completable.error(
-                        new RestException(
-                            "OWNER_UPDATE_FAILED",
-                            "Failed to update audience owners",
-                            org.apache.http.HttpStatus.SC_CONFLICT)));
+            });
   }
 
   /**
@@ -693,10 +715,8 @@ public class AudienceServiceImpl implements AudienceService {
                   existingOwners.stream().anyMatch(o -> o.getOwnerEmail().equals(ownerEmail));
               if (alreadyOwner) {
                 return Single.error(
-                    new RestException(
-                        "DUPLICATE_OWNER",
-                        "User " + ownerEmail + " is already an owner of this audience",
-                        org.apache.http.HttpStatus.SC_CONFLICT));
+                    ErrorEnum.DUPLICATE_OWNER.toException(
+                        "User " + ownerEmail + " is already an owner of this audience"));
               }
 
               log.info(
@@ -735,19 +755,13 @@ public class AudienceServiceImpl implements AudienceService {
                   existingOwners.stream().anyMatch(o -> o.getOwnerEmail().equals(ownerEmail));
               if (!ownerExists) {
                 return Single.error(
-                    new RestException(
-                        "OWNER_NOT_FOUND",
-                        "User " + ownerEmail + " is not an owner of this audience",
-                        org.apache.http.HttpStatus.SC_NOT_FOUND));
+                    ErrorEnum.OWNER_NOT_FOUND.toException(
+                        "User " + ownerEmail + " is not an owner of this audience"));
               }
 
               // Check if this is the last owner
               if (existingOwners.size() <= 1) {
-                return Single.error(
-                    new RestException(
-                        "LAST_OWNER",
-                        "Cannot remove the last owner of an audience",
-                        org.apache.http.HttpStatus.SC_BAD_REQUEST));
+                return Single.error(ErrorEnum.LAST_OWNER.toException());
               }
 
               log.info(
@@ -773,22 +787,34 @@ public class AudienceServiceImpl implements AudienceService {
    */
   @Override
   public Single<List<AudienceOwnerResponse>> getAudienceOwners(String xProjectId, Long audienceId) {
-    return audienceOwnerRepository
-        .findOwners(xProjectId, audienceId)
-        .map(
-            owners ->
-                owners.stream()
+    // First verify audience exists
+    return audienceRepository
+        .getAudienceById(xProjectId, audienceId)
+        .onErrorResumeNext(
+            error -> {
+              if (error instanceof NoSuchElementException) {
+                return Single.error(new ResourceNotFoundException("Audience", audienceId));
+              }
+              return Single.error(error);
+            })
+        .flatMap(
+            audience ->
+                audienceOwnerRepository
+                    .findOwners(xProjectId, audienceId)
                     .map(
-                        owner ->
-                            AudienceOwnerResponse.builder()
-                                .id(owner.getId())
-                                .audienceId(owner.getAudienceId())
-                                .ownerEmail(owner.getOwnerEmail())
-                                .status(owner.getStatus())
-                                .createdAt(owner.getCreatedAt())
-                                .updatedAt(owner.getUpdatedAt())
-                                .build())
-                    .toList())
+                        owners ->
+                            owners.stream()
+                                .map(
+                                    owner ->
+                                        AudienceOwnerResponse.builder()
+                                            .id(owner.getId())
+                                            .audienceId(owner.getAudienceId())
+                                            .ownerEmail(owner.getOwnerEmail())
+                                            .status(owner.getStatus())
+                                            .createdAt(owner.getCreatedAt())
+                                            .updatedAt(owner.getUpdatedAt())
+                                            .build())
+                                .toList()))
         .doOnSuccess(
             owners ->
                 log.info(

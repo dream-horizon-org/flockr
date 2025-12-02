@@ -97,6 +97,7 @@ paths:
         description: Actor email/username (defaults to 'system' if not provided)
         schema:
           type: string
+          default: system
       requestBody:
         content:
           application/json:
@@ -140,6 +141,7 @@ paths:
         description: Actor email/username (defaults to 'system' if not provided)
         schema:
           type: string
+          default: system
       - name: audienceId
         in: path
         description: ID of the audience
@@ -285,6 +287,7 @@ paths:
         description: Email of the logged-in user (defaults to 'system' if not provided)
         schema:
           type: string
+          default: system
       requestBody:
         content:
           application/json:

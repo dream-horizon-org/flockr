@@ -77,6 +77,7 @@ public class AudienceController {
               description = "Actor email/username (defaults to 'system' if not provided)",
               required = false)
           @HeaderParam("email")
+          @DefaultValue("system")
           String actor,
       @Valid CreateAudienceRequest requestBody) {
     return ErrorHandler.handleAsync(
@@ -141,6 +142,7 @@ public class AudienceController {
               description = "Actor email/username (defaults to 'system' if not provided)",
               required = false)
           @HeaderParam("email")
+          @DefaultValue("system")
           String actor,
       @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
           Long audienceId,
@@ -294,7 +296,7 @@ public class AudienceController {
       responseCode = "500",
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
-  public CompletionStage<Void> updateAudienceOwner(
+  public CompletionStage<ResponseEntity.Success<Boolean>> updateAudienceOwner(
       @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Id")
           String xProjectId,
@@ -305,10 +307,11 @@ public class AudienceController {
               description = "Email of the logged-in user (defaults to 'system' if not provided)",
               required = false)
           @HeaderParam("email")
+          @DefaultValue("system")
           String email,
       @Valid UpdateAudienceOwnerRequest requestBody) {
-    return audienceService
-        .updateAudienceOwner(xProjectId, audienceId, email, requestBody)
-        .toCompletionStage(null);
+    return ErrorHandler.handleAsync(
+        audienceService.updateAudienceOwner(xProjectId, audienceId, email, requestBody),
+        "updateOwnerAction");
   }
 }
