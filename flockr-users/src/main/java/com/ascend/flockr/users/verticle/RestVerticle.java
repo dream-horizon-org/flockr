@@ -1,6 +1,6 @@
 package com.ascend.flockr.users.verticle;
 
-import com.ascend.flockr.common.guice.GuiceInjector;
+import com.ascend.flockr.users.guice.GuiceInjector;
 import com.ascend.flockr.users.config.HttpServerConfig;
 import com.dream11.rest.AbstractRestVerticle;
 import com.dream11.rest.ClassInjector;

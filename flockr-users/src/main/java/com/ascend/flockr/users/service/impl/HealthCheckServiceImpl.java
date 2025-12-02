@@ -1,6 +1,6 @@
 package com.ascend.flockr.users.service.impl;
 
-import com.ascend.flockr.common.client.Aerospike;
+import com.ascend.flockr.users.client.Aerospike;
 import com.ascend.flockr.users.service.HealthCheckService;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Single;

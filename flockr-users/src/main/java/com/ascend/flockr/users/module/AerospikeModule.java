@@ -1,8 +1,8 @@
 package com.ascend.flockr.users.module;
 
-import com.ascend.flockr.common.client.Aerospike;
-import com.ascend.flockr.common.client.impl.AerospikeImpl;
-import com.ascend.flockr.common.config.AerospikeConfig;
+import com.ascend.flockr.users.client.Aerospike;
+import com.ascend.flockr.users.client.impl.AerospikeImpl;
+import com.ascend.flockr.users.config.AerospikeConfig;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;

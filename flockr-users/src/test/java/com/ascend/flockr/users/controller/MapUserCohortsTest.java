@@ -4,7 +4,7 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.ascend.flockr.common.constants.Constants;
+import com.ascend.flockr.users.constants.Constants;
 import com.ascend.flockr.users.dto.ResponseEntity;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import com.ascend.flockr.users.service.UserCohortsService;

@@ -1,4 +1,4 @@
-package com.ascend.flockr.common.client.impl;
+package com.ascend.flockr.users.client.impl;
 
 import com.aerospike.client.Key;
 import com.aerospike.client.Operation;
@@ -9,9 +9,9 @@ import com.aerospike.client.policy.BatchWritePolicy;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.Replica;
 import com.aerospike.client.policy.WritePolicy;
-import com.ascend.flockr.common.client.Aerospike;
-import com.ascend.flockr.common.config.AerospikeConfig;
-import com.ascend.flockr.common.constants.Constants;
+import com.ascend.flockr.users.client.Aerospike;
+import com.ascend.flockr.users.config.AerospikeConfig;
+import com.ascend.flockr.users.constants.Constants;
 import com.google.inject.Inject;
 import io.d11.aerospike.client.AerospikeClient;
 import io.reactivex.rxjava3.core.Single;
@@ -284,22 +284,30 @@ public class AerospikeImpl implements Aerospike {
     return writePolicy;
   }
 
-//    public Single<Boolean> appendBatchCohort(
-//            String id, String cohort, String source, Long cohortExpiry, String setName) {
-//        BatchWritePolicy writePolicy = getBatchWritePolicy();
-//
-//        String namespace = aerospikeConfig.getNamespace();
-//
-//        Key key = new Key(namespace, setName, Constants.USER_KEY + id);
-//
-//        Operation[] operations = getMapOperations(cohort, cohortExpiry);
-//
-//        return AsyncResultSingle.<com.aerospike.client.Record>toSingle(
-//                        handler -> flockrAerospikeClient.operate(writePolicy, key, operations, handler))
-//                .map(appendRecord -> true)
-//                .doOnError(
-//                        err -> {
-//                            log.error("Failed to append cohort: {} for userId: {} due error : ", cohort, id, err);
-//                        });
-//    }
+  public Single<Boolean> appendBatchCohort(
+      String id, String cohort, String source, Long cohortExpiry, String setName) {
+    WritePolicy writePolicy = getWritePolicy();
+
+    String namespace = aerospikeConfig.getNamespace();
+
+    Key key = new Key(namespace, setName, Constants.USER_KEY + id);
+
+    Operation[] operations = getMapOperations(cohort, cohortExpiry);
+
+    return AsyncResultSingle.<com.aerospike.client.Record>toSingle(
+            handler -> flockrAerospikeClient.operate(writePolicy, key, operations, handler))
+        .map(appendRecord -> true)
+        .doOnError(
+            err -> {
+              log.error("Failed to append cohort: {} for userId: {} due error : ", cohort, id, err);
+            });
+  }
+
+//  private BatchWritePolicy getBatchWritePolicy() {
+//    BatchWritePolicy writePolicy = new BatchWritePolicy();
+//    writePolicy.maxRetries = MAX_RETRIES;
+//    writePolicy.sendKey = true;
+//    return writePolicy;
+//  }
 }
+

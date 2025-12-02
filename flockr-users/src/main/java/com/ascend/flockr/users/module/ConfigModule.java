@@ -1,6 +1,6 @@
 package com.ascend.flockr.users.module;
 
-import com.ascend.flockr.common.config.AerospikeConfig;
+import com.ascend.flockr.users.config.AerospikeConfig;
 import com.ascend.flockr.users.config.HttpServerConfig;
 import com.ascend.flockr.users.util.ConfigProvider;
 import com.google.inject.AbstractModule;

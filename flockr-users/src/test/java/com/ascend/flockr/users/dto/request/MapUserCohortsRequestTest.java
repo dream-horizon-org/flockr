@@ -2,7 +2,7 @@ package com.ascend.flockr.users.dto.request;
 
 import static org.junit.Assert.*;
 
-import com.ascend.flockr.common.constants.Constants;
+import com.ascend.flockr.users.constants.Constants;
 import org.junit.Before;
 import org.junit.Test;
 

@@ -1,8 +1,8 @@
 package com.ascend.flockr.users.dto.request;
 
-import com.ascend.flockr.common.annotation.DateTimeFormat;
-import com.ascend.flockr.common.annotation.validators.Validator;
-import com.ascend.flockr.common.utils.CommonUtils;
+import com.ascend.flockr.users.annotation.DateTimeFormat;
+import com.ascend.flockr.users.annotation.validators.Validator;
+import com.ascend.flockr.users.util.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

@@ -3,7 +3,7 @@ package com.ascend.flockr.users.service.impl;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import com.ascend.flockr.common.client.Aerospike;
+import com.ascend.flockr.users.client.Aerospike;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
 import org.junit.Before;

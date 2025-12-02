@@ -2,10 +2,10 @@ package com.ascend.flockr.users.service.impl;
 
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.ResultCode;
-import com.ascend.flockr.common.client.Aerospike;
-import com.ascend.flockr.common.config.AerospikeConfig;
-import com.ascend.flockr.common.constants.Constants;
-import com.ascend.flockr.common.exception.errors.DefinedErrors;
+import com.ascend.flockr.users.client.Aerospike;
+import com.ascend.flockr.users.config.AerospikeConfig;
+import com.ascend.flockr.users.constants.Constants;
+import com.ascend.flockr.users.exception.errors.DefinedErrors;
 import com.ascend.flockr.users.constants.BulkCohortAssignmentConstants;
 import com.ascend.flockr.users.dto.BulkOperationResult;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
