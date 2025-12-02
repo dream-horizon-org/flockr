@@ -219,11 +219,12 @@ public class AudienceServiceImpl implements AudienceService {
   /**
    * Creates rules for a given audience using the data from the request.
    *
-   * <p>This method first validates the request asynchronously on a worker thread to avoid blocking
-   * the event loop (SQL query parsing can be CPU-intensive). After validation succeeds, each rule
-   * in the request is converted to a {@link RuleMeta} with {@link SourceInfo} configuration and
-   * encrypted project ID, actor and status values before being persisted via the {@link
-   * RuleRepository}.
+   * <p>This method first verifies that the audience exists and belongs to the same project
+   * (xProjectId) before proceeding. It then validates the request asynchronously on a worker thread
+   * to avoid blocking the event loop (SQL query parsing can be CPU-intensive). After validation
+   * succeeds, each rule in the request is converted to a {@link RuleMeta} with {@link SourceInfo}
+   * configuration and encrypted project ID, actor and status values before being persisted via the
+   * {@link RuleRepository}.
    *
    * @param xProjectId the encrypted project identifier from the request header
    * @param request the request containing the audience identifier and rule definitions
@@ -231,6 +232,8 @@ public class AudienceServiceImpl implements AudienceService {
    *     null)
    * @return a {@link Single} emitting {@code true} if the rules were created successfully,
    *     otherwise propagating an error
+   * @throws ForbiddenAccessException if the audience does not belong to the specified xProjectId
+   * @throws ResourceNotFoundException if the audience does not exist
    */
   @Override
   public Single<Boolean> createRules(String xProjectId, CreateRulesRequest request, String actor) {
@@ -239,8 +242,33 @@ public class AudienceServiceImpl implements AudienceService {
 
     String createdBy = (actor != null && !actor.isBlank()) ? actor : DEFAULT_ACTOR;
 
-    // Validate request asynchronously on worker thread (non-blocking)
-    return AsyncJakartaValidationUtil.validate(request)
+    // First verify audience exists and belongs to the same xProjectId
+    return audienceRepository
+        .getAudienceById(xProjectId, request.getAudienceId())
+        .onErrorResumeNext(
+            error -> {
+              if (error instanceof NoSuchElementException) {
+                log.warn(
+                    "Audience {} not found or does not belong to project {}",
+                    request.getAudienceId(),
+                    xProjectId);
+                return Single.error(
+                    new ForbiddenAccessException(
+                        "PROJECT_MISMATCH",
+                        "Audience "
+                            + request.getAudienceId()
+                            + " does not exist or does not belong to the specified project"));
+              }
+              return Single.error(error);
+            })
+        .doOnSuccess(
+            audience ->
+                log.debug(
+                    "Verified audience {} belongs to project {}",
+                    audience.getAudienceId(),
+                    xProjectId))
+        // Validate request asynchronously on worker thread (non-blocking)
+        .flatMap(audience -> AsyncJakartaValidationUtil.validate(request))
         .doOnSuccess(
             validRequest ->
                 log.debug("Validation successful for {} rules", validRequest.getRules().size()))
@@ -280,6 +308,11 @@ public class AudienceServiceImpl implements AudienceService {
               if (error instanceof AsyncJakartaValidationUtil.ValidationException) {
                 log.warn(
                     "Validation failed for audience {}: {}",
+                    request.getAudienceId(),
+                    error.getMessage());
+              } else if (error instanceof ForbiddenAccessException) {
+                log.warn(
+                    "Access denied for audience {}: {}",
                     request.getAudienceId(),
                     error.getMessage());
               } else {

@@ -14,10 +14,8 @@ import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.ext.web.client.HttpRequest;
 import io.vertx.rxjava3.ext.web.client.HttpResponse;
-import io.vertx.rxjava3.ext.web.client.predicate.ResponsePredicateResult;
 import java.net.ConnectException;
 import java.util.Objects;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -109,22 +107,6 @@ public class WebClientImpl implements WebClient {
         circuitBreaker.getMetrics().getNumberOfFailedCalls(),
         circuitBreaker.getMetrics().getFailureRate(),
         circuitBreaker.getState());
-  }
-
-  private <T extends Number> void pushGaugeMetricToDD(
-      String aspectName, T metricValue, String... tags) {}
-
-  private Function<HttpResponse<Void>, ResponsePredicateResult> validateHttpResponse() {
-    return httpResponse -> {
-      if (httpResponse.statusCode() < 200 || httpResponse.statusCode() > 299)
-        return ResponsePredicateResult.failure(
-            "HTTP Error from Remote Service "
-                + "Status Code: "
-                + httpResponse.statusCode()
-                + " Status Message: "
-                + httpResponse.statusMessage());
-      return ResponsePredicateResult.success();
-    };
   }
 
   private Consumer<Throwable> httpErrorResponseConsumer(HttpRequest<Buffer> request) {

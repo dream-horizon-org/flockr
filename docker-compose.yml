@@ -1,12 +1,45 @@
 services:
+  spark-master:
+    image: apache/spark:3.5.3
+    container_name: flockr-spark-master
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+    ports:
+      - '8090:8080'   # Spark Master Web UI
+      - '7077:7077'   # Spark Master RPC port for workers
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - flockr-network
+
+  spark-worker:
+    image: apache/spark:3.5.3
+    container_name: flockr-spark-worker
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    ports:
+      - '8091:8081'   # Spark Worker Web UI
+    networks:
+      - flockr-network
+
   # PostgreSQL 16 Database
   postgres:
     image: postgres:16-alpine
     container_name: flockr-postgres
+    env_file:
+      - env.docker
     environment:
-      POSTGRES_DB: flockr
-      POSTGRES_USER: flockr_user
-      POSTGRES_PASSWORD: flockr_password
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -70,27 +103,8 @@ services:
         condition: service_healthy
       flink-jobmanager:
         condition: service_healthy
-    environment:
-      # Application
-      - ENV=docker
-      - TEAM_SUFFIX=
-      - PRIVATE_HOSTED_ZONE=
-      
-      # PostgreSQL
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=flockr_user
-      - POSTGRES_PASSWORD=flockr_password
-      - POSTGRES_DATABASE=flockr
-      
-      # Flink
-      - FLINK_HOST=flink-jobmanager
-      - FLINK_PORT=8081
-      - FLINK_CONNECT_TIMEOUT=30000
-      - FLINK_REQUEST_TIMEOUT=60000
-      
-      # JVM Options
-      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC
+    env_file:
+      - env.docker
     ports:
       - "8080:8080"
     volumes:
