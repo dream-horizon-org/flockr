@@ -33,4 +33,3 @@ public class GuiceInjector implements ClassInjector {
     return AppContext.getInstance(clazz);
   }
 }
-

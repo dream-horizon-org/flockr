@@ -31,8 +31,8 @@ import java.util.Map;
  *
  * <p><strong>Implementation:</strong>
  *
- * <p>The default implementation is {@link com.ascend.flockr.users.client.impl.AerospikeImpl},
- * which uses the Aerospike Java client library.
+ * <p>The default implementation is {@link com.ascend.flockr.users.client.impl.AerospikeImpl}, which
+ * uses the Aerospike Java client library.
  *
  * @author Flockr Team
  * @since 1.0
@@ -148,4 +148,3 @@ public interface Aerospike {
    */
   Single<Boolean> removeCohort(String id, String cohort, String source, String setName);
 }
-

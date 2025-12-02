@@ -27,4 +27,3 @@ public class DefinedException extends RuntimeException {
     super(message);
   }
 }
-

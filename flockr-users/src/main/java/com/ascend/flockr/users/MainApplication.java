@@ -1,6 +1,5 @@
 package com.ascend.flockr.users;
 
-import com.ascend.flockr.users.AbstractMainApplication;
 import com.ascend.flockr.users.module.AerospikeModule;
 import com.ascend.flockr.users.module.ConfigModule;
 import com.ascend.flockr.users.module.DefaultModule;

@@ -55,4 +55,3 @@ public class AerospikeConfig {
   /** Name of the bin storing cohort expiry timestamps (map: cohort name → expiry timestamp). */
   private String cohortExpiryBin;
 }
-

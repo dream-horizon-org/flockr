@@ -277,4 +277,3 @@ public enum DefinedErrors implements RestError {
   /** HTTP status code to return for this error. */
   private final int httpStatusCode;
 }
-

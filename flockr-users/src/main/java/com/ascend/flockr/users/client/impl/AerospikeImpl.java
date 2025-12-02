@@ -5,7 +5,6 @@ import com.aerospike.client.Operation;
 import com.aerospike.client.Record;
 import com.aerospike.client.Value;
 import com.aerospike.client.cdt.*;
-import com.aerospike.client.policy.BatchWritePolicy;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.Replica;
 import com.aerospike.client.policy.WritePolicy;
@@ -303,11 +302,10 @@ public class AerospikeImpl implements Aerospike {
             });
   }
 
-//  private BatchWritePolicy getBatchWritePolicy() {
-//    BatchWritePolicy writePolicy = new BatchWritePolicy();
-//    writePolicy.maxRetries = MAX_RETRIES;
-//    writePolicy.sendKey = true;
-//    return writePolicy;
-//  }
+  //  private BatchWritePolicy getBatchWritePolicy() {
+  //    BatchWritePolicy writePolicy = new BatchWritePolicy();
+  //    writePolicy.maxRetries = MAX_RETRIES;
+  //    writePolicy.sendKey = true;
+  //    return writePolicy;
+  //  }
 }
-

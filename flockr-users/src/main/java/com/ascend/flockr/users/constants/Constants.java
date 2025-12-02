@@ -34,8 +34,8 @@ public class Constants {
    *
    * <p>Example: {@code "2024-01-15 14:30:00"}
    *
-   * <p>This pattern is used by {@link com.ascend.flockr.users.util.CommonUtils#getFormatter()}
-   * for parsing and formatting dates.
+   * <p>This pattern is used by {@link com.ascend.flockr.users.util.CommonUtils#getFormatter()} for
+   * parsing and formatting dates.
    */
   public static final String DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
@@ -88,4 +88,3 @@ public class Constants {
     throw new UnsupportedOperationException("Constructor Invocation Unavailable for Constants");
   }
 }
-

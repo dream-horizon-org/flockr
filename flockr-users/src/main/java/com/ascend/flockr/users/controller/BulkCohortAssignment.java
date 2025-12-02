@@ -1,8 +1,8 @@
 package com.ascend.flockr.users.controller;
 
-import com.ascend.flockr.users.exception.errors.DefinedErrors;
 import com.ascend.flockr.users.dto.BulkOperationResult;
 import com.ascend.flockr.users.dto.ResponseEntity;
+import com.ascend.flockr.users.exception.errors.DefinedErrors;
 import com.ascend.flockr.users.service.UserCohortsService;
 import com.ascend.flockr.users.util.SetNameUtil;
 import com.dream11.rest.util.ExceptionUtil;

@@ -1,9 +1,9 @@
 package com.ascend.flockr.users.verticle;
 
+import com.ascend.flockr.users.config.HttpServerConfig;
 import com.ascend.flockr.users.constants.Constants;
 import com.ascend.flockr.users.guice.AppContext;
 import com.ascend.flockr.users.util.CommonUtils;
-import com.ascend.flockr.users.config.HttpServerConfig;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.vertx.core.DeploymentOptions;

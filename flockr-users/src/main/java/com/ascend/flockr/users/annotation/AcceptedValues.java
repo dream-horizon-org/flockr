@@ -63,4 +63,3 @@ public @interface AcceptedValues {
    */
   Class<? extends Payload>[] payload() default {};
 }
-

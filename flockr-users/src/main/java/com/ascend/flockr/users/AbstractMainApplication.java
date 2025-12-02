@@ -154,4 +154,3 @@ public abstract class AbstractMainApplication extends Launcher {
    */
   protected abstract List<Module> getGuiceModules(Vertx vertx);
 }
-

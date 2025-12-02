@@ -78,4 +78,3 @@ public class AcceptedValuesConstraintValidator
     return acceptedValues.contains(value);
   }
 }
-

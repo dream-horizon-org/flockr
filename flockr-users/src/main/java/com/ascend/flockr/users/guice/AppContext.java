@@ -108,4 +108,3 @@ public final class AppContext {
     return instance().injector.getInstance(clazz);
   }
 }
-
