@@ -54,7 +54,7 @@ class AsyncJakartaValidationUtilTest {
 
   @Test
   @DisplayName("Should validate valid BatchConfiguration async without blocking event loop")
-  void testValidBatchConfigurationAsync() {
+  void testValidBatchConfigurationAsync() throws InterruptedException {
     // Arrange
     SourceInfo sourceInfo = SourceInfo.builder().id(1L).build();
 
@@ -71,6 +71,7 @@ class AsyncJakartaValidationUtilTest {
     // Assert
     result
         .test()
+        .await()
         .assertComplete()
         .assertNoErrors()
         .assertValue(
@@ -82,7 +83,7 @@ class AsyncJakartaValidationUtilTest {
 
   @Test
   @DisplayName("Should fail validation for invalid SQL query async")
-  void testInvalidSqlQueryAsync() {
+  void testInvalidSqlQueryAsync() throws InterruptedException {
     // Arrange
     SourceInfo sourceInfo = SourceInfo.builder().id(1L).build();
 
@@ -99,6 +100,7 @@ class AsyncJakartaValidationUtilTest {
     // Assert
     result
         .test()
+        .await()
         .assertError(AsyncJakartaValidationUtil.ValidationException.class)
         .assertError(
             error -> {
@@ -109,7 +111,7 @@ class AsyncJakartaValidationUtilTest {
 
   @Test
   @DisplayName("Should validate CreateRulesRequest async")
-  void testValidateCreateRulesRequestAsync() {
+  void testValidateCreateRulesRequestAsync() throws InterruptedException {
     // Arrange
     SourceInfo sourceInfo = SourceInfo.builder().id(1L).build();
 
@@ -139,6 +141,7 @@ class AsyncJakartaValidationUtilTest {
     // Assert
     result
         .test()
+        .await()
         .assertComplete()
         .assertNoErrors()
         .assertValue(
