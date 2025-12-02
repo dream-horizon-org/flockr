@@ -12,6 +12,7 @@ import io.ascend.flockr.admin.domain.rule.RuleAction;
 import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Row;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.List;
@@ -169,7 +170,7 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
       RuleAction ruleAction,
       TaskType type) {
     final Tuple params =
-        io.vertx.rxjava3.sqlclient.Tuple.tuple()
+        Tuple.tuple()
             .addLong(audienceId)
             .addLong(taskId)
             .addString(action != null ? action.name() : null)
@@ -179,11 +180,11 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
             .addString(type != null ? type.ref() : null)
             .addValue(
                 value != null
-                    ? io.vertx.core.json.JsonObject.mapFrom(value.getOldValue())
+                    ? JsonObject.mapFrom(value.getOldValue())
                     : null)
             .addValue(
                 value != null
-                    ? io.vertx.core.json.JsonObject.mapFrom(value.getNewValue())
+                    ? JsonObject.mapFrom(value.getNewValue())
                     : null);
 
     return postgresWriterClient
@@ -228,10 +229,10 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
         }
         String typeRef = row.getString("type");
         def.setType(typeRef != null ? TaskType.fromRef(typeRef) : null);
-        AuditLogValue v = new AuditLogValue();
-        v.setOldValue(row.getValue("old_value"));
-        v.setNewValue(row.getValue("new_value"));
-        def.setValue(v);
+        AuditLogValue value = new AuditLogValue();
+          value.setOldValue(row.getValue("old_value"));
+          value.setNewValue(row.getValue("new_value"));
+        def.setValue(value);
         return def;
       };
 }

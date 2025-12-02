@@ -896,8 +896,8 @@ public class AudienceServiceImpl implements AudienceService {
                                             .collect(
                                                     java.util.stream.Collectors.groupingBy(
                                                             it -> toDateString(it.performedAt()),
-                                                            java.util.LinkedHashMap::new,
-                                                            java.util.stream.Collectors.toList()))
+                                                            java.util.LinkedHashMap::new,    // preserve insertion order of date groups
+                                                            java.util.stream.Collectors.toList()))     // items within each date also keep encounter order
                                             .entrySet()
                                             .stream()
                                             .map(e -> new AuditLogResponse(e.getKey(), e.getValue()))
