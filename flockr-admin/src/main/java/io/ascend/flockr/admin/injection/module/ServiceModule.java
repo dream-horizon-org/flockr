@@ -153,5 +153,6 @@ public class ServiceModule extends DefaultModule {
     bind(HealthCheckService.class).to(HealthCheckServiceImpl.class);
     bind(DataConnectorService.class).to(DataConnectorServiceImpl.class);
     bind(AudienceService.class).to(AudienceServiceImpl.class);
+    bind(AudienceImportService.class).to(AudienceImportServiceImpl.class);
   }
 }

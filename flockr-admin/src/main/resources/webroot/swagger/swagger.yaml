@@ -9,6 +9,8 @@ servers:
 tags:
 - name: Audiences
   description: Audience management APIs
+- name: Audience Imports
+  description: CSV import API for STATIC audiences
 - name: Data Connectors
   description: Data source and sink management APIs
 paths:
@@ -368,6 +370,65 @@ paths:
                 $ref: '#/components/schemas/Failure'
         "404":
           description: Rule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/audiences/{audienceId}/imports:
+    post:
+      tags:
+      - Audience Imports
+      summary: Import CSV data for a STATIC audience
+      description: Uploads a CSV file for a STATIC audience. The data is streamed
+        and pushed to configured sinks. This endpoint is only available for audiences
+        with type=STATIC. Send the file as multipart/form-data with field name 'file'.
+      operationId: createImport
+      parameters:
+      - name: X-Project-Id
+        in: header
+        description: Encrypted project identifier
+        required: true
+        schema:
+          type: string
+      - name: email
+        in: header
+        description: Actor email/username
+        schema:
+          type: string
+          default: system
+      - name: audienceId
+        in: path
+        description: ID of the STATIC audience
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CsvImportForm'
+      responses:
+        "200":
+          description: Import completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request - Invalid CSV or audience type is not STATIC
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "404":
+          description: Audience not found
           content:
             application/json:
               schema:
@@ -1095,6 +1156,13 @@ components:
           - ADD
           - REMOVE
         email:
+          type: string
+    CsvImportForm:
+      type: object
+      properties:
+        file:
+          type: object
+        fileName:
           type: string
     DataConnectorType:
       type: object

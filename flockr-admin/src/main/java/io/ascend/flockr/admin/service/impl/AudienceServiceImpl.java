@@ -2,6 +2,7 @@ package io.ascend.flockr.admin.service.impl;
 
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
+import io.ascend.flockr.admin.domain.audience.AudienceType;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.domain.rule.*;
@@ -261,10 +262,21 @@ public class AudienceServiceImpl implements AudienceService {
               }
               return Single.error(error);
             })
+        // Validate that the audience type allows rules
+        .flatMap(
+            audience -> {
+              if (AudienceType.STATIC.name().equals(audience.getType())) {
+                log.warn(
+                    "Cannot add rules to STATIC audience {}. Use CSV import instead.",
+                    audience.getAudienceId());
+                return Single.error(ErrorEnum.RULES_NOT_ALLOWED_FOR_STATIC_AUDIENCE.toException());
+              }
+              return Single.just(audience);
+            })
         .doOnSuccess(
             audience ->
                 log.debug(
-                    "Verified audience {} belongs to project {}",
+                    "Verified audience {} belongs to project {} and allows rules",
                     audience.getAudienceId(),
                     xProjectId))
         // Validate request asynchronously on worker thread (non-blocking)
