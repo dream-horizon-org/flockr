@@ -26,4 +26,14 @@ public class CsvImportForm {
   @FormParam("fileName")
   @PartType(MediaType.TEXT_PLAIN)
   private String fileName;
+
+  /** The action to perform: "add" or "remove". Defaults to "add" if not specified. */
+  @FormParam("action")
+  @PartType(MediaType.TEXT_PLAIN)
+  private String action;
+
+  /** Returns the action, defaulting to "add" if not specified. */
+  public String getActionOrDefault() {
+    return (action != null && !action.isBlank()) ? action.toLowerCase() : "add";
+  }
 }

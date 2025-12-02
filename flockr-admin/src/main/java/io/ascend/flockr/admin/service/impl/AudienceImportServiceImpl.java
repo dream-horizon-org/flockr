@@ -1,7 +1,9 @@
 package io.ascend.flockr.admin.service.impl;
 
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.sink.SinkPusherRegistry;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
+import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.audience.AudienceType;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.exception.ErrorEnum;
@@ -42,6 +44,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AudienceImportServiceImpl implements AudienceImportService {
   private final AudienceRepository audienceRepository;
   private final DataConnectorRepository dataConnectorRepository;
+  private final SinkPusherRegistry sinkPusherRegistry;
 
   private static final int BATCH_SIZE = 1000;
 
@@ -51,6 +54,7 @@ public class AudienceImportServiceImpl implements AudienceImportService {
 
     log.info("Processing import for audience {} with file {}", audienceId, form.getFileName());
     String fileName = form.getFileName() != null ? form.getFileName() : "upload.csv";
+    String action = form.getActionOrDefault();
     InputStream inputStream = form.getFile();
 
     // Step 1: Verify audience exists and is of type STATIC
@@ -81,7 +85,8 @@ public class AudienceImportServiceImpl implements AudienceImportService {
                         sinks ->
                             // Execute blocking I/O on worker thread pool, NOT event loop
                             Single.fromCallable(
-                                    () -> streamAndPushToSinks(inputStream, sinks, audience))
+                                    () ->
+                                        streamAndPushToSinks(inputStream, sinks, audience, action))
                                 .subscribeOn(Schedulers.io())
                                 .map(
                                     recordCount ->
@@ -94,9 +99,10 @@ public class AudienceImportServiceImpl implements AudienceImportService {
         .doOnSuccess(
             response ->
                 log.info(
-                    "Import completed for audience {} - {} records pushed to sinks",
+                    "Import completed for audience {} - {} records pushed to sinks with action '{}'",
                     audienceId,
-                    response.getRecordCount()))
+                    response.getRecordCount(),
+                    action))
         .doOnError(
             error ->
                 log.error(
@@ -108,27 +114,40 @@ public class AudienceImportServiceImpl implements AudienceImportService {
   /**
    * Streams through the CSV input and pushes records to sinks in batches. Memory usage is
    * O(batchSize) instead of O(fileSize).
+   *
+   * <p>Expected CSV format: user_id as the first column. Other columns are ignored.
    */
   private long streamAndPushToSinks(
-      InputStream inputStream, List<DataSinkDetails> sinks, AudienceMeta audience)
+      InputStream inputStream, List<DataSinkDetails> sinks, AudienceMeta audience, String action)
       throws IOException {
 
-    List<String> batch = new ArrayList<>(BATCH_SIZE);
+    List<AudienceRecord> batch = new ArrayList<>(BATCH_SIZE);
     long totalRecords = 0;
     boolean isHeader = true;
+    int userIdColumnIndex = 0; // Default: first column is user_id
 
     try (BufferedReader reader =
         new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
 
       String line;
       while ((line = reader.readLine()) != null) {
-        // Skip header row
+        // Parse header to find user_id column
         if (isHeader) {
+          userIdColumnIndex = findUserIdColumnIndex(line);
           isHeader = false;
           continue;
         }
 
-        batch.add(line);
+        // Extract userId from CSV line
+        String userId = extractUserId(line, userIdColumnIndex);
+        if (userId == null || userId.isBlank()) {
+          log.warn("Skipping row with empty userId: {}", line);
+          continue;
+        }
+
+        // Create structured AudienceRecord
+        AudienceRecord record = AudienceRecord.fromAudience(audience, userId, action);
+        batch.add(record);
         totalRecords++;
 
         // Push batch when full
@@ -144,33 +163,53 @@ public class AudienceImportServiceImpl implements AudienceImportService {
       }
     }
 
-    log.info("Streamed {} records for audience {}", totalRecords, audience.getAudienceId());
+    log.info(
+        "Streamed {} records for audience {} with action '{}'",
+        totalRecords,
+        audience.getAudienceId(),
+        action);
     return totalRecords;
   }
 
-  /** Pushes a batch of CSV records to the configured sinks. */
+  /** Finds the column index for user_id in the CSV header. */
+  private int findUserIdColumnIndex(String headerLine) {
+    String[] headers = headerLine.split(",");
+    for (int i = 0; i < headers.length; i++) {
+      String header = headers[i].trim().toLowerCase();
+      if (header.equals("user_id") || header.equals("userid") || header.equals("id")) {
+        return i;
+      }
+    }
+    // Default to first column if no user_id header found
+    return 0;
+  }
+
+  /** Extracts the userId from a CSV line at the specified column index. */
+  private String extractUserId(String line, int columnIndex) {
+    String[] values = line.split(",");
+    if (columnIndex < values.length) {
+      return values[columnIndex].trim().replace("\"", "");
+    }
+    return null;
+  }
+
+  /** Pushes a batch of audience records to the configured sinks. */
   private void pushBatchToSinks(
-      List<String> batch, List<DataSinkDetails> sinks, AudienceMeta audience) {
+      List<AudienceRecord> batch, List<DataSinkDetails> sinks, AudienceMeta audience) {
 
     if (sinks.isEmpty()) {
       log.debug("No sinks configured, skipping push for {} records", batch.size());
       return;
     }
 
-    // TODO: Implement actual sink push logic based on sink type
     log.debug(
         "Pushing batch of {} records to {} sinks for audience {}",
         batch.size(),
         sinks.size(),
         audience.getAudienceId());
 
-    for (DataSinkDetails sink : sinks) {
-      log.debug(
-          "Would push {} records to sink: {} (type: {})",
-          batch.size(),
-          sink.getName(),
-          sink.getType());
-    }
+    // Push to all sinks and block until complete (we're already on worker thread)
+    sinkPusherRegistry.pushBatchToAll(batch, sinks, audience.getAudienceId()).blockingAwait();
   }
 
   /** Fetches data sink details for the given sink IDs. */

@@ -1164,6 +1164,10 @@ components:
           type: object
         fileName:
           type: string
+        action:
+          type: string
+        actionOrDefault:
+          type: string
     DataConnectorType:
       type: object
       properties:

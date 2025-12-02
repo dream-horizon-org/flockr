@@ -2,7 +2,7 @@ package io.ascend.flockr.admin.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.ascend.flockr.admin.domain.dataconnectors.config.ConnectorConfig;
+import com.google.inject.Inject;
 import io.ascend.flockr.admin.domain.dataconnectors.config.SinkConfig;
 import io.ascend.flockr.admin.domain.dataconnectors.config.SourceConfig;
 import io.ascend.flockr.admin.exception.ConfigParsingException;
@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @UtilityClass
 public final class ConfigParser {
 
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+  @Inject private static ObjectMapper objectMapper;
 
   /**
    * Parses JsonObject to SourceConfig implementation using JsonSubTypes. Automatically detects the
@@ -68,40 +68,24 @@ public final class ConfigParser {
   }
 
   /**
-   * Parses JsonObject to ConnectorConfig implementation using JsonSubTypes. Automatically detects
-   * whether it's a SourceConfig or SinkConfig based on connectorKind.
+   * Parses JsonObject to a specific SinkConfig type with compile-time type safety.
    *
+   * @param <T> the expected SinkConfig type
    * @param configJson the JsonObject config from database
-   * @param connectorKind the connector kind ("SOURCE" or "SINK")
-   * @return parsed ConnectorConfig implementation
-   * @throws ConfigParsingException if parsing fails
+   * @param expectedType the expected config class
+   * @return parsed config of the expected type
+   * @throws ConfigParsingException if parsing fails or type doesn't match
    */
-  public static ConnectorConfig parseConfig(JsonObject configJson, String connectorKind) {
-    if (configJson == null) {
-      throw new ConfigParsingException(connectorKind, "Config JsonObject cannot be null");
-    }
-    if (connectorKind == null) {
-      throw new ConfigParsingException("Connector kind cannot be null");
-    }
-
-    try {
-      if ("SOURCE".equalsIgnoreCase(connectorKind)) {
-        return parseSourceConfig(configJson);
-      } else if ("SINK".equalsIgnoreCase(connectorKind)) {
-        return parseSinkConfig(configJson);
-      } else {
-        throw new ConfigParsingException(
-            connectorKind,
-            "Invalid connector kind: " + connectorKind + ". Must be 'SOURCE' or 'SINK'");
-      }
-    } catch (ConfigParsingException e) {
-      throw e;
-    } catch (Exception e) {
-      log.error("Failed to parse config for kind {}: {}", connectorKind, configJson, e);
+  public static <T extends SinkConfig> T parseSinkConfig(
+      JsonObject configJson, Class<T> expectedType) {
+    SinkConfig config = parseSinkConfig(configJson);
+    if (!expectedType.isInstance(config)) {
       throw new ConfigParsingException(
-          connectorKind,
-          String.format("Failed to parse %s config: %s", connectorKind, e.getMessage()),
-          e);
+          "SINK",
+          String.format(
+              "Expected config type %s but got %s",
+              expectedType.getSimpleName(), config.getClass().getSimpleName()));
     }
+    return expectedType.cast(config);
   }
 }
