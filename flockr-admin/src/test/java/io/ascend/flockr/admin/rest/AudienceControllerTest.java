@@ -8,9 +8,15 @@ import static org.mockito.Mockito.when;
 import io.ascend.flockr.admin.io.ResponseEntity;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerAction;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerRequest;
+import io.ascend.flockr.admin.io.response.AuditLogResponse;
+import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.service.AudienceService;
 import io.reactivex.rxjava3.core.Completable;
+
+import java.util.List;
 import java.util.concurrent.CompletionStage;
+
+import io.reactivex.rxjava3.core.Single;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -46,5 +52,42 @@ public class AudienceControllerTest {
     verify(audienceService)
         .updateAudienceOwner(
             eq(tenantId), eq(projectId), eq(audienceId), eq(actingEmail), eq(request));
+  }
+
+  @Test
+  public void auditLog_returnsSuccessAndDelegatesToService() {
+    // Arrange
+    AudienceService audienceService = mock(AudienceService.class);
+    AudienceController controller = new AudienceController(audienceService);
+
+    Long audienceId = 42L;
+    int pageSize = 10;
+    int pageNum = 0;
+    boolean withPagination = true;
+
+    PaginatedResponse<AuditLogResponse>
+        payload =
+            new PaginatedResponse<>(
+                new PaginatedResponse.PageInfo(
+                    pageNum, pageSize, false),
+                java.util.List.of(
+                    new AuditLogResponse(
+                        "2025-11-30", List.of())));
+
+    when(audienceService.getAudienceAuditLog(audienceId, pageSize, pageNum, withPagination))
+        .thenReturn(Single.just(payload));
+
+    // Act
+    CompletionStage<
+            ResponseEntity.Success<
+                PaginatedResponse<
+                    AuditLogResponse>>>
+        stage = controller.auditLog(audienceId, pageSize, pageNum, withPagination);
+    var response = stage.toCompletableFuture().join();
+
+    // Assert
+    Assert.assertNotNull(response);
+    Assert.assertEquals(payload, response.data());
+    verify(audienceService).getAudienceAuditLog(audienceId, pageSize, pageNum, withPagination);
   }
 }
