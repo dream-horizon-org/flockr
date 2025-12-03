@@ -6,3 +6,195 @@ info:
 servers:
 - url: http://localhost:8081
   description: Local development server
+paths:
+  /flockr/users/assignments/bulk:
+    post:
+      operationId: bulkAssignUsers
+      parameters:
+      - name: x-project-key
+        in: header
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MultipartFormDataInput'
+      responses:
+        default:
+          description: default response
+          content:
+            application/json: {}
+  /flockr/users/get-cohorts:
+    get:
+      operationId: handle
+      parameters:
+      - name: userId
+        in: header
+        schema:
+          type: string
+      - name: x-project-key
+        in: header
+        schema:
+          type: string
+      responses:
+        default:
+          description: default response
+          content:
+            application/json: {}
+  /healthcheck:
+    get:
+      operationId: handle_1
+      responses:
+        default:
+          description: default response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+  /flockr/users/map-cohorts:
+    post:
+      operationId: handle_2
+      parameters:
+      - name: userId
+        in: header
+        schema:
+          type: string
+      - name: x-project-key
+        in: header
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapUserCohortsRequest'
+      responses:
+        default:
+          description: default response
+          content:
+            application/json:
+              schema:
+                type: object
+  /flockr/users/map-cohorts/batch:
+    post:
+      operationId: handleBatch
+      parameters:
+      - name: x-project-key
+        in: header
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/BatchMapUserCohortsRequest'
+      responses:
+        default:
+          description: default response
+          content:
+            application/json: {}
+components:
+  schemas:
+    InputPart:
+      type: object
+      properties:
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
+        contentTypeFromMessage:
+          type: boolean
+        bodyAsString:
+          type: string
+        headers:
+          type: object
+          properties:
+            empty:
+              type: boolean
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        body:
+          type: object
+        fileName:
+          type: string
+    MediaType:
+      type: object
+      properties:
+        type:
+          type: string
+        subtype:
+          type: string
+        parameters:
+          type: object
+          additionalProperties:
+            type: string
+        wildcardType:
+          type: boolean
+        wildcardSubtype:
+          type: boolean
+    MultipartFormDataInput:
+      type: object
+      properties:
+        formDataMap:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/InputPart'
+        preamble:
+          type: string
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/InputPart'
+    MultivaluedMapStringString:
+      type: object
+      properties:
+        empty:
+          type: boolean
+      additionalProperties:
+        type: array
+        items:
+          type: string
+    JsonObject:
+      type: object
+      properties:
+        map:
+          type: object
+          additionalProperties:
+            type: object
+        empty:
+          type: boolean
+    MapUserCohortsRequest:
+      required:
+      - action
+      - cohort_key
+      - expire_at
+      type: object
+      properties:
+        action:
+          type: string
+        cohort_key:
+          type: string
+        expire_at:
+          type: string
+    BatchMapUserCohortsRequest:
+      required:
+      - action
+      - cohort_key
+      - expire_at
+      - user_id
+      type: object
+      properties:
+        action:
+          type: string
+        user_id:
+          type: integer
+          format: int64
+        cohort_key:
+          type: string
+        expire_at:
+          type: string
