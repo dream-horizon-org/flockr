@@ -18,8 +18,6 @@
 
         <main.class>com.ascend.flockr.users.MainApplication</main.class>
         <main.verticle>com.ascend.flockr.users.verticle.MainVerticle</main.verticle>
-        <app.release.artifact>target/flockr</app.release.artifact>
-        <resources.directory>src/main/resources</resources.directory>
 
         <swagger.configurationFilePath>
             ${project.basedir}/src/main/resources/config/swagger/swagger-info.json
@@ -37,6 +35,26 @@
             <artifactId>config</artifactId>
             <version>1.4.3</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.aerospike</groupId>
+            <artifactId>aerospike-client</artifactId>
+            <version>6.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.d11</groupId>
+            <artifactId>vertx-aerospike-client</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!-- RESTEasy multipart provider -->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-multipart-provider</artifactId>
+            <version>${resteasy.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>

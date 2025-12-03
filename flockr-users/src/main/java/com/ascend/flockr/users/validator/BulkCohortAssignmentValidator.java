@@ -2,19 +2,18 @@ package com.ascend.flockr.users.validator;
 
 import com.ascend.flockr.users.exception.errors.DefinedErrors;
 import com.dream11.rest.util.ExceptionUtil;
+import java.io.IOException;
+import java.util.List;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 
-import java.io.IOException;
-import java.util.List;
-
 /**
  * Validator for bulk cohort assignment multipart form data.
  *
- * <p>Validates that required form fields (cohort_name and csv_file) are present in the
- * multipart form data.
+ * <p>Validates that required form fields (cohort_name and csv_file) are present in the multipart
+ * form data.
  *
  * @author Flockr Team
  * @since 1.0
@@ -90,4 +89,3 @@ public class BulkCohortAssignmentValidator {
     return parts.get(0);
   }
 }
-

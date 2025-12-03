@@ -44,7 +44,8 @@ public class BulkCohortAssignment {
    * <p>Accepts multipart form data with:
    *
    * <ul>
-   *   <li>{@code csv_file} - CSV file containing comma-separated user identifiers (snake_case for API)
+   *   <li>{@code csv_file} - CSV file containing comma-separated user identifiers (snake_case for
+   *       API)
    *   <li>{@code cohort_name} - Name of the cohort to assign users to (snake_case for API)
    * </ul>
    *

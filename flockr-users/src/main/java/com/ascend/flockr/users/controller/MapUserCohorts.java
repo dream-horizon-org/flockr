@@ -8,11 +8,11 @@ import com.ascend.flockr.users.service.UserCohortsService;
 import com.ascend.flockr.users.validator.BatchMapUserCohortsRequestValidator;
 import com.ascend.flockr.users.validator.HeaderValidator;
 import com.ascend.flockr.users.validator.MapUserCohortsRequestValidator;
-import java.util.List;
 import com.google.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.util.List;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,11 +88,13 @@ public class MapUserCohorts {
    * <p>Endpoint: POST /flockr/users/map-cohorts/batch
    *
    * <p>Headers:
+   *
    * <ul>
    *   <li>{@code x-project-key} - Project key used directly as Aerospike set name (required)
    * </ul>
    *
    * <p>Request body: JSON array of mapping requests, each containing:
+   *
    * <ul>
    *   <li>{@code user_id} - User ID (required, must be positive)
    *   <li>{@code cohort_key} - Cohort name (snake_case for API)
@@ -112,8 +114,7 @@ public class MapUserCohorts {
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public CompletionStage<Response> handleBatch(
-      @HeaderParam("x-project-key") String projectKey,
-      List<BatchMapUserCohortsRequest> requests) {
+      @HeaderParam("x-project-key") String projectKey, List<BatchMapUserCohortsRequest> requests) {
 
     HeaderValidator.validateProjectKeyHeader(projectKey);
     BatchMapUserCohortsRequestValidator.validate(requests);
@@ -127,9 +128,7 @@ public class MapUserCohorts {
         .toCompletionStage();
   }
 
-  /**
-   * Builds an error response for batch mapping failures.
-   */
+  /** Builds an error response for batch mapping failures. */
   private Response buildErrorResponse(Throwable error) {
     log.error("Batch cohort mapping failed", error);
     ResponseEntity.Failure failure =

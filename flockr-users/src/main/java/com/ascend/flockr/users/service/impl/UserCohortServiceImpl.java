@@ -10,8 +10,8 @@ import com.ascend.flockr.users.dto.BulkOperationResult;
 import com.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import com.ascend.flockr.users.exception.errors.DefinedErrors;
-import com.ascend.flockr.users.util.CommonUtils;
 import com.ascend.flockr.users.service.UserCohortsService;
+import com.ascend.flockr.users.util.CommonUtils;
 import com.dream11.rest.exception.RestException;
 import com.dream11.rest.util.ExceptionUtil;
 import com.google.inject.Inject;
@@ -369,7 +369,8 @@ public class UserCohortServiceImpl implements UserCohortsService {
         .buffer(BulkCohortAssignmentConstants.BATCH_SIZE)
         .doOnNext(
             batch ->
-                log.info("Processing batch of {} user IDs for cohort: {}", batch.size(), cohortName))
+                log.info(
+                    "Processing batch of {} user IDs for cohort: {}", batch.size(), cohortName))
         .flatMap(
             batch ->
                 Flowable.fromIterable(batch)
@@ -647,14 +648,14 @@ public class UserCohortServiceImpl implements UserCohortsService {
   /**
    * {@inheritDoc}
    *
-   * <p>Processes each request in the batch concurrently with bounded parallelism.
-   * Each request is processed based on its action (append or remove).
-   * Uses projectKey directly as the Aerospike set name for multi-tenant isolation.
+   * <p>Processes each request in the batch concurrently with bounded parallelism. Each request is
+   * processed based on its action (append or remove). Uses projectKey directly as the Aerospike set
+   * name for multi-tenant isolation.
    */
   @Override
   public Single<BulkOperationResult> batchMapUserCohorts(
       String projectKey, List<BatchMapUserCohortsRequest> requests) {
-    
+
     String setName = projectKey;
     AtomicInteger totalProcessed = new AtomicInteger(0);
     AtomicInteger successCount = new AtomicInteger(0);
@@ -663,9 +664,10 @@ public class UserCohortServiceImpl implements UserCohortsService {
     return Flowable.fromIterable(requests)
         .doOnNext(request -> totalProcessed.incrementAndGet())
         .flatMap(
-            request -> processSingleMappingRequest(request, setName)
-                .doOnSuccess(success -> updateCounters(success, successCount, failedCount))
-                .toFlowable(),
+            request ->
+                processSingleMappingRequest(request, setName)
+                    .doOnSuccess(success -> updateCounters(success, successCount, failedCount))
+                    .toFlowable(),
             BulkCohortAssignmentConstants.MAX_CONCURRENCY)
         .ignoreElements()
         .andThen(createBatchResult(totalProcessed, successCount, failedCount));
@@ -680,12 +682,12 @@ public class UserCohortServiceImpl implements UserCohortsService {
    */
   private Single<Boolean> processSingleMappingRequest(
       BatchMapUserCohortsRequest request, String setName) {
-    
+
     String userKey = String.valueOf(request.getUserId());
     String source = Constants.SOURCE_DREAM11;
-    
+
     Single<Boolean> operation = createOperation(request, userKey, source, setName);
-    
+
     return operation.onErrorResumeNext(
         throwable -> handleOperationError(throwable, request.getUserId()));
   }
@@ -700,11 +702,8 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * @return Single emitting the operation result
    */
   private Single<Boolean> createOperation(
-      BatchMapUserCohortsRequest request,
-      String userKey,
-      String source,
-      String setName) {
-    
+      BatchMapUserCohortsRequest request, String userKey, String source, String setName) {
+
     try {
       if (isAppendAction(request.getAction())) {
         return createAppendOperation(request, userKey, source, setName);
@@ -717,29 +716,20 @@ public class UserCohortServiceImpl implements UserCohortsService {
     }
   }
 
-  /**
-   * Creates an append operation for adding a user to a cohort.
-   */
+  /** Creates an append operation for adding a user to a cohort. */
   private Single<Boolean> createAppendOperation(
-      BatchMapUserCohortsRequest request,
-      String userKey,
-      String source,
-      String setName) {
-    
-    Long cohortExpiry = CommonUtils.getEpochFromExpireAt(request.getExpireAt(), request.getAction());
+      BatchMapUserCohortsRequest request, String userKey, String source, String setName) {
+
+    Long cohortExpiry =
+        CommonUtils.getEpochFromExpireAt(request.getExpireAt(), request.getAction());
     return aerospikeClient.appendCohort(
         userKey, request.getCohortKey(), source, cohortExpiry, setName);
   }
 
-  /**
-   * Creates a remove operation for removing a user from a cohort.
-   */
+  /** Creates a remove operation for removing a user from a cohort. */
   private Single<Boolean> createRemoveOperation(
-      BatchMapUserCohortsRequest request,
-      String userKey,
-      String source,
-      String setName) {
-    
+      BatchMapUserCohortsRequest request, String userKey, String source, String setName) {
+
     return aerospikeClient.removeCohort(userKey, request.getCohortKey(), source, setName);
   }
 
@@ -755,20 +745,23 @@ public class UserCohortServiceImpl implements UserCohortsService {
       log.debug("Aerospike key not found for user {}", userId);
       return Single.just(false);
     }
-    
+
     if (isRestException(throwable)) {
       log.error("Invalid expiryAt for user {}: {}", userId, throwable.getMessage());
       return Single.just(false);
     }
-    
-    log.error("Error processing mapping request for user {}: {}", userId, throwable.getMessage(), throwable);
+
+    log.error(
+        "Error processing mapping request for user {}: {}",
+        userId,
+        throwable.getMessage(),
+        throwable);
     return Single.just(false);
   }
 
-  /**
-   * Updates success/failure counters based on operation result.
-   */
-  private void updateCounters(boolean success, AtomicInteger successCount, AtomicInteger failedCount) {
+  /** Updates success/failure counters based on operation result. */
+  private void updateCounters(
+      boolean success, AtomicInteger successCount, AtomicInteger failedCount) {
     if (success) {
       successCount.incrementAndGet();
     } else {
@@ -776,56 +769,44 @@ public class UserCohortServiceImpl implements UserCohortsService {
     }
   }
 
-  /**
-   * Creates the final batch operation result with statistics.
-   */
+  /** Creates the final batch operation result with statistics. */
   private Single<BulkOperationResult> createBatchResult(
-      AtomicInteger totalProcessed,
-      AtomicInteger successCount,
-      AtomicInteger failedCount) {
-    
+      AtomicInteger totalProcessed, AtomicInteger successCount, AtomicInteger failedCount) {
+
     return Single.fromCallable(
         () -> {
           int total = totalProcessed.get();
           int successes = successCount.get();
           int failures = failedCount.get();
-          
+
           log.info(
               "Batch cohort mapping completed. Total: {}, Success: {}, Failed: {}",
               total,
               successes,
               failures);
-          
-          String message = String.format(
-              "Processed %d mapping requests. Success: %d, Failed: %d",
-              total,
-              successes,
-              failures);
-          
+
+          String message =
+              String.format(
+                  "Processed %d mapping requests. Success: %d, Failed: %d",
+                  total, successes, failures);
+
           return new BulkOperationResult(total, successes, failures, message);
         });
   }
 
-  /**
-   * Checks if the action is an append operation.
-   */
+  /** Checks if the action is an append operation. */
   private boolean isAppendAction(String action) {
     return Constants.ACTION_APPEND.equals(action);
   }
 
-  /**
-   * Checks if the error is a key not found error from Aerospike.
-   */
+  /** Checks if the error is a key not found error from Aerospike. */
   private boolean isKeyNotFoundError(Throwable throwable) {
     return throwable instanceof AerospikeException aerospikeException
         && aerospikeException.getResultCode() == ResultCode.KEY_NOT_FOUND_ERROR;
   }
 
-  /**
-   * Checks if the error is a REST exception (typically validation errors).
-   */
+  /** Checks if the error is a REST exception (typically validation errors). */
   private boolean isRestException(Throwable throwable) {
     return throwable instanceof RestException;
   }
-
 }

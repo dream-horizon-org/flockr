@@ -10,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Validator for MapUserCohortsRequest DTO.
  *
- * <p>Validates that all required fields are present and have valid values. This validator
- * performs presence checks and basic value validation. Format validation (e.g., date format)
- * is handled by Bean Validation annotations on the DTO.
+ * <p>Validates that all required fields are present and have valid values. This validator performs
+ * presence checks and basic value validation. Format validation (e.g., date format) is handled by
+ * Bean Validation annotations on the DTO.
  *
  * @author Flockr Team
  * @since 1.0
@@ -25,6 +25,7 @@ public class MapUserCohortsRequestValidator {
    * Validates a MapUserCohortsRequest object.
    *
    * <p>Validates:
+   *
    * <ul>
    *   <li>Request is not null
    *   <li>cohort_key is present and not empty
@@ -71,4 +72,3 @@ public class MapUserCohortsRequestValidator {
     request.validate();
   }
 }
-

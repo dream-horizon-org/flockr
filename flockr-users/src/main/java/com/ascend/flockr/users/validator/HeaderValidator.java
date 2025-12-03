@@ -8,9 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Utility class for validating HTTP headers.
  *
- * <p>This validator provides methods to validate header presence and basic format requirements.
- * It does not perform format validation (e.g., UUID format, project key format) - those are
- * handled by upstream services.
+ * <p>This validator provides methods to validate header presence and basic format requirements. It
+ * does not perform format validation (e.g., UUID format, project key format) - those are handled by
+ * upstream services.
  *
  * @author Flockr Team
  * @since 1.0
@@ -60,4 +60,3 @@ public class HeaderValidator {
     return Long.parseLong(userIdHeader.trim());
   }
 }
-

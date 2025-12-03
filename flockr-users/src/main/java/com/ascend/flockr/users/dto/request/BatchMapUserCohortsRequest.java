@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
  * Request DTO for a single user cohort mapping in a batch operation.
  *
  * <p>Each request in the batch contains:
+ *
  * <ul>
  *   <li>User ID to map
  *   <li>Cohort key to assign/remove
@@ -26,7 +27,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BatchMapUserCohortsRequest {
-  
+
   @NotNull
   @Positive
   @JsonProperty("user_id")
@@ -36,12 +37,10 @@ public class BatchMapUserCohortsRequest {
   @JsonProperty("cohort_key")
   private String cohortKey;
 
-  @NotBlank
-  private String action;
+  @NotBlank private String action;
 
   @NotBlank
   @DateTimeFormat
   @JsonProperty("expire_at")
   private String expireAt;
 }
-

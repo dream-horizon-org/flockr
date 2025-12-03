@@ -27,8 +27,8 @@ public interface UserCohortsService {
   /**
    * Retrieves the list of active cohorts for a given user.
    *
-   * <p>Active cohorts are those with expiry time greater than current time. The projectKey
-   * is used directly as the Aerospike set name for multi-tenant isolation.
+   * <p>Active cohorts are those with expiry time greater than current time. The projectKey is used
+   * directly as the Aerospike set name for multi-tenant isolation.
    *
    * @param userId the user ID, must be positive
    * @param projectKey the project key used as the Aerospike set name, must not be null or blank
@@ -54,9 +54,9 @@ public interface UserCohortsService {
   /**
    * Bulk assigns users from a CSV file to a cohort.
    *
-   * <p>This method processes a CSV file containing comma-separated user identifiers and assigns each
-   * user to the specified cohort. The processing is done asynchronously with streaming to avoid
-   * loading the entire file into memory.
+   * <p>This method processes a CSV file containing comma-separated user identifiers and assigns
+   * each user to the specified cohort. The processing is done asynchronously with streaming to
+   * avoid loading the entire file into memory.
    *
    * <p>The projectKey is used directly as the Aerospike set name for multi-tenant isolation.
    *
@@ -75,14 +75,15 @@ public interface UserCohortsService {
   /**
    * Batch maps multiple users to cohorts (assigns or removes users from cohorts).
    *
-   * <p>This operation processes a list of mapping requests, where each request can either
-   * append a user to a cohort with an expiry time, or remove a user from a cohort.
-   * The action is determined by each request's {@code action} field.
+   * <p>This operation processes a list of mapping requests, where each request can either append a
+   * user to a cohort with an expiry time, or remove a user from a cohort. The action is determined
+   * by each request's {@code action} field.
    *
    * <p>The projectKey is used directly as the Aerospike set name for multi-tenant isolation.
    *
    * @param projectKey the project key used as the Aerospike set name, must not be null or blank
-   * @param requests the list of mapping requests, each containing user_id, cohort_key, action, and expire_at
+   * @param requests the list of mapping requests, each containing user_id, cohort_key, action, and
+   *     expire_at
    * @return Single emitting bulk operation result with success/failure statistics
    * @since 1.0
    */
