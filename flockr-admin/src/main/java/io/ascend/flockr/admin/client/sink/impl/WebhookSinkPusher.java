@@ -210,7 +210,8 @@ public class WebhookSinkPusher implements SinkPusher {
 
     // expire_at formatted as "yyyy-MM-dd HH:mm:ss"
     if (record.getExpireDate() != null) {
-      String formattedDate = EXPIRE_DATE_FORMATTER.format(Instant.ofEpochMilli(record.getExpireDate()));
+      String formattedDate =
+          EXPIRE_DATE_FORMATTER.format(Instant.ofEpochMilli(record.getExpireDate()));
       payload.put("expire_at", formattedDate);
     }
 

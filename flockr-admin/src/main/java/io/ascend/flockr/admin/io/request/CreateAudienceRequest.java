@@ -1,5 +1,7 @@
 package io.ascend.flockr.admin.io.request;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.domain.audience.AudienceType;
 import io.ascend.flockr.admin.validation.ValidEnum;
 import io.vertx.core.json.JsonObject;
@@ -30,6 +32,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class CreateAudienceRequest {
   /** The name of the audience. Must not be empty. */
   @NotEmpty private String name;

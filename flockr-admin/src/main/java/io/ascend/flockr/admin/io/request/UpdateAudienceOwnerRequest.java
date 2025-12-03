@@ -1,5 +1,7 @@
 package io.ascend.flockr.admin.io.request;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -10,6 +12,7 @@ import lombok.Data;
  * @since 1.0
  */
 @Data
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class UpdateAudienceOwnerRequest {
 
   /** The action to perform (ADD or REMOVE). */

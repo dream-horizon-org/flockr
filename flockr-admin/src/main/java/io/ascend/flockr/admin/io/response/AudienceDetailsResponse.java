@@ -1,5 +1,7 @@
 package io.ascend.flockr.admin.io.response;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.rule.RuleMeta;
@@ -22,6 +24,7 @@ import java.util.List;
  * @param rules list of associated rules with enriched source information
  * @since 1.0
  */
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record AudienceDetailsResponse(
     AudienceMeta audienceMeta,
     List<DataSinkDetails> sinks,

@@ -737,9 +737,9 @@ components:
     CreateAudienceRequest:
       required:
       - description
-      - expireDate
+      - expire_date
       - name
-      - sinkIds
+      - sink_ids
       - type
       type: object
       properties:
@@ -747,15 +747,15 @@ components:
           type: string
         description:
           type: string
-        customAudienceConfig:
+        custom_audience_config:
           $ref: '#/components/schemas/JsonObject'
         type:
           type: string
-        expireDate:
+        expire_date:
           maximum: 2177452799000
           type: integer
           format: int64
-        sinkIds:
+        sink_ids:
           type: array
           items:
             type: integer
@@ -816,7 +816,7 @@ components:
       - rules
       type: object
       properties:
-        audienceId:
+        audience_id:
           type: integer
           format: int64
         rules:
@@ -924,8 +924,6 @@ components:
           type: string
         description:
           type: string
-        configuration:
-          $ref: '#/components/schemas/RuleConfigurationSourceInfo'
         start_time:
           type: integer
           format: int64
@@ -942,6 +940,8 @@ components:
           enum:
           - ADD
           - REMOVE
+        configuration:
+          $ref: '#/components/schemas/RuleConfigurationSourceInfo'
     RuleConfigurationSourceInfo:
       required:
       - configuration_type
@@ -987,7 +987,7 @@ components:
     AudienceDetailsResponse:
       type: object
       properties:
-        audienceMeta:
+        audience_meta:
           $ref: '#/components/schemas/AudienceMeta'
         sinks:
           type: array
@@ -1124,17 +1124,17 @@ components:
         id:
           type: integer
           format: int64
-        audienceId:
+        audience_id:
           type: integer
           format: int64
-        ownerEmail:
+        owner_email:
           type: string
         status:
           type: string
-        createdAt:
+        created_at:
           type: integer
           format: int64
-        updatedAt:
+        updated_at:
           type: integer
           format: int64
     SuccessListAudienceOwnerResponse:
@@ -1195,15 +1195,15 @@ components:
         page:
           type: integer
           format: int32
-        pageSize:
+        page_size:
           type: integer
           format: int32
-        hasMore:
+        has_more:
           type: boolean
     PaginatedResponseDataSinkDetails:
       type: object
       properties:
-        pageInfo:
+        page_info:
           $ref: '#/components/schemas/PageInfo'
         data:
           type: array
@@ -1236,7 +1236,7 @@ components:
     PaginatedResponseDataSourceDetails:
       type: object
       properties:
-        pageInfo:
+        page_info:
           $ref: '#/components/schemas/PageInfo'
         data:
           type: array
@@ -1256,7 +1256,7 @@ components:
             $ref: '#/components/schemas/DataConnectorType'
     OnboardConnectorTypeRequest:
       required:
-      - displayName
+      - display_name
       - kind
       - type
       type: object
@@ -1265,9 +1265,9 @@ components:
           type: string
         type:
           type: string
-        displayName:
+        display_name:
           type: string
-        configSchema:
+        config_schema:
           $ref: '#/components/schemas/JsonObject'
     SuccessDataSinkDetails:
       type: object
@@ -1277,12 +1277,12 @@ components:
     OnboardDataSinkRequest:
       required:
       - name
-      - typeId
+      - type_id
       type: object
       properties:
         name:
           type: string
-        typeId:
+        type_id:
           type: integer
           format: int64
         config:
@@ -1295,12 +1295,12 @@ components:
     OnboardDataSourceRequest:
       required:
       - name
-      - typeId
+      - type_id
       type: object
       properties:
         name:
           type: string
-        typeId:
+        type_id:
           type: integer
           format: int64
         config:
