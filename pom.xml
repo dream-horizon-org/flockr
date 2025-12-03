@@ -105,6 +105,11 @@
       <version>${swagger-validator.version}</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>org.jboss.resteasy</groupId>
+          <artifactId>resteasy-multipart-provider</artifactId>
+          <version>${resteasy.version}</version>
+      </dependency>
 
     <dependency>
       <groupId>io.swagger.core.v3</groupId>

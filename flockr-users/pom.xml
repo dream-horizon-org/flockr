@@ -16,11 +16,11 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Main class and verticle for this module -->
-        <main.class>io.ascend.flockr.users.Main</main.class>
-        <main.verticle>io.ascend.flockr.users.verticle.MainVerticle</main.verticle>
+        <main.class>com.ascend.flockr.users.MainApplication</main.class>
+        <main.verticle>com.ascend.flockr.users.verticle.MainVerticle</main.verticle>
+        <app.release.artifact>target/flockr</app.release.artifact>
+        <resources.directory>src/main/resources</resources.directory>
 
-        <!-- Swagger configuration for this module -->
         <swagger.configurationFilePath>
             ${project.basedir}/src/main/resources/config/swagger/swagger-info.json
         </swagger.configurationFilePath>
@@ -30,6 +30,14 @@
         </swagger.outputPath>
         <swagger.resourcePackage>io.ascend.flockr.users</swagger.resourcePackage>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.typesafe</groupId>
+            <artifactId>config</artifactId>
+            <version>1.4.3</version>
+        </dependency>
+    </dependencies>
 
     <build>
         <plugins>
