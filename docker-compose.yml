@@ -1,4 +1,25 @@
 services:
+  # Aerospike Database for flockr-users
+  aerospike:
+    image: aerospike/aerospike-server:6.4.0.0
+    container_name: flockr-aerospike
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "3002:3002"
+    environment:
+      - NAMESPACE=test
+      - DATA_IN_MEMORY=true
+    volumes:
+      - aerospike_data:/opt/aerospike/data
+    healthcheck:
+      test: ["CMD", "asinfo", "-v", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - flockr-network
+
   spark-master:
     image: apache/spark:3.5.3
     container_name: flockr-spark-master
@@ -96,7 +117,7 @@ services:
   flockr-admin:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: flockr-admin/Dockerfile
     container_name: flockr-admin
     depends_on:
       postgres:
@@ -119,8 +140,38 @@ services:
       - flockr-network
     restart: unless-stopped
 
+  # Flockr Users Application
+  flockr-users:
+    build:
+      context: .
+      dockerfile: flockr-users/Dockerfile
+    container_name: flockr-users
+    depends_on:
+      aerospike:
+        condition: service_healthy
+    env_file:
+      - env.docker
+    environment:
+      - SERVER_PORT=8082
+      - AEROSPIKE_HOST=aerospike
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - flockr-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+    driver: local
+  aerospike_data:
     driver: local
 
 networks:
