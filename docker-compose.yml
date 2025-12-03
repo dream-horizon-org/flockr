@@ -151,9 +151,6 @@ services:
         condition: service_healthy
     env_file:
       - env.docker
-    environment:
-      - SERVER_PORT=8082
-      - AEROSPIKE_HOST=aerospike
     ports:
       - "8082:8082"
     volumes:

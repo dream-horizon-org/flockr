@@ -17,7 +17,7 @@ import lombok.Synchronized;
  *
  * <p>The context must be initialized once during application startup by calling {@link
  * #initializeContext(List)}. This is typically done in {@link
- * io.ascend.flockr.users.AbstractMainApplication#initializeGuiceInjector(io.vertx.core.Vertx)}.
+ * io.ascend.flockr.users.MainLauncher#initializeGuiceInjector(io.vertx.core.Vertx)}.
  *
  * <p><strong>Usage:</strong>
  *

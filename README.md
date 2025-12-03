@@ -381,7 +381,7 @@ java \
 
 **For flockr-users:**
 - Follow same steps but use:
-  - **Main class**: `com.ascend.flockr.users.MainApplication`
+  - **Main class**: `io.ascend.flockr.users.MainLauncher`
   - **Program arguments**: `run io.ascend.flockr.users.verticle.MainVerticle`
   - **Environment variables**: `ENV=local;AEROSPIKE_HOST=localhost;AEROSPIKE_PORT=3000`
   - **Use classpath of module**: `flockr-users`

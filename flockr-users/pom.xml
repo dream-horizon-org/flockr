@@ -17,8 +17,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Main class and verticle for this module -->
-        <main.class>com.ascend.flockr.users.MainApplication</main.class>
-        <main.verticle>com.ascend.flockr.users.verticle.MainVerticle</main.verticle>
+        <main.class>io.ascend.flockr.users.MainLauncher</main.class>
+        <main.verticle>io.ascend.flockr.users.verticle.MainVerticle</main.verticle>
 
         <!-- Swagger configuration for this module -->
         <swagger.configurationFilePath>
@@ -41,6 +41,12 @@
             <groupId>com.aerospike</groupId>
             <artifactId>aerospike-client</artifactId>
             <version>${aerospike.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>${logback.version}</version>
         </dependency>
 
         <!-- Vert.x Aerospike Client -->

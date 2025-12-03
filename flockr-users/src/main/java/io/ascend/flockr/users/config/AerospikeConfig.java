@@ -43,9 +43,6 @@ public class AerospikeConfig {
   /** Aerospike namespace where user records are stored. */
   private String namespace;
 
-  /** Name of the Aerospike set for persistent cohort storage. */
-  private String persistentCohortsSet;
-
   /** Name of the bin storing cohort creation timestamps (map: cohort name → timestamp). */
   private String cohortCreatedAtBin;
 
