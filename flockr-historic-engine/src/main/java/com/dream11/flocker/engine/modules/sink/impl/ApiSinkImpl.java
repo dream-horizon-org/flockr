@@ -15,9 +15,9 @@ public class ApiSinkImpl implements Sink<String> {
 
     private final ApiClient apiClient;
     private final ApiConfig apiConfig;
-    private final String cohortId;
+    private final String cohortName;
 
-    public ApiSinkImpl(ApiConfig apiConfig, String cohortId) {
+    public ApiSinkImpl(ApiConfig apiConfig, String cohortName) {
         if (apiConfig == null) {
             throw new IllegalArgumentException("ApiConfig cannot be null");
         }
@@ -25,7 +25,7 @@ public class ApiSinkImpl implements Sink<String> {
             throw new IllegalArgumentException("API URL cannot be null or empty");
         }
         this.apiConfig = apiConfig;
-        this.cohortId = cohortId;
+        this.cohortName = cohortName;
         this.apiClient = new ApiClient(apiConfig);
         log.info("ApiSinkImpl initialized for URL: {} with rate limit: {}/sec",
             apiConfig.getUrl(), apiConfig.getRateLimitPerSecond());
@@ -57,7 +57,7 @@ public class ApiSinkImpl implements Sink<String> {
             }
             log.info("Collected {} unique userIds for API call", userIds.size());
 
-            apiClient.notifyCohortUpdate(cohortId, userIds);
+            apiClient.notifyCohortUpdate(cohortName, userIds);
             log.info("Successfully sent data to API");
         } catch (Exception e) {
             log.error("Failed to write dataset to API", e);

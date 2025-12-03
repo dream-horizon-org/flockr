@@ -82,6 +82,8 @@ coverage/
 
 # Local tooling artifacts
 .idea_modules/
+.tool-versions
+.editorconfig
 
 # LocalStack data
 localstack-data/

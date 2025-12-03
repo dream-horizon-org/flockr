@@ -41,15 +41,15 @@ public class ApiClient {
             apiConfig.getRateLimitPerSecond(), apiConfig.getBatchSize(), apiConfig.getTimeoutSeconds());
     }
 
-    public void notifyCohortUpdate(String cohortId, List<String> userIds) {
+    public void notifyCohortUpdate(String cohortName, List<String> userIds) {
         if (apiConfig == null) {
             log.warn("ApiConfig not provided, simulating API call");
-            log.info("Calling API for cohortId: {} with {} users", cohortId, userIds.size());
+            log.info("Calling API for cohortName: {} with {} users", cohortName, userIds.size());
             log.info("API call simulated successfully");
             return;
         }
 
-        log.info("Calling API for cohortId: {} with {} users", cohortId, userIds.size());
+        log.info("Calling API for cohortName: {} with {} users", cohortName, userIds.size());
 
         try {
             int batchSize = apiConfig.getBatchSize();
@@ -62,14 +62,14 @@ public class ApiClient {
 
                 waitForRateLimit();
 
-                makeApiCall(cohortId, batch, i + 1, totalBatches);
+                makeApiCall(cohortName, batch, i + 1, totalBatches);
 
                 log.debug("Processed batch {}/{} ({} users)", i + 1, totalBatches, batch.size());
             }
 
             log.info("Successfully sent all {} users to API in {} batches", userIds.size(), totalBatches);
         } catch (Exception e) {
-            log.error("Failed to call API for cohortId: {}", cohortId, e);
+            log.error("Failed to call API for cohortName: {}", cohortName, e);
             throw new RuntimeException("API call failed", e);
         }
     }
@@ -93,8 +93,8 @@ public class ApiClient {
         lastRequestTime.set(System.currentTimeMillis());
     }
 
-    private void makeApiCall(String cohortId, List<String> userIds, int batchNumber, int totalBatches) throws Exception {
-        String requestBody = buildRequestBody(cohortId, userIds);
+    private void makeApiCall(String cohortName, List<String> userIds, int batchNumber, int totalBatches) throws Exception {
+        String requestBody = buildRequestBody(cohortName, userIds);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(apiConfig.getUrl()))
@@ -114,9 +114,9 @@ public class ApiClient {
         }
     }
 
-    private String buildRequestBody(String cohortId, List<String> userIds) {
+    private String buildRequestBody(String cohortName, List<String> userIds) {
         StringBuilder json = new StringBuilder("{");
-        json.append("\"cohortId\":\"").append(cohortId).append("\",");
+        json.append("\"cohortName\":\"").append(cohortName).append("\",");
         json.append("\"userIds\":[");
         for (int i = 0; i < userIds.size(); i++) {
             if (i > 0) {

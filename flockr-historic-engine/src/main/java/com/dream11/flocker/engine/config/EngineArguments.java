@@ -18,8 +18,8 @@ public class EngineArguments {
     @JsonProperty("sqlQuery")
     private String sqlQuery;
 
-    @JsonProperty("cohortId")
-    private String cohortId;
+    @JsonProperty("cohortName")
+    private String cohortName;
 
     @JsonProperty("action")
     private String action;

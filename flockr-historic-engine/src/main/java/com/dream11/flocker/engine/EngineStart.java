@@ -25,7 +25,7 @@ public class EngineStart {
                 log.error("Usage: java -jar <jar-file> <ARGUMENTS_JSON>");
                 log.error("Arguments JSON should contain:");
                 log.error("  - sqlQuery: SQL query to execute");
-                log.error("  - cohortId: Cohort identifier");
+                log.error("  - cohortName: Cohort name");
                 log.error("  - action: Action type (append/remove)");
                 log.error("  - sparkMaster: Spark master URL (e.g., spark://host:7077)");
                 log.error("  - sourceJson: Source configuration as JSON array (must include ATHENA with accessKey/secretKey)");
@@ -34,7 +34,7 @@ public class EngineStart {
                 log.error("Example JSON:");
                 log.error("{");
                 log.error("  \"sqlQuery\": \"SELECT * FROM table\",");
-                log.error("  \"cohortId\": \"cohort123\",");
+                log.error("  \"cohortName\": \"cohort123\",");
                 log.error("  \"action\": \"append\",");
                 log.error("  \"sparkMaster\": \"spark://host:7077\",");
                 log.error("  \"sourceJson\": [{\"type\":\"ATHENA\",\"config\":{\"database\":\"a0a6bd02a3194a7a99699bc968575d83\",\"region\":\"us-east-1\",\"workgroup\":\"primary\",\"outputLocation\":\"s3a://my-bucket/athena-results/\",\"accessKey\":\"YOUR_ACCESS_KEY\",\"secretKey\":\"YOUR_SECRET_KEY\"}}],");
@@ -56,7 +56,7 @@ public class EngineStart {
             }
 
             String sqlQuery = engineArgs.getSqlQuery();
-            String cohortId = engineArgs.getCohortId();
+            String cohortName = engineArgs.getCohortName();
             String action = engineArgs.getAction();
             String sparkMaster = engineArgs.getSparkMaster();
             List<ConnectorConfig> sourceConfigs = engineArgs.getSourceJson();
@@ -66,8 +66,8 @@ public class EngineStart {
                 log.error("SQL query cannot be null or empty");
                 System.exit(1);
             }
-            if (cohortId == null || cohortId.trim().isEmpty()) {
-                log.error("Cohort ID cannot be null or empty");
+            if (cohortName == null || cohortName.trim().isEmpty()) {
+                log.error("Cohort name cannot be null or empty");
                 System.exit(1);
             }
             if (action == null || action.trim().isEmpty()) {
@@ -85,7 +85,7 @@ public class EngineStart {
             }
 
             log.info("SQL Query: {}", sqlQuery);
-            log.info("Cohort ID: {}", cohortId);
+            log.info("Cohort Name: {}", cohortName);
             log.info("Action: {}", eventAction);
             log.info("Spark Master: {}", sparkMaster);
             log.info("Source Configs: {}", sourceConfigs);
@@ -201,13 +201,13 @@ public class EngineStart {
             log.debug("SparkSession created successfully with master: {}", sparkMaster);
 
             injector = Guice
-                .createInjector(new EngineModule(sparkSession, sourceConfigs, sinkConfigs, cohortId, eventAction));
+                .createInjector(new EngineModule(sparkSession, sourceConfigs, sinkConfigs, cohortName, eventAction));
             log.debug("Guice injector created successfully");
 
             S3Process s3Process = injector.getInstance(S3Process.class);
             log.info("Starting S3 processing with query and action: {}", eventAction);
 
-            s3Process.processWithQuery(sqlQuery, cohortId, eventAction);
+            s3Process.processWithQuery(sqlQuery, cohortName, eventAction);
             log.info("Flocker Engine completed successfully");
 
         } catch (Exception e) {

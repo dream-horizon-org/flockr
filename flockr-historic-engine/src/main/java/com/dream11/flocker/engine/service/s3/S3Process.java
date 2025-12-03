@@ -30,10 +30,10 @@ public class S3Process {
         this.sinks = sinks;
     }
 
-    public void processWithQuery(String sqlQuery, String cohortId, String action) {
+    public void processWithQuery(String sqlQuery, String cohortName, String action) {
         try {
             log.info("Starting S3 processing with query: {}", sqlQuery);
-            log.info("Cohort ID: {}, Action: {}", cohortId, action);
+            log.info("Cohort Name: {}, Action: {}", cohortName, action);
 
             if (sources.isEmpty()) {
                 throw new IllegalStateException("No sources configured");
@@ -78,16 +78,10 @@ public class S3Process {
 
 
             Dataset<Row> resultWithFields = queryResult;
-            if (cohortId != null && !cohortId.isEmpty()) {
-                try {
-                    Long cohortIdLong = Long.parseLong(cohortId);
-                    resultWithFields = resultWithFields.withColumn("cohortId",
-                            org.apache.spark.sql.functions.lit(cohortIdLong));
-                } catch (NumberFormatException e) {
-                    resultWithFields = resultWithFields.withColumn("cohortId",
-                            org.apache.spark.sql.functions.lit(cohortId));
-                }
-                log.debug("Added cohortId field: {}", cohortId);
+            if (cohortName != null && !cohortName.isEmpty()) {
+                resultWithFields = resultWithFields.withColumn("cohortName",
+                        org.apache.spark.sql.functions.lit(cohortName));
+                log.debug("Added cohortName field: {}", cohortName);
             }
 
             log.info("Writing results to {} sinks...", sinks.size());

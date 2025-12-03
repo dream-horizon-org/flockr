@@ -29,18 +29,18 @@ public class EngineModule extends AbstractModule {
     private final List<ConnectorConfig> sourceConfigs;
     private final List<ConnectorConfig> sinkConfigs;
     @SuppressWarnings("unused")
-    private final String cohortId;
+    private final String cohortName;
     @SuppressWarnings("unused")
     private final String action;
 
     public EngineModule(SparkSession sparkSession,
             List<ConnectorConfig> sourceConfigs,
             List<ConnectorConfig> sinkConfigs,
-            String cohortId, String action) {
+            String cohortName, String action) {
         this.sparkSession = sparkSession;
         this.sourceConfigs = sourceConfigs;
         this.sinkConfigs = sinkConfigs;
-        this.cohortId = cohortId;
+        this.cohortName = cohortName;
         this.action = action;
         log.debug("EngineModule initialized with action: {}", action);
     }
@@ -118,7 +118,7 @@ public class EngineModule extends AbstractModule {
                             "Unknown config type for API sink: " + configObj.getClass().getName());
                 }
                 
-                sinks.add(new com.dream11.flocker.engine.modules.sink.impl.ApiSinkImpl(apiConfig, cohortId));
+                sinks.add(new com.dream11.flocker.engine.modules.sink.impl.ApiSinkImpl(apiConfig, cohortName));
                 log.info("Added API sink with rate limit: {}/sec", apiConfig.getRateLimitPerSecond());
             } else if ("KAFKA".equals(type)) {
                 log.warn("Kafka sink not yet implemented, skipping");
