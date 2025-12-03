@@ -1,0 +1,76 @@
+services:
+  # Spark Master
+  spark-master:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.spark-master
+    container_name: spark-master
+    hostname: spark-master
+    ports:
+      - "7077:7077"  # Spark Master port
+      - "8080:8080"  # Spark Master UI
+    volumes:
+      - ../target:/opt/spark/jars:ro
+      - spark-data:/tmp/spark
+    networks:
+      - spark-network
+
+  # Spark Worker
+  spark-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.spark-worker
+    container_name: spark-worker
+    hostname: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_WORKER_MEMORY=4g
+      - SPARK_WORKER_CORES=2
+    ports:
+      - "8081:8081"  # Spark Worker UI
+    volumes:
+      - ../target:/opt/spark/jars:ro
+      - spark-data:/tmp/spark
+    networks:
+      - spark-network
+    deploy:
+      resources:
+        limits:
+          memory: 6g
+        reservations:
+          memory: 4g
+
+  # Mock API Server (for testing API calls)
+  mock-api:
+    image: python:3.11-slim
+    container_name: mock-api
+    hostname: mock-api
+    working_dir: /app
+    volumes:
+      - ./mock-api-server.py:/app/mock-api-server.py:ro
+    command: >
+      sh -c "
+      apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/* &&
+      pip install -q flask flask-cors &&
+      python mock-api-server.py
+      "
+    ports:
+      - "8082:8080"  # Mock API port (using 8082 to avoid conflict with Spark UI)
+    networks:
+      - spark-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  spark-data:
+    driver: local
+
+networks:
+  spark-network:
+    driver: bridge
+

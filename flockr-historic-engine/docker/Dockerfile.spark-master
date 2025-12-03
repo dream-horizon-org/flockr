@@ -1,0 +1,36 @@
+# Dockerfile for Spark Master
+FROM eclipse-temurin:21-jdk
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Spark version (using 3.3.0 which is stable and available)
+ENV SPARK_VERSION=3.3.0
+ENV HADOOP_VERSION=3
+ENV SPARK_HOME=/opt/spark
+
+# Download and install Spark
+RUN wget -q https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+    tar -xzf spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+    mv spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} ${SPARK_HOME} && \
+    rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
+
+# Set environment variables
+ENV PATH=${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}
+
+# Expose ports
+EXPOSE 7077 8080
+
+# Create jars directory
+# Note: JAR files are mounted as volume in docker-compose.yml, so we don't need to copy them here
+RUN mkdir -p ${SPARK_HOME}/jars
+
+# Set working directory
+WORKDIR ${SPARK_HOME}
+
+# Start Spark Master
+CMD ["bin/spark-class", "org.apache.spark.deploy.master.Master"]
+
