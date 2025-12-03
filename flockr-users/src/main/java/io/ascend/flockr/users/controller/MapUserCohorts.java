@@ -171,7 +171,7 @@ public class MapUserCohorts {
         .map(ResponseEntity.Success<BulkOperationResult>::new)
         .map(Response::ok)
         .map(Response.ResponseBuilder::build)
-        .onErrorReturn(error -> buildErrorResponse(error))
+        .onErrorReturn(this::buildErrorResponse)
         .toCompletionStage();
   }
 

@@ -11,7 +11,6 @@ import com.aerospike.client.policy.WritePolicy;
 import com.google.inject.Inject;
 import io.ascend.flockr.users.client.Aerospike;
 import io.ascend.flockr.users.config.AerospikeConfig;
-import io.ascend.flockr.users.constants.Constants;
 import io.d11.aerospike.client.AerospikeClient;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.impl.AsyncResultSingle;
@@ -83,15 +82,15 @@ public class AerospikeImpl implements Aerospike {
    * {@inheritDoc}
    *
    * <p>This implementation constructs an Aerospike key using the namespace from config, the
-   * provided set name, and the user ID with the {@link Constants#USER_KEY} prefix. It reads from
-   * the cohort expiry bin configured in {@link AerospikeConfig#getCohortExpiryBin()}.
+   * provided set name, and the user ID directly as a string. It reads from the cohort expiry bin
+   * configured in {@link AerospikeConfig#getCohortExpiryBin()}.
    *
    * <p>If the record doesn't exist or the bin is empty, an empty map is returned.
    */
   @Override
   public Single<Map<String, Long>> getCohortExpiryBin(String id, String set) {
     String namespace = aerospikeConfig.getNamespace();
-    Key key = new Key(namespace, set, Constants.USER_KEY + id);
+    Key key = new Key(namespace, set, id);
     Policy policy = getPolicy();
 
     String binName = aerospikeConfig.getCohortExpiryBin();
@@ -136,7 +135,7 @@ public class AerospikeImpl implements Aerospike {
 
     String namespace = aerospikeConfig.getNamespace();
 
-    Key key = new Key(namespace, setName, Constants.USER_KEY + id);
+    Key key = new Key(namespace, setName, id);
 
     Operation[] operations = getMapOperations(cohort, cohortExpiry);
 
@@ -169,7 +168,7 @@ public class AerospikeImpl implements Aerospike {
 
     String namespace = aerospikeConfig.getNamespace();
 
-    Key key = new Key(namespace, setName, Constants.USER_KEY + id);
+    Key key = new Key(namespace, setName, id);
 
     Operation[] operations =
         new Operation[] {
@@ -289,7 +288,7 @@ public class AerospikeImpl implements Aerospike {
 
     String namespace = aerospikeConfig.getNamespace();
 
-    Key key = new Key(namespace, setName, Constants.USER_KEY + id);
+    Key key = new Key(namespace, setName, id);
 
     Operation[] operations = getMapOperations(cohort, cohortExpiry);
 

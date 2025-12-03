@@ -72,14 +72,6 @@ public class Constants {
   public static final String SOURCE_FANCODE = "FanCode";
 
   /**
-   * Prefix used for user keys in Aerospike.
-   *
-   * <p>This prefix is prepended to user IDs or guest IDs when creating Aerospike keys. Example:
-   * {@code "user_12345"} or {@code "user_guest-abc"}.
-   */
-  public static final String USER_KEY = "user_";
-
-  /**
    * Private constructor to prevent instantiation.
    *
    * @throws UnsupportedOperationException always thrown when constructor is invoked

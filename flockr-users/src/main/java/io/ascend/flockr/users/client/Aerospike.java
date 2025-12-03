@@ -63,7 +63,7 @@ public interface Aerospike {
    * // Returns: {"premium-users": 1704067200000L, "vip-users": 1704153600000L}
    * }</pre>
    *
-   * @param id the user ID or guest ID (without the "user_" prefix)
+   * @param id the user ID or guest ID
    * @param setName the Aerospike set name where the user record is stored
    * @return a {@link Single} emitting a map of cohort names to expiry timestamps (epoch
    *     milliseconds), or an empty map if the user has no cohorts
@@ -103,7 +103,7 @@ public interface Aerospike {
    * );
    * }</pre>
    *
-   * @param id the user ID or guest ID (without the "user_" prefix)
+   * @param id the user ID or guest ID
    * @param cohort the name of the cohort to add the user to
    * @param source the source/platform identifier (e.g., "Dream11", "FanCode")
    * @param cohortExpiry the expiry timestamp in epoch milliseconds (UTC)
@@ -140,7 +140,7 @@ public interface Aerospike {
    * );
    * }</pre>
    *
-   * @param id the user ID or guest ID (without the "user_" prefix)
+   * @param id the user ID or guest ID
    * @param cohort the name of the cohort to remove the user from
    * @param source the source/platform identifier (e.g., "Dream11", "FanCode")
    * @param setName the Aerospike set name where the user record is stored
