@@ -1,7 +1,8 @@
 package io.ascend.flockr.admin.io.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.domain.rule.*;
 import io.ascend.flockr.admin.validation.ValidRuleTypeConfiguration;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties()
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class CreateRulesRequest {
   /** The ID of the audience to create rules for (set from path parameter). */
   private Long audienceId;
@@ -39,6 +41,7 @@ public class CreateRulesRequest {
   @NoArgsConstructor
   @ValidRuleTypeConfiguration
   @JsonIgnoreProperties()
+  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public static class Rule {
     /** The name of the rule. */
     @NotNull private String name;
@@ -47,24 +50,16 @@ public class CreateRulesRequest {
     @NotNull private String description;
 
     /** The start time for rule execution (epoch seconds). */
-    @NotNull
-    @JsonProperty("start_time")
-    private Long startTime;
+    @NotNull private Long startTime;
 
     /** The end time for rule execution (epoch seconds). */
-    @NotNull
-    @JsonProperty("end_time")
-    private Long endTime;
+    @NotNull private Long endTime;
 
     /** The type of rule (BATCH or STREAM). */
-    @NotNull
-    @JsonProperty("rule_type")
-    private RuleType ruleType;
+    @NotNull private RuleType ruleType;
 
     /** The action to perform when the rule matches (ADD or REMOVE). */
-    @NotNull
-    @JsonProperty("rule_action")
-    private RuleAction ruleAction;
+    @NotNull private RuleAction ruleAction;
 
     /** The rule configuration containing execution details specific to the rule type. */
     @Valid @NotNull private RuleConfiguration<SourceInfo> configuration;

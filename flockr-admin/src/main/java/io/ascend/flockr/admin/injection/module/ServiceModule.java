@@ -1,5 +1,6 @@
 package io.ascend.flockr.admin.injection.module;
 
+import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
@@ -9,6 +10,11 @@ import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.client.postgres.impl.PostgresReaderClientImpl;
 import io.ascend.flockr.admin.client.postgres.impl.PostgresWriterClientImpl;
+import io.ascend.flockr.admin.client.sink.SinkPusher;
+import io.ascend.flockr.admin.client.sink.SinkPusherRegistry;
+import io.ascend.flockr.admin.client.sink.impl.KafkaSinkPusher;
+import io.ascend.flockr.admin.client.sink.impl.S3SinkPusher;
+import io.ascend.flockr.admin.client.sink.impl.WebhookSinkPusher;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.client.webclient.impl.WebClientImpl;
 import io.ascend.flockr.admin.config.*;
@@ -18,10 +24,12 @@ import io.ascend.flockr.admin.service.*;
 import io.ascend.flockr.admin.service.impl.*;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.CircuitBreakerFactory;
+import io.ascend.flockr.admin.util.ConfigParser;
 import io.ascend.flockr.admin.util.json.JsonSchemaValidationUtil;
 import io.vertx.rxjava3.core.Vertx;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import java.util.Set;
 
 /**
  * Guice module that configures all service bindings for the Flockr application.
@@ -77,9 +85,11 @@ public class ServiceModule extends DefaultModule {
     /* Bind Services */
     bindServices();
     /* Static Binding */
-    requestStaticInjection(JsonSchemaValidationUtil.class);
-    requestStaticInjection(CircuitBreakerFactory.class);
-    requestStaticInjection(AsyncJakartaValidationUtil.class); // ← Add static injection
+    requestStaticInjection(
+        ConfigParser.class,
+        JsonSchemaValidationUtil.class,
+        AsyncJakartaValidationUtil.class,
+        CircuitBreakerFactory.class); // ← Add static injection
   }
 
   /**
@@ -100,7 +110,7 @@ public class ServiceModule extends DefaultModule {
   /**
    * Binds client implementations as singletons.
    *
-   * <p>Binds WebClient, FlinkClient, and PostgreSQL reader/writer clients.
+   * <p>Binds WebClient, FlinkClient, PostgreSQL reader/writer clients, and sink pushers.
    */
   private void bindClients() {
     //    web client bindings
@@ -114,6 +124,26 @@ public class ServiceModule extends DefaultModule {
     bind(PostgresWriterClientImpl.class).in(Singleton.class);
     bind(PostgresReaderClient.class).to(PostgresReaderClientImpl.class);
     bind(PostgresWriterClient.class).to(PostgresWriterClientImpl.class);
+    //    sink pusher bindings
+    bind(KafkaSinkPusher.class).in(Singleton.class);
+    bind(S3SinkPusher.class).in(Singleton.class);
+    bind(WebhookSinkPusher.class).in(Singleton.class);
+  }
+
+  /**
+   * Provides the SinkPusherRegistry with all available sink pushers.
+   *
+   * @param kafkaPusher the Kafka sink pusher
+   * @param s3Pusher the S3 sink pusher
+   * @param webhookPusher the Webhook sink pusher
+   * @return the configured SinkPusherRegistry
+   */
+  @Provides
+  @Singleton
+  SinkPusherRegistry provideSinkPusherRegistry(
+      KafkaSinkPusher kafkaPusher, S3SinkPusher s3Pusher, WebhookSinkPusher webhookPusher) {
+    Set<SinkPusher> pushers = Set.of(kafkaPusher, s3Pusher, webhookPusher);
+    return new SinkPusherRegistry(pushers);
   }
 
   /**
@@ -153,5 +183,6 @@ public class ServiceModule extends DefaultModule {
     bind(HealthCheckService.class).to(HealthCheckServiceImpl.class);
     bind(DataConnectorService.class).to(DataConnectorServiceImpl.class);
     bind(AudienceService.class).to(AudienceServiceImpl.class);
+    bind(AudienceImportService.class).to(AudienceImportServiceImpl.class);
   }
 }

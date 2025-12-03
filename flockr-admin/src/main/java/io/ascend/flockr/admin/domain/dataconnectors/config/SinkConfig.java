@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     visible = true)
 @JsonSubTypes({
   @JsonSubTypes.Type(value = KafkaSinkConfig.class, name = "KAFKA"),
-  @JsonSubTypes.Type(value = S3FolderSinkConfig.class, name = "S3_FOLDER")
+  @JsonSubTypes.Type(value = S3FolderSinkConfig.class, name = "S3_FOLDER"),
+  @JsonSubTypes.Type(value = WebhookSinkConfig.class, name = "WEBHOOK")
 })
 public interface SinkConfig extends ConnectorConfig {}

@@ -1,6 +1,8 @@
 package io.ascend.flockr.admin.io.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.domain.rule.RuleMeta;
 import io.ascend.flockr.admin.domain.rule.SourceInfoEnriched;
 
@@ -13,4 +15,5 @@ import io.ascend.flockr.admin.domain.rule.SourceInfoEnriched;
  * @since 1.0
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record RuleDetailsResponse(RuleMeta<SourceInfoEnriched> ruleDetails) {}

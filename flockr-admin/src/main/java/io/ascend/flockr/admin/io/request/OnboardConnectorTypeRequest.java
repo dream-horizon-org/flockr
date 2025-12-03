@@ -1,5 +1,7 @@
 package io.ascend.flockr.admin.io.request;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.validation.NotEmptyJsonObject;
 import io.vertx.core.json.JsonObject;
 import jakarta.validation.constraints.NotBlank;
@@ -14,6 +16,7 @@ import lombok.Data;
  * @since 1.0
  */
 @Data
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class OnboardConnectorTypeRequest {
   /** The kind of connector: "SOURCE" or "SINK". */
   @NotBlank(message = "Kind is required (SOURCE or SINK)")

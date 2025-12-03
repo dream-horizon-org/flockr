@@ -1,5 +1,7 @@
 package io.ascend.flockr.admin.io;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Getter;
 
 /**
@@ -18,6 +20,7 @@ public final class ResponseEntity {
    * @param data the payload data returned by the operation
    * @param <T> the type of the response data
    */
+  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public record Success<T>(T data) {}
 
   /**
@@ -26,6 +29,7 @@ public final class ResponseEntity {
    * <p>Contains an error entity with code, message, and cause information.
    */
   @Getter
+  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public static class Failure {
     /** The error details. */
     private final ErrorEntity error;
@@ -48,6 +52,7 @@ public final class ResponseEntity {
      * @param message a human-readable error message
      * @param cause additional cause information (may be null)
      */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record ErrorEntity(String code, String message, String cause) {}
   }
 }
