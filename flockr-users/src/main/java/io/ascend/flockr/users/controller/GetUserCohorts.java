@@ -4,6 +4,14 @@ import com.google.inject.Inject;
 import io.ascend.flockr.users.dto.ResponseEntity;
 import io.ascend.flockr.users.service.UserCohortsService;
 import io.ascend.flockr.users.validator.HeaderValidator;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -22,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Path("/flockr/users/")
+@Tag(name = "User Cohorts", description = "Operations for retrieving user cohort memberships")
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class GetUserCohorts {
   private final UserCohortsService userCohortsService;
@@ -29,29 +38,44 @@ public class GetUserCohorts {
   /**
    * Retrieves active cohorts for a user.
    *
-   * <p>Endpoint: GET /flockr/users/get-cohorts
-   *
-   * <p>Headers:
-   *
-   * <ul>
-   *   <li>{@code userId} - User ID (required, must be positive)
-   *   <li>{@code x-project-key} - Project key used directly as Aerospike set name (required)
-   * </ul>
-   *
-   * <p>The x-project-key is used directly as the Aerospike set name for multi-tenant isolation.
-   *
    * @param userIdHeader the user ID from userId header
    * @param projectKey the combined tenant and project identifier from x-project-key header
-   * @return CompletionStage resolving to HTTP 200 with list of cohort names, or 400 if validation
-   *     fails
-   * @author Sudhanshu Rai
-   * @since 1.0
+   * @return CompletionStage resolving to HTTP 200 with list of cohort names
    */
   @GET
   @Path("/get-cohorts")
   @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Get user cohorts",
+      description =
+          "Retrieves a list of active cohort names that the specified user belongs to. "
+              + "Only returns cohorts that have not expired.")
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "Successfully retrieved user cohorts",
+        content =
+            @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                array = @ArraySchema(schema = @Schema(implementation = String.class)))),
+    @ApiResponse(
+        responseCode = "400",
+        description = "Invalid request - missing or invalid userId/x-project-key header",
+        content =
+            @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  })
   public CompletionStage<Response> handle(
-      @HeaderParam("userId") String userIdHeader, @HeaderParam("x-project-key") String projectKey) {
+      @Parameter(description = "User ID (must be positive)", required = true, example = "12345")
+          @HeaderParam("userId")
+          String userIdHeader,
+      @Parameter(
+              description = "Project key used as Aerospike set name for multi-tenant isolation",
+              required = true,
+              example = "tenant1_project1")
+          @HeaderParam("x-project-key")
+          String projectKey) {
 
     // Validate headers
     HeaderValidator.validateProjectKeyHeader(projectKey);

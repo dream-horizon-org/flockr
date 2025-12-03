@@ -2,6 +2,7 @@ package io.ascend.flockr.users.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.ascend.flockr.users.annotation.DateTimeFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -27,21 +28,32 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Schema(description = "Single user cohort mapping request for batch operations")
 public class BatchMapUserCohortsRequest {
 
   @NotNull
   @Positive
   @JsonProperty("user_id")
+  @Schema(description = "User ID to map (must be positive)", example = "12345")
   private Long userId;
 
   @NotBlank
   @JsonProperty("cohort_key")
+  @Schema(description = "Cohort key/name to assign or remove user from", example = "premium-users")
   private String cohortKey;
 
-  @NotBlank private String action;
+  @NotBlank
+  @Schema(
+      description = "Action to perform: 'append' to add user or 'remove' to remove user",
+      example = "append",
+      allowableValues = {"append", "remove"})
+  private String action;
 
   @NotBlank
   @DateTimeFormat
   @JsonProperty("expire_at")
+  @Schema(
+      description = "Expiry time for the cohort membership (required for append action)",
+      example = "2025-12-31 23:59:59")
   private String expireAt;
 }

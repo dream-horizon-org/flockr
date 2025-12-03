@@ -9,6 +9,13 @@ import io.ascend.flockr.users.service.UserCohortsService;
 import io.ascend.flockr.users.validator.BatchMapUserCohortsRequestValidator;
 import io.ascend.flockr.users.validator.HeaderValidator;
 import io.ascend.flockr.users.validator.MapUserCohortsRequestValidator;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -27,6 +34,9 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Path("/flockr/users")
+@Tag(
+    name = "User Cohort Mapping",
+    description = "Operations for assigning or removing users from cohorts")
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class MapUserCohorts {
 
@@ -35,40 +45,54 @@ public class MapUserCohorts {
   /**
    * Maps a user to a cohort (assigns or removes).
    *
-   * <p>Endpoint: POST /flockr/users/map-cohorts
-   *
-   * <p>Headers:
-   *
-   * <ul>
-   *   <li>{@code userId} - User ID (required, must be positive)
-   *   <li>{@code x-project-key} - Project key used directly as Aerospike set name (required)
-   * </ul>
-   *
-   * <p>Request body should contain:
-   *
-   * <ul>
-   *   <li>{@code cohort_key} - Cohort name (snake_case for API)
-   *   <li>{@code action} - "append" or "remove"
-   *   <li>{@code expire_at} - Expiry time in format "yyyy-MM-dd HH:mm:ss" (for append action)
-   * </ul>
-   *
-   * <p>The x-project-key is used directly as the Aerospike set name for multi-tenant isolation.
-   *
    * @param userIdHeader the user ID from userId header
    * @param projectKey the combined tenant and project identifier from x-project-key header
    * @param request the mapping request (cohort_key, action, expire_at)
-   * @return CompletionStage resolving to HTTP 200 with success status, or 400 if validation fails
-   * @author Sudhanshu Rai
-   * @since 1.0
+   * @return CompletionStage resolving to HTTP 200 with success status
    */
   @POST
   @Path("/map-cohorts")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Map user to cohort",
+      description =
+          "Assigns or removes a user from a cohort. Use action 'append' to add a user with an expiry time, "
+              + "or 'remove' to remove the user from the cohort.")
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "User successfully mapped to cohort",
+        content =
+            @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = ResponseEntity.Success.class))),
+    @ApiResponse(
+        responseCode = "400",
+        description = "Invalid request - missing or invalid parameters",
+        content =
+            @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  })
   public CompletionStage<Response> handle(
-      @HeaderParam("userId") String userIdHeader,
-      @HeaderParam("x-project-key") String projectKey,
-      MapUserCohortsRequest request) {
+      @Parameter(description = "User ID (must be positive)", required = true, example = "12345")
+          @HeaderParam("userId")
+          String userIdHeader,
+      @Parameter(
+              description = "Project key used as Aerospike set name for multi-tenant isolation",
+              required = true,
+              example = "tenant1_project1")
+          @HeaderParam("x-project-key")
+          String projectKey,
+      @io.swagger.v3.oas.annotations.parameters.RequestBody(
+              description = "Cohort mapping request",
+              required = true,
+              content =
+                  @Content(
+                      mediaType = MediaType.APPLICATION_JSON,
+                      schema = @Schema(implementation = MapUserCohortsRequest.class)))
+          MapUserCohortsRequest request) {
 
     // Validate headers
     HeaderValidator.validateProjectKeyHeader(projectKey);
@@ -87,37 +111,57 @@ public class MapUserCohorts {
   /**
    * Batch maps multiple users to cohorts (assigns or removes).
    *
-   * <p>Endpoint: POST /flockr/users/map-cohorts/batch
-   *
-   * <p>Headers:
-   *
-   * <ul>
-   *   <li>{@code x-project-key} - Project key used directly as Aerospike set name (required)
-   * </ul>
-   *
-   * <p>Request body: JSON array of mapping requests, each containing:
-   *
-   * <ul>
-   *   <li>{@code user_id} - User ID (required, must be positive)
-   *   <li>{@code cohort_key} - Cohort name (snake_case for API)
-   *   <li>{@code action} - "append" or "remove"
-   *   <li>{@code expire_at} - Expiry time in format "yyyy-MM-dd HH:mm:ss"
-   * </ul>
-   *
-   * <p>The x-project-key is used directly as the Aerospike set name for multi-tenant isolation.
-   *
    * @param projectKey the project key from x-project-key header
    * @param requests the list of mapping requests
    * @return CompletionStage resolving to HTTP 200 with bulk operation result
-   * @author Sudhanshu Rai
-   * @since 1.0
    */
   @POST
   @Path("/map-cohorts/batch")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Batch map users to cohorts",
+      description =
+          "Batch operation to assign or remove multiple users from cohorts in a single request. "
+              + "Each item in the request array specifies a user, cohort, action, and expiry time.")
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "Batch operation completed",
+        content =
+            @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = BulkOperationResult.class))),
+    @ApiResponse(
+        responseCode = "400",
+        description = "Invalid request - missing or invalid parameters",
+        content =
+            @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = ResponseEntity.Failure.class))),
+    @ApiResponse(
+        responseCode = "500",
+        description = "Internal server error during batch processing",
+        content =
+            @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = ResponseEntity.Failure.class)))
+  })
   public CompletionStage<Response> handleBatch(
-      @HeaderParam("x-project-key") String projectKey, List<BatchMapUserCohortsRequest> requests) {
+      @Parameter(
+              description = "Project key used as Aerospike set name for multi-tenant isolation",
+              required = true,
+              example = "tenant1_project1")
+          @HeaderParam("x-project-key")
+          String projectKey,
+      @io.swagger.v3.oas.annotations.parameters.RequestBody(
+              description = "List of cohort mapping requests",
+              required = true,
+              content =
+                  @Content(
+                      mediaType = MediaType.APPLICATION_JSON,
+                      schema = @Schema(implementation = BatchMapUserCohortsRequest[].class)))
+          List<BatchMapUserCohortsRequest> requests) {
 
     HeaderValidator.validateProjectKeyHeader(projectKey);
     BatchMapUserCohortsRequestValidator.validate(requests);
