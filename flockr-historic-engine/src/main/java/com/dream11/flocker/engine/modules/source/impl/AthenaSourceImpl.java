@@ -30,13 +30,15 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
         this.athenaConfig = athenaConfig;
         this.sparkSession = sparkSession;
         log.info("Athena source configured: database={}, region={}", 
-                athenaConfig.getDatabase(), athenaConfig.getRegion());
+                athenaConfig.getDatabase() != null ? athenaConfig.getDatabase() : "will be extracted from query",
+                athenaConfig.getRegion());
     }
 
     @Override
     public Dataset<Row> read() throws Exception {
         log.info("Reading data from Athena: database={}, region={}", 
-                athenaConfig.getDatabase(), athenaConfig.getRegion());
+                athenaConfig.getDatabase() != null ? athenaConfig.getDatabase() : "will be extracted from query",
+                athenaConfig.getRegion());
         
         // Execute Athena query first if SQL query is provided
         String queryExecutionId = null;
@@ -92,21 +94,30 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
                 }
             }
             
-            // Try to read as Parquet (default Athena output format)
+            // Try to read as CSV first (Athena default output is CSV), then fallback to Parquet
+            Dataset<Row> data = null;
             try {
-                Dataset<Row> data = sparkSession.read().parquet(s3Path);
-                log.info("Successfully read Athena results from S3 path: {}", s3Path);
-                return data;
-            } catch (Exception e) {
-                log.warn("Failed to read as Parquet, trying CSV format", e);
-                // Fallback to CSV
-                Dataset<Row> data = sparkSession.read()
+                // Try CSV first (Athena's default output format)
+                log.debug("Attempting to read as CSV from S3 path: {}", s3Path);
+                data = sparkSession.read()
                         .option("header", "true")
                         .option("inferSchema", "true")
                         .csv(s3Path);
                 log.info("Successfully read Athena results as CSV from S3 path: {}", s3Path);
-                return data;
+            } catch (Exception csvException) {
+                log.debug("Failed to read as CSV, trying Parquet format", csvException);
+                // Fallback to Parquet
+                try {
+                    data = sparkSession.read().parquet(s3Path);
+                    log.info("Successfully read Athena results as Parquet from S3 path: {}", s3Path);
+                } catch (Exception parquetException) {
+                    log.error("Failed to read as both CSV and Parquet from path: {}", s3Path);
+                    log.error("CSV error: {}", csvException.getMessage());
+                    log.error("Parquet error: {}", parquetException.getMessage());
+                    throw new RuntimeException("Failed to read Athena results from S3. Tried both CSV and Parquet formats.", parquetException);
+                }
             }
+            return data;
         } else {
             log.error("Athena output location is required but not specified");
             throw new IllegalStateException("Athena outputLocation must be specified in configuration");
@@ -132,6 +143,18 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
     }
     
     private QueryExecutionResult executeAthenaQuery(String sqlQuery) throws Exception {
+        // Validate credentials before creating client
+        if (athenaConfig.getAccessKey() == null || athenaConfig.getAccessKey().trim().isEmpty()) {
+            throw new IllegalArgumentException("AWS Access Key is required but not provided");
+        }
+        if (athenaConfig.getSecretKey() == null || athenaConfig.getSecretKey().trim().isEmpty()) {
+            throw new IllegalArgumentException("AWS Secret Key is required but not provided");
+        }
+        
+        log.debug("Creating AWS credentials for Athena - AccessKey: {}..., Region: {}", 
+                athenaConfig.getAccessKey().substring(0, Math.min(8, athenaConfig.getAccessKey().length())),
+                athenaConfig.getRegion());
+        
         // Create AWS credentials
         AWSCredentials credentials;
         if (athenaConfig.getSessionToken() != null && !athenaConfig.getSessionToken().isEmpty()) {
@@ -140,11 +163,13 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
                     athenaConfig.getSecretKey(),
                     athenaConfig.getSessionToken()
             );
+            log.debug("Using temporary credentials with session token");
         } else {
             credentials = new BasicAWSCredentials(
                     athenaConfig.getAccessKey(),
                     athenaConfig.getSecretKey()
             );
+            log.debug("Using permanent credentials");
         }
 
         // Create Athena client
@@ -161,10 +186,30 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
                 })
                 .withRegion(athenaConfig.getRegion())
                 .build();
+        
+        log.debug("Athena client created successfully for region: {}", athenaConfig.getRegion());
 
         // Create query execution request
-        QueryExecutionContext queryExecutionContext = new QueryExecutionContext()
-                .withDatabase(athenaConfig.getDatabase());
+        // Extract database from query if not provided in config (e.g., "SELECT * FROM database.table")
+        String database = athenaConfig.getDatabase();
+        if ((database == null || database.trim().isEmpty()) && athenaConfig.getSqlQuery() != null) {
+            // Try to extract database from query (format: database.table or database.table.column)
+            String query = athenaConfig.getSqlQuery().trim();
+            // Look for patterns like: FROM database.table, JOIN database.table, etc.
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "(?i)(?:FROM|JOIN|UPDATE|INTO)\\s+([a-zA-Z0-9_]+)\\.[a-zA-Z0-9_]+", 
+                java.util.regex.Pattern.CASE_INSENSITIVE);
+            java.util.regex.Matcher matcher = pattern.matcher(query);
+            if (matcher.find()) {
+                database = matcher.group(1);
+                log.info("Extracted database '{}' from SQL query", database);
+            }
+        }
+        
+        QueryExecutionContext queryExecutionContext = new QueryExecutionContext();
+        if (database != null && !database.trim().isEmpty()) {
+            queryExecutionContext.withDatabase(database);
+        }
 
         // Convert s3a:// to s3:// for Athena API (Athena doesn't support s3a://)
         String outputLocation = athenaConfig.getOutputLocation();
@@ -213,7 +258,13 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
 
         if (queryState == QueryExecutionState.FAILED) {
             String reason = getQueryExecutionResult.getQueryExecution().getStatus().getStateChangeReason();
-            throw new RuntimeException("Athena query execution failed: " + reason);
+            String errorMessage = "Athena query execution failed: " + reason;
+            if (reason != null && (reason.contains("UnrecognizedClientException") || 
+                                  reason.contains("security token") || 
+                                  reason.contains("invalid"))) {
+                errorMessage += "\nPlease verify your AWS credentials (accessKey, secretKey, and sessionToken if using temporary credentials) are valid and have proper permissions for Athena.";
+            }
+            throw new RuntimeException(errorMessage);
         } else if (queryState == QueryExecutionState.CANCELLED) {
             throw new RuntimeException("Athena query execution was cancelled");
         }

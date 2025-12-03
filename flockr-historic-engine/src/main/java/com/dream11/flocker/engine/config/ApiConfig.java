@@ -17,6 +17,7 @@ public class ApiConfig {
     private int batchSize;
     private int timeoutSeconds;
     private String contentType;
+    private String projectKey;
 
     public static ApiConfig fromConfig(Config config) {
         ApiConfig apiConfig = new ApiConfig();
@@ -31,6 +32,7 @@ public class ApiConfig {
         apiConfig.setTimeoutSeconds(mergedConfig.getInt("timeoutSeconds"));
         apiConfig.setContentType(getStringOrNull(mergedConfig, "contentType") != null
             ? getStringOrNull(mergedConfig, "contentType") : "application/json");
+        apiConfig.setProjectKey(getStringOrNull(mergedConfig, "projectKey"));
 
         return apiConfig;
     }
@@ -40,7 +42,6 @@ public class ApiConfig {
             return ConfigUtil.getConfigFromConfigFile("config/sink/api/%s.conf");
         } catch (Exception e) {
             log.warn("Failed to load default API config, using hardcoded defaults: {}", e.getMessage());
-            // Fallback to hardcoded defaults if config file is not available
             return ConfigFactory.parseString(
                 "rateLimitPerSecond = 10\n" +
                 "batchSize = 100\n" +

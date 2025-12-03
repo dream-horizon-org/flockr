@@ -41,11 +41,9 @@ public class S3Config {
         if (accessKey != null && secretKey != null) {
             hadoopConf.set("fs.s3a.access.key", accessKey);
             hadoopConf.set("fs.s3a.secret.key", secretKey);
-            
-            // Set session token if provided (for temporary credentials)
+
             if (sessionToken != null && !sessionToken.isEmpty()) {
                 hadoopConf.set("fs.s3a.session.token", sessionToken);
-                // Use TemporaryAWSCredentialsProvider for temporary credentials with session token
                 hadoopConf.set("fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider");
                 log.debug("S3 credentials configured with session token - using TemporaryAWSCredentialsProvider");
             } else {

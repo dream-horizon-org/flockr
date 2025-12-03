@@ -2,6 +2,7 @@ package com.dream11.flocker.engine.service.s3;
 
 import com.dream11.flocker.engine.modules.sink.Sink;
 import com.dream11.flocker.engine.modules.source.Source;
+import com.dream11.flocker.engine.modules.source.impl.AthenaSourceImpl;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import lombok.Data;
@@ -12,6 +13,8 @@ import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+
+import static org.apache.spark.sql.functions.lit;
 
 @Slf4j
 @Data
@@ -30,7 +33,7 @@ public class S3Process {
         this.sinks = sinks;
     }
 
-    public void processWithQuery(String sqlQuery, String cohortName, String action) {
+    public void processWithQuery(String sqlQuery, String cohortName, String action, String expireAt) {
         try {
             log.info("Starting S3 processing with query: {}", sqlQuery);
             log.info("Cohort Name: {}, Action: {}", cohortName, action);
@@ -57,32 +60,67 @@ public class S3Process {
             long rowCount = unifiedData.count();
             log.info("Successfully read data from {} sources. Total row count: {}", sources.size(), rowCount);
 
-            // If source is Athena, the query was already executed on Athena, so use the data directly
-            // Otherwise, execute Spark SQL query on the data
             Dataset<Row> queryResult;
-            if (sources.size() == 1 && sources.get(0) instanceof com.dream11.flocker.engine.modules.source.impl.AthenaSourceImpl) {
-                // Athena source - query already executed, use data as-is
+            if (sources.size() == 1 && sources.get(0) instanceof AthenaSourceImpl) {
                 log.info("Athena source detected - query already executed on Athena, using results directly");
                 queryResult = unifiedData;
             } else {
-                // Other sources - execute Spark SQL query
                 unifiedData.createOrReplaceTempView("source_data");
                 log.debug("Created temporary view 'source_data'");
                 queryResult = sparkSession.sql(sqlQuery);
             }
-            
+
             queryResult.cache();
             long resultCount = queryResult.count();
             log.info("Query result row count: {}", resultCount);
 
-
-
             Dataset<Row> resultWithFields = queryResult;
-            if (cohortName != null && !cohortName.isEmpty()) {
-                resultWithFields = resultWithFields.withColumn("cohortName",
-                        org.apache.spark.sql.functions.lit(cohortName));
-                log.debug("Added cohortName field: {}", cohortName);
+
+            String[] columns = queryResult.columns();
+            if (columns.length == 0) {
+                throw new IllegalStateException("Query result has no columns");
             }
+
+            String firstColumnName = columns[0];
+            log.debug("First column name: {}", firstColumnName);
+
+            if (!"user_id".equalsIgnoreCase(firstColumnName)) {
+                resultWithFields = resultWithFields.withColumnRenamed(firstColumnName, "user_id");
+                log.debug("Renamed column '{}' to 'user_id'", firstColumnName);
+            }
+
+            resultWithFields = resultWithFields.select("user_id");
+
+            if (cohortName != null && !cohortName.isEmpty()) {
+                resultWithFields = resultWithFields.withColumn("cohort_key",
+                        lit(cohortName));
+                log.debug("Added cohort_key field: {}", cohortName);
+            } else {
+                resultWithFields = resultWithFields.withColumn("cohort_key",
+                        lit(""));
+            }
+
+            if (action != null && !action.isEmpty()) {
+                resultWithFields = resultWithFields.withColumn("action",
+                        lit(action));
+                log.debug("Added action field: {}", action);
+            } else {
+                resultWithFields = resultWithFields.withColumn("action",
+                        lit("append"));
+            }
+
+            if (expireAt != null && !expireAt.isEmpty()) {
+                resultWithFields = resultWithFields.withColumn("expire_at",
+                        lit(expireAt));
+                log.debug("Added expire_at field: {}", expireAt);
+            } else {
+                resultWithFields = resultWithFields.withColumn("expire_at",
+                        lit(""));
+            }
+
+            resultWithFields = resultWithFields.select("user_id", "cohort_key", "action", "expire_at");
+
+            log.info("Transformed data structure - columns: {}", java.util.Arrays.toString(resultWithFields.columns()));
 
             log.info("Writing results to {} sinks...", sinks.size());
             for (Sink<String> sink : sinks) {
@@ -112,7 +150,7 @@ public class S3Process {
 
     private void writeRowsToSink(Dataset<Row> dataset, Sink<String> sink, String sinkName) {
         log.warn("Using collectAsList for {} - this may cause memory issues with large datasets", sinkName);
-        java.util.List<Row> rows = dataset.collectAsList();
+        List<Row> rows = dataset.collectAsList();
         log.info("Collected {} rows to send to {}", rows.size(), sinkName);
 
         for (Row row : rows) {

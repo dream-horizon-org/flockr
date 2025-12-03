@@ -5,14 +5,18 @@ import com.dream11.flocker.engine.config.AthenaConfig;
 import com.dream11.flocker.engine.config.ConnectorConfig;
 import com.dream11.flocker.engine.config.KafkaConfig;
 import com.dream11.flocker.engine.config.S3Config;
+import com.dream11.flocker.engine.constants.Constants;
 import com.dream11.flocker.engine.enums.SourceTypes;
 import com.dream11.flocker.engine.modules.sink.Sink;
+import com.dream11.flocker.engine.modules.sink.impl.ApiSinkImpl;
+import com.dream11.flocker.engine.modules.sink.impl.S3SinkImpl;
 import com.dream11.flocker.engine.modules.source.Source;
 import com.dream11.flocker.engine.modules.source.impl.SourceFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import com.typesafe.config.Config;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -32,17 +36,20 @@ public class EngineModule extends AbstractModule {
     private final String cohortName;
     @SuppressWarnings("unused")
     private final String action;
+    @SuppressWarnings("unused")
+    private final String expireAt;
 
     public EngineModule(SparkSession sparkSession,
             List<ConnectorConfig> sourceConfigs,
             List<ConnectorConfig> sinkConfigs,
-            String cohortName, String action) {
+            String cohortName, String action, String expireAt) {
         this.sparkSession = sparkSession;
         this.sourceConfigs = sourceConfigs;
         this.sinkConfigs = sinkConfigs;
         this.cohortName = cohortName;
         this.action = action;
-        log.debug("EngineModule initialized with action: {}", action);
+        this.expireAt = expireAt;
+        log.debug("EngineModule initialized with action: {}, expireAt: {}", action, expireAt);
     }
 
     @Override
@@ -61,8 +68,8 @@ public class EngineModule extends AbstractModule {
             SourceTypes type = SourceTypes.valueOf(config.getType().toUpperCase());
             Object configObj = config.getConfig();
 
-            if (configObj instanceof com.typesafe.config.Config) {
-                com.typesafe.config.Config typesafeConfig = (com.typesafe.config.Config) configObj;
+            if (configObj instanceof Config) {
+                Config typesafeConfig = (Config) configObj;
                 configObj = switch (type) {
                     case S3 -> S3Config.fromConfig(typesafeConfig);
                     case ATHENA -> AthenaConfig.fromConfig(typesafeConfig);
@@ -91,40 +98,40 @@ public class EngineModule extends AbstractModule {
 
                 if (configObj instanceof S3Config) {
                     s3Config = (S3Config) configObj;
-                } else if (configObj instanceof com.typesafe.config.Config) {
-                    s3Config = S3Config.fromConfig((com.typesafe.config.Config) configObj);
+                } else if (configObj instanceof Config) {
+                    s3Config = S3Config.fromConfig((Config) configObj);
                 } else {
                     throw new IllegalArgumentException(
                             "Unknown config type for S3 sink: " + configObj.getClass().getName());
                 }
 
                 String writeMode = s3Config.getWriteMode() != null ? s3Config.getWriteMode()
-                        : com.dream11.flocker.engine.constants.Constants.WRITE_MODE_APPEND;
+                        : Constants.WRITE_MODE_APPEND;
                 String outputPath = "s3a://" + s3Config.getBucket() + "/" + s3Config.getPath();
 
-                sinks.add(new com.dream11.flocker.engine.modules.sink.impl.S3SinkImpl(
+                sinks.add(new S3SinkImpl(
                         s3Config, sparkSession, writeMode, outputPath));
                 log.info("Added S3 sink: {}", outputPath);
             } else if ("API".equals(type)) {
                 Object configObj = config.getConfig();
                 ApiConfig apiConfig;
-                
+
                 if (configObj instanceof ApiConfig) {
                     apiConfig = (ApiConfig) configObj;
-                } else if (configObj instanceof com.typesafe.config.Config) {
-                    apiConfig = ApiConfig.fromConfig((com.typesafe.config.Config) configObj);
+                } else if (configObj instanceof Config) {
+                    apiConfig = ApiConfig.fromConfig((Config) configObj);
                 } else {
                     throw new IllegalArgumentException(
                             "Unknown config type for API sink: " + configObj.getClass().getName());
                 }
-                
-                sinks.add(new com.dream11.flocker.engine.modules.sink.impl.ApiSinkImpl(apiConfig, cohortName));
+
+                sinks.add(new ApiSinkImpl(apiConfig, cohortName, action, expireAt));
                 log.info("Added API sink with rate limit: {}/sec", apiConfig.getRateLimitPerSecond());
             } else if ("KAFKA".equals(type)) {
                 log.warn("Kafka sink not yet implemented, skipping");
             }
         }
-        
+
         return sinks;
     }
 }

@@ -16,8 +16,10 @@ public class ApiSinkImpl implements Sink<String> {
     private final ApiClient apiClient;
     private final ApiConfig apiConfig;
     private final String cohortName;
+    private final String action;
+    private final String expireAt;
 
-    public ApiSinkImpl(ApiConfig apiConfig, String cohortName) {
+    public ApiSinkImpl(ApiConfig apiConfig, String cohortName, String action, String expireAt) {
         if (apiConfig == null) {
             throw new IllegalArgumentException("ApiConfig cannot be null");
         }
@@ -26,6 +28,8 @@ public class ApiSinkImpl implements Sink<String> {
         }
         this.apiConfig = apiConfig;
         this.cohortName = cohortName;
+        this.action = action;
+        this.expireAt = expireAt;
         this.apiClient = new ApiClient(apiConfig);
         log.info("ApiSinkImpl initialized for URL: {} with rate limit: {}/sec",
             apiConfig.getUrl(), apiConfig.getRateLimitPerSecond());
@@ -33,7 +37,6 @@ public class ApiSinkImpl implements Sink<String> {
 
     @Override
     public void write(String data) throws Exception {
-        // Not used for API sink - we use writeDataset instead
         throw new UnsupportedOperationException("API sink does not support individual write operations");
     }
 
@@ -46,7 +49,6 @@ public class ApiSinkImpl implements Sink<String> {
         log.info("Writing dataset to API: {} with rate limit: {}/sec",
             apiConfig.getUrl(), apiConfig.getRateLimitPerSecond());
 
-        // Collect userIds from first column
         List<String> userIds = new ArrayList<>();
         try {
             List<Row> rows = dataset.select(dataset.columns()[0]).distinct().collectAsList();
@@ -57,7 +59,7 @@ public class ApiSinkImpl implements Sink<String> {
             }
             log.info("Collected {} unique userIds for API call", userIds.size());
 
-            apiClient.notifyCohortUpdate(cohortName, userIds);
+            apiClient.notifyCohortUpdate(cohortName, userIds, action, expireAt);
             log.info("Successfully sent data to API");
         } catch (Exception e) {
             log.error("Failed to write dataset to API", e);

@@ -10,7 +10,7 @@ import org.apache.spark.sql.SparkSession;
 
 @Slf4j
 public class S3SinkImpl implements Sink<String> {
-    
+
     private final S3Config sinkConfig;
     private final SparkSession sparkSession;
     private final String writeMode;
@@ -26,7 +26,7 @@ public class S3SinkImpl implements Sink<String> {
         }
         this.sinkConfig = sinkConfig;
         this.sparkSession = sparkSession;
-        this.writeMode = writeMode != null ? writeMode : 
+        this.writeMode = writeMode != null ? writeMode :
             (sinkConfig.getWriteMode() != null ? sinkConfig.getWriteMode() : Constants.WRITE_MODE_OVERWRITE);
         this.outputPath = outputPath != null ? outputPath : sinkConfig.getS3Path();
         sinkConfig.configureHadoop(sparkSession.sparkContext().hadoopConfiguration());
@@ -39,9 +39,9 @@ public class S3SinkImpl implements Sink<String> {
         if (data == null || data.trim().isEmpty()) {
             throw new IllegalArgumentException("Data cannot be null or empty");
         }
-        
+
         Dataset<Row> singleRow = sparkSession.read().json(sparkSession.createDataset(
-            java.util.Arrays.asList(data), 
+            java.util.Arrays.asList(data),
             org.apache.spark.sql.Encoders.STRING()
         ));
         writeDataset(singleRow);
@@ -55,26 +55,25 @@ public class S3SinkImpl implements Sink<String> {
         }
 
         log.info("Writing dataset to S3 path: {} with mode: {}", outputPath, writeMode);
-        
-        // Apply partitioning if configured
+
         Dataset<Row> datasetToWrite = dataset;
         if (sinkConfig.getPartitions() > 0) {
             log.debug("Repartitioning dataset to {} partitions", sinkConfig.getPartitions());
             datasetToWrite = dataset.coalesce(sinkConfig.getPartitions());
         }
-        
+
         var writer = datasetToWrite.write().mode(writeMode).format(sinkConfig.getSparkFormat());
-        
+
         if (sinkConfig.getCompression() != null && !sinkConfig.getCompression().isEmpty()) {
             writer.option("compression", sinkConfig.getCompression());
             log.debug("Compression enabled: {}", sinkConfig.getCompression());
         }
-        
+
         if (sinkConfig.getOptions() != null && !sinkConfig.getOptions().isEmpty()) {
             sinkConfig.getOptions().forEach(writer::option);
             log.debug("Applied {} custom options", sinkConfig.getOptions().size());
         }
-        
+
         writer.save(outputPath);
         log.info("Successfully wrote dataset to S3 path: {}", outputPath);
     }

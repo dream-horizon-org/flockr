@@ -99,15 +99,13 @@ public class ConnectorConfigParser {
         String type = config.getString("type").toUpperCase();
         Config sinkConfig = config.hasPath("config") ? config.getConfig("config") : ConfigFactory.empty();
 
-        // Convert to typed config for API sink
+
         if ("API".equals(type)) {
             ApiConfig apiConfig = ApiConfig.fromConfig(sinkConfig);
             return new ConnectorConfig(type, apiConfig);
         } else if ("S3".equals(type)) {
-            // Keep as Typesafe Config for now, will be converted in EngineModule
             return new ConnectorConfig(type, sinkConfig);
         } else {
-            // Keep as Typesafe Config for other types
             return new ConnectorConfig(type, sinkConfig);
         }
     }

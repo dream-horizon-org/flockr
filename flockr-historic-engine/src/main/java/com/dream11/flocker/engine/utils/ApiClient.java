@@ -24,7 +24,7 @@ public class ApiClient {
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
-        this.minIntervalMillis = 100; // Default 10 requests per second
+        this.minIntervalMillis = 100;
     }
 
     public ApiClient(ApiConfig apiConfig) {
@@ -41,7 +41,7 @@ public class ApiClient {
             apiConfig.getRateLimitPerSecond(), apiConfig.getBatchSize(), apiConfig.getTimeoutSeconds());
     }
 
-    public void notifyCohortUpdate(String cohortName, List<String> userIds) {
+    public void notifyCohortUpdate(String cohortName, List<String> userIds, String action, String expireAt) {
         if (apiConfig == null) {
             log.warn("ApiConfig not provided, simulating API call");
             log.info("Calling API for cohortName: {} with {} users", cohortName, userIds.size());
@@ -62,7 +62,7 @@ public class ApiClient {
 
                 waitForRateLimit();
 
-                makeApiCall(cohortName, batch, i + 1, totalBatches);
+                makeApiCall(cohortName, batch, action, expireAt, i + 1, totalBatches);
 
                 log.debug("Processed batch {}/{} ({} users)", i + 1, totalBatches, batch.size());
             }
@@ -93,13 +93,19 @@ public class ApiClient {
         lastRequestTime.set(System.currentTimeMillis());
     }
 
-    private void makeApiCall(String cohortName, List<String> userIds, int batchNumber, int totalBatches) throws Exception {
-        String requestBody = buildRequestBody(cohortName, userIds);
+    private void makeApiCall(String cohortName, List<String> userIds, String action, String expireAt, int batchNumber, int totalBatches) throws Exception {
+        String requestBody = buildRequestBody(cohortName, userIds, action, expireAt);
 
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(apiConfig.getUrl()))
                 .timeout(Duration.ofSeconds(apiConfig.getTimeoutSeconds()))
-                .header("Content-Type", apiConfig.getContentType())
+                .header("Content-Type", apiConfig.getContentType());
+
+        if (apiConfig.getProjectKey() != null && !apiConfig.getProjectKey().isEmpty()) {
+            requestBuilder.header("x-project-key", apiConfig.getProjectKey());
+        }
+
+        HttpRequest request = requestBuilder
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
@@ -114,17 +120,27 @@ public class ApiClient {
         }
     }
 
-    private String buildRequestBody(String cohortName, List<String> userIds) {
-        StringBuilder json = new StringBuilder("{");
-        json.append("\"cohortName\":\"").append(cohortName).append("\",");
-        json.append("\"userIds\":[");
+    private String buildRequestBody(String cohortName, List<String> userIds, String action, String expireAt) {
+        StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < userIds.size(); i++) {
             if (i > 0) {
                 json.append(",");
             }
-            json.append("\"").append(escapeJson(userIds.get(i))).append("\"");
+            json.append("{");
+            String userId = userIds.get(i);
+            try {
+                Long.parseLong(userId);
+                json.append("\"user_id\":").append(userId);
+            } catch (NumberFormatException e) {
+                json.append("\"user_id\":\"").append(escapeJson(userId)).append("\"");
+            }
+            json.append(",");
+            json.append("\"cohort_key\":\"").append(escapeJson(cohortName)).append("\",");
+            json.append("\"action\":\"").append(escapeJson(action != null ? action : "append")).append("\",");
+            json.append("\"expire_at\":\"").append(escapeJson(expireAt != null ? expireAt : "")).append("\"");
+            json.append("}");
         }
-        json.append("]}");
+        json.append("]");
         return json.toString();
     }
 

@@ -54,7 +54,6 @@ public class ConnectorConfigDeserializer extends JsonDeserializer<ConnectorConfi
                     } else if ("KAFKA".equals(type)) {
                         parsedConfig = KafkaConfig.fromConfig(config);
                     } else {
-                        // For other sink types, keep as Typesafe Config
                         parsedConfig = config;
                     }
                 } catch (IllegalArgumentException ex) {

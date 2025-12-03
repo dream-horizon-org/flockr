@@ -7,6 +7,7 @@ import com.dream11.flocker.engine.service.s3.S3Process;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.typesafe.config.ConfigFactory;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ public class EngineStart {
         SparkSession sparkSession = null;
         Injector injector = null;
         try {
+
             log.info("Starting Flocker Spark Engine...");
 
             if (args.length < 1) {
@@ -36,6 +38,7 @@ public class EngineStart {
                 log.error("  \"sqlQuery\": \"SELECT * FROM table\",");
                 log.error("  \"cohortName\": \"cohort123\",");
                 log.error("  \"action\": \"append\",");
+                log.error("  \"expireAt\": \"2025-12-31 23:59:59\",");
                 log.error("  \"sparkMaster\": \"spark://host:7077\",");
                 log.error("  \"sourceJson\": [{\"type\":\"ATHENA\",\"config\":{\"database\":\"a0a6bd02a3194a7a99699bc968575d83\",\"region\":\"us-east-1\",\"workgroup\":\"primary\",\"outputLocation\":\"s3a://my-bucket/athena-results/\",\"accessKey\":\"YOUR_ACCESS_KEY\",\"secretKey\":\"YOUR_SECRET_KEY\"}}],");
                 log.error("  \"destinationJson\": []");
@@ -58,6 +61,7 @@ public class EngineStart {
             String sqlQuery = engineArgs.getSqlQuery();
             String cohortName = engineArgs.getCohortName();
             String action = engineArgs.getAction();
+            String expireAt = engineArgs.getExpireAt();
             String sparkMaster = engineArgs.getSparkMaster();
             List<ConnectorConfig> sourceConfigs = engineArgs.getSourceJson();
             List<ConnectorConfig> sinkConfigs = engineArgs.getDestinationJson();
@@ -75,6 +79,11 @@ public class EngineStart {
                 System.exit(1);
                 return;
             }
+            if (expireAt == null || expireAt.trim().isEmpty()) {
+                log.error("expireAt cannot be null or empty");
+                System.exit(1);
+                return;
+            }
 
             final String nonNullAction = action;
             String eventAction = nonNullAction.toLowerCase().trim();
@@ -87,6 +96,7 @@ public class EngineStart {
             log.info("SQL Query: {}", sqlQuery);
             log.info("Cohort Name: {}", cohortName);
             log.info("Action: {}", eventAction);
+            log.info("expireAt: {}", expireAt);
             log.info("Spark Master: {}", sparkMaster);
             log.info("Source Configs: {}", sourceConfigs);
             log.info("Destination Configs: {}", sinkConfigs);
@@ -125,7 +135,8 @@ public class EngineStart {
                             Object configObj = config.getConfig();
                             athenaConfig = (AthenaConfig) configObj;
                             log.info("Athena config loaded - database: {}, region: {}",
-                                    athenaConfig.getDatabase(), athenaConfig.getRegion());
+                                    athenaConfig.getDatabase() != null ? athenaConfig.getDatabase() : "will be extracted from query",
+                                    athenaConfig.getRegion());
                             break;
                         }
                     }
@@ -134,9 +145,9 @@ public class EngineStart {
                     throw new IllegalStateException("Athena config not found");
                 }
 
-                // Set SQL query in Athena config so it can be executed
                 athenaConfig.setSqlQuery(sqlQuery);
-                log.info("SQL query set in Athena config for execution. Database: {}", athenaConfig.getDatabase());
+                log.info("SQL query set in Athena config for execution. Database: {}",
+                        athenaConfig.getDatabase() != null ? athenaConfig.getDatabase() : "will be extracted from query");
             } catch (Exception e) {
                 log.error("Failed to process source configuration: {}", e.getMessage(), e);
                 System.exit(1);
@@ -149,7 +160,7 @@ public class EngineStart {
             }
 
             log.info("Athena config - AccessKey: {}, SecretKey: {}, SessionToken: {}",
-                    athenaConfig.getAccessKey() != null ? athenaConfig.getAccessKey().substring(0, Math.min(10, athenaConfig.getAccessKey().length())) + "..." : "null",
+                    athenaConfig.getAccessKey() != null ? athenaConfig.getAccessKey().substring(0, Math.min(5, athenaConfig.getAccessKey().length())) + "..." : "null",
                     athenaConfig.getSecretKey() != null ? "***" : "null",
                     athenaConfig.getSessionToken() != null ? "present (" + athenaConfig.getSessionToken().length() + " chars)" : "null");
 
@@ -158,11 +169,9 @@ public class EngineStart {
             System.setProperty("AWS_ACCESS_KEY_ID", athenaConfig.getAccessKey());
             System.setProperty("AWS_SECRET_ACCESS_KEY", athenaConfig.getSecretKey());
 
-            // Set session token if provided (for temporary credentials)
             if (athenaConfig.getSessionToken() != null && !athenaConfig.getSessionToken().isEmpty()) {
                 System.setProperty("fs.s3a.session.token", athenaConfig.getSessionToken());
                 System.setProperty("AWS_SESSION_TOKEN", athenaConfig.getSessionToken());
-                // Use TemporaryAWSCredentialsProvider for temporary credentials with session token
                 System.setProperty("fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider");
                 log.info("AWS session token configured from Athena source - using TemporaryAWSCredentialsProvider");
             } else {
@@ -184,7 +193,7 @@ public class EngineStart {
 
 
             ApiConfig internalApiConfig = ApiConfig.fromConfig(
-                com.typesafe.config.ConfigFactory.parseString("{}"));
+                ConfigFactory.parseString("{}"));
             ConnectorConfig internalApiSink = new ConnectorConfig("API", internalApiConfig);
             sinkConfigs.add(internalApiSink);
             log.info("Added internal API sink: {}", internalApiConfig.getUrl());
@@ -201,13 +210,13 @@ public class EngineStart {
             log.debug("SparkSession created successfully with master: {}", sparkMaster);
 
             injector = Guice
-                .createInjector(new EngineModule(sparkSession, sourceConfigs, sinkConfigs, cohortName, eventAction));
+                .createInjector(new EngineModule(sparkSession, sourceConfigs, sinkConfigs, cohortName, eventAction, expireAt));
             log.debug("Guice injector created successfully");
 
             S3Process s3Process = injector.getInstance(S3Process.class);
             log.info("Starting S3 processing with query and action: {}", eventAction);
 
-            s3Process.processWithQuery(sqlQuery, cohortName, eventAction);
+            s3Process.processWithQuery(sqlQuery, cohortName, eventAction, expireAt);
             log.info("Flocker Engine completed successfully");
 
         } catch (Exception e) {

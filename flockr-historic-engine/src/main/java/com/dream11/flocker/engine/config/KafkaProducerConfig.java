@@ -19,7 +19,6 @@ public class KafkaProducerConfig {
     public static KafkaProducerConfig fromConfig(Config config) {
         KafkaProducerConfig kafkaConfig = new KafkaProducerConfig();
 
-        // Check environment variable first (for Kubernetes), then config file
         String bootstrapServers = System.getenv("KAFKA_BOOTSTRAP_SERVERS");
         if (bootstrapServers == null || bootstrapServers.isEmpty()) {
             bootstrapServers = System.getProperty("kafka.bootstrap.servers");
@@ -27,7 +26,6 @@ public class KafkaProducerConfig {
         if ((bootstrapServers == null || bootstrapServers.isEmpty()) && config.hasPath("bootstrapServers")) {
             bootstrapServers = config.getString("bootstrapServers");
         }
-        // Support bootstrapServersUrl as an alias for bootstrapServers
         if ((bootstrapServers == null || bootstrapServers.isEmpty()) && config.hasPath("bootstrapServersUrl")) {
             bootstrapServers = config.getString("bootstrapServersUrl");
         }
