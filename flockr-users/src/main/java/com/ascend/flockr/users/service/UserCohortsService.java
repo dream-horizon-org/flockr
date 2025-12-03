@@ -1,6 +1,7 @@
 package com.ascend.flockr.users.service;
 
 import com.ascend.flockr.users.dto.BulkOperationResult;
+import com.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
@@ -70,4 +71,21 @@ public interface UserCohortsService {
    */
   Single<BulkOperationResult> assignUsersToCohort(
       String cohortName, String projectKey, InputPart csvFilePart);
+
+  /**
+   * Batch maps multiple users to cohorts (assigns or removes users from cohorts).
+   *
+   * <p>This operation processes a list of mapping requests, where each request can either
+   * append a user to a cohort with an expiry time, or remove a user from a cohort.
+   * The action is determined by each request's {@code action} field.
+   *
+   * <p>The projectKey is used directly as the Aerospike set name for multi-tenant isolation.
+   *
+   * @param projectKey the project key used as the Aerospike set name, must not be null or blank
+   * @param requests the list of mapping requests, each containing user_id, cohort_key, action, and expire_at
+   * @return Single emitting bulk operation result with success/failure statistics
+   * @since 1.0
+   */
+  Single<BulkOperationResult> batchMapUserCohorts(
+      String projectKey, List<BatchMapUserCohortsRequest> requests);
 }

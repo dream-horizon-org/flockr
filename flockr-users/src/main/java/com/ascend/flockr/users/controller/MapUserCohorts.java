@@ -1,10 +1,14 @@
 package com.ascend.flockr.users.controller;
 
+import com.ascend.flockr.users.dto.BulkOperationResult;
 import com.ascend.flockr.users.dto.ResponseEntity;
+import com.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import com.ascend.flockr.users.service.UserCohortsService;
+import com.ascend.flockr.users.validator.BatchMapUserCohortsRequestValidator;
 import com.ascend.flockr.users.validator.HeaderValidator;
 import com.ascend.flockr.users.validator.MapUserCohortsRequestValidator;
+import java.util.List;
 import com.google.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -76,5 +80,60 @@ public class MapUserCohorts {
         .map(ResponseEntity.Success::new)
         .map(res -> Response.ok(res).build())
         .toCompletionStage();
+  }
+
+  /**
+   * Batch maps multiple users to cohorts (assigns or removes).
+   *
+   * <p>Endpoint: POST /flockr/users/map-cohorts/batch
+   *
+   * <p>Headers:
+   * <ul>
+   *   <li>{@code x-project-key} - Project key used directly as Aerospike set name (required)
+   * </ul>
+   *
+   * <p>Request body: JSON array of mapping requests, each containing:
+   * <ul>
+   *   <li>{@code user_id} - User ID (required, must be positive)
+   *   <li>{@code cohort_key} - Cohort name (snake_case for API)
+   *   <li>{@code action} - "append" or "remove"
+   *   <li>{@code expire_at} - Expiry time in format "yyyy-MM-dd HH:mm:ss"
+   * </ul>
+   *
+   * <p>The x-project-key is used directly as the Aerospike set name for multi-tenant isolation.
+   *
+   * @param projectKey the project key from x-project-key header
+   * @param requests the list of mapping requests
+   * @return CompletionStage resolving to HTTP 200 with bulk operation result
+   * @since 1.0
+   */
+  @POST
+  @Path("/map-cohorts/batch")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public CompletionStage<Response> handleBatch(
+      @HeaderParam("x-project-key") String projectKey,
+      List<BatchMapUserCohortsRequest> requests) {
+
+    HeaderValidator.validateProjectKeyHeader(projectKey);
+    BatchMapUserCohortsRequestValidator.validate(requests);
+
+    return userCohortsService
+        .batchMapUserCohorts(projectKey, requests)
+        .map(ResponseEntity.Success<BulkOperationResult>::new)
+        .map(Response::ok)
+        .map(Response.ResponseBuilder::build)
+        .onErrorReturn(error -> buildErrorResponse(error))
+        .toCompletionStage();
+  }
+
+  /**
+   * Builds an error response for batch mapping failures.
+   */
+  private Response buildErrorResponse(Throwable error) {
+    log.error("Batch cohort mapping failed", error);
+    ResponseEntity.Failure failure =
+        new ResponseEntity.Failure("BATCH_MAPPING_FAILED", error.getMessage(), null);
+    return Response.serverError().entity(failure).build();
   }
 }
