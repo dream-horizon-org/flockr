@@ -1,12 +1,10 @@
 package com.ascend.flockr.users.controller;
 
-import com.ascend.flockr.users.constants.Constants;
 import com.ascend.flockr.users.dto.ResponseEntity;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
-import com.ascend.flockr.users.exception.errors.DefinedErrors;
 import com.ascend.flockr.users.service.UserCohortsService;
-import com.ascend.flockr.users.util.SetNameUtil;
-import com.dream11.rest.util.ExceptionUtil;
+import com.ascend.flockr.users.validator.HeaderValidator;
+import com.ascend.flockr.users.validator.MapUserCohortsRequestValidator;
 import com.google.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -38,8 +36,7 @@ public class MapUserCohorts {
    *
    * <ul>
    *   <li>{@code userId} - User ID (required, must be positive)
-   *   <li>{@code x-project-key} - Combined tenant and project identifier in format
-   *       "tenantId_projectId" (required)
+   *   <li>{@code x-project-key} - Project key used directly as Aerospike set name (required)
    * </ul>
    *
    * <p>Request body should contain:
@@ -50,8 +47,7 @@ public class MapUserCohorts {
    *   <li>{@code expire_at} - Expiry time in format "yyyy-MM-dd HH:mm:ss" (for append action)
    * </ul>
    *
-   * <p>The set name used for Aerospike operations is generated from x-project-key to ensure
-   * multi-tenant isolation.
+   * <p>The x-project-key is used directly as the Aerospike set name for multi-tenant isolation.
    *
    * @param userIdHeader the user ID from userId header
    * @param projectKey the combined tenant and project identifier from x-project-key header
@@ -68,109 +64,15 @@ public class MapUserCohorts {
       @HeaderParam("x-project-key") String projectKey,
       MapUserCohortsRequest request) {
 
-    // Validate userId header is present
-    if (userIdHeader == null || userIdHeader.trim().isEmpty()) {
-      log.error("Missing userId header");
-      throw ExceptionUtil.getException(DefinedErrors.MISSING_USER_ID_HEADER);
-    }
-
-    // Validate x-project-key header is present
-    if (projectKey == null || projectKey.trim().isEmpty()) {
-      log.error("Missing x-project-key header");
-      throw ExceptionUtil.getException(DefinedErrors.MISSING_PROJECT_KEY_HEADER);
-    }
-
-    // Parse user ID
-    Long userId;
-    try {
-      userId = Long.parseLong(userIdHeader.trim());
-      if (userId <= 0) {
-        log.error("Invalid userId provided: {}", userIdHeader);
-        throw ExceptionUtil.getException(DefinedErrors.INVALID_USER_ID, userIdHeader);
-      }
-    } catch (IllegalArgumentException | NullPointerException e) {
-      log.error("Invalid userId format: {}", userIdHeader);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_USER_ID, userIdHeader);
-    }
-
-    // Parse x-project-key (format: tenantId_projectId)
-    String[] projectKeyParts = projectKey.split("_", 2);
-    if (projectKeyParts.length != 2) {
-      log.error("Invalid x-project-key format: {}", projectKey);
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_PROJECT_KEY_FORMAT, projectKey);
-    }
-
-    String tenantId = projectKeyParts[0].trim();
-    String projectId = projectKeyParts[1].trim();
-
-    // Validate tenantId is not empty
-    if (tenantId.isEmpty()) {
-      log.error("Empty tenantId in x-project-key: {}", projectKey);
-      throw ExceptionUtil.getException(DefinedErrors.MISSING_TENANT_ID);
-    }
-
-    // Validate projectId is not empty
-    if (projectId.isEmpty()) {
-      log.error("Empty projectId in x-project-key: {}", projectKey);
-      throw ExceptionUtil.getException(DefinedErrors.MISSING_PROJECT_ID);
-    }
-
-    // Validate tenantId and projectId (includes UUID validation for tenantId)
-    try {
-      SetNameUtil.validateTenantAndProject(tenantId, projectId);
-    } catch (IllegalArgumentException e) {
-      log.error(
-          "Invalid tenantId or projectId: tenantId={}, projectId={}, error={}",
-          tenantId,
-          projectId,
-          e.getMessage());
-      // Check if it's a UUID validation error
-      if (e.getMessage().contains("UUID")) {
-        throw ExceptionUtil.getException(DefinedErrors.INVALID_TENANT_ID_FORMAT, tenantId);
-      } else {
-        throw ExceptionUtil.getException(DefinedErrors.INVALID_PROJECT_KEY_FORMAT, projectKey);
-      }
-    }
+    // Validate headers
+    HeaderValidator.validateProjectKeyHeader(projectKey);
+    Long userId = HeaderValidator.validateAndParseUserId(userIdHeader);
 
     // Validate request body
-    if (request == null) {
-      log.error("Request body is null");
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST, "Request body is required");
-    }
-
-    // Validate required fields
-    if (request.getCohortKey() == null || request.getCohortKey().trim().isEmpty()) {
-      log.error("Missing cohort_key in request body");
-      throw ExceptionUtil.getException(DefinedErrors.MISSING_COHORT_KEY);
-    }
-
-    if (request.getAction() == null || request.getAction().trim().isEmpty()) {
-      log.error("Missing action in request body");
-      throw ExceptionUtil.getException(DefinedErrors.MISSING_ACTION);
-    }
-
-    if (request.getExpireAt() == null || request.getExpireAt().trim().isEmpty()) {
-      log.error("Missing expire_at in request body");
-      throw ExceptionUtil.getException(DefinedErrors.MISSING_EXPIRE_AT);
-    }
-
-    // Validate action value
-    if (!request.getAction().equals(Constants.ACTION_APPEND)
-        && !request.getAction().equals(Constants.ACTION_REMOVE)) {
-      log.error("Invalid action value: {}", request.getAction());
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_ACTION, request.getAction());
-    }
-
-    // Validate request body using Bean Validation
-    try {
-      request.validate();
-    } catch (Exception e) {
-      log.error("Request validation failed: {}", e.getMessage());
-      throw ExceptionUtil.getException(DefinedErrors.INVALID_REQUEST, e.getMessage());
-    }
+    MapUserCohortsRequestValidator.validate(request);
 
     return userCohortsService
-        .mapUserCohorts(userId, tenantId, projectId, request)
+        .mapUserCohorts(userId, projectKey, request)
         .map(ResponseEntity.Success::new)
         .map(res -> Response.ok(res).build())
         .toCompletionStage();

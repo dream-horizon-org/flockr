@@ -10,7 +10,6 @@ import com.ascend.flockr.users.dto.BulkOperationResult;
 import com.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import com.ascend.flockr.users.exception.errors.DefinedErrors;
 import com.ascend.flockr.users.service.UserCohortsService;
-import com.ascend.flockr.users.util.SetNameUtil;
 import com.dream11.rest.exception.RestException;
 import com.dream11.rest.util.ExceptionUtil;
 import com.google.inject.Inject;
@@ -69,13 +68,13 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * {@inheritDoc}
    *
    * <p>Implementation retrieves cohort data from Aerospike and filters for active cohorts (those
-   * with expiry time greater than current time). Uses set name generated from tenantId and
-   * projectId for multi-tenant isolation.
+   * with expiry time greater than current time). Uses projectKey directly as the Aerospike set name
+   * for multi-tenant isolation.
    */
   @Override
-  public Single<List<String>> getCohorts(Long userId, String tenantId, String projectId) {
+  public Single<List<String>> getCohorts(Long userId, String projectKey) {
     String userKey = String.valueOf(userId);
-    String setName = SetNameUtil.generateSetName(tenantId, projectId);
+    String setName = projectKey;
     return aerospikeClient.getCohortExpiryBin(userKey, setName).map(this::getActiveCohortsFromMap);
   }
 
@@ -83,17 +82,17 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * {@inheritDoc}
    *
    * <p>Implementation handles both append and remove actions. For append operations, validates
-   * expiry time. Returns {@code false} if Aerospike key is not found. Uses set name generated from
-   * tenantId and projectId for multi-tenant isolation. Uses default source since it's removed from
+   * expiry time. Returns {@code false} if Aerospike key is not found. Uses projectKey directly as
+   * the Aerospike set name for multi-tenant isolation. Uses default source since it's removed from
    * API.
    */
   @Override
   public Single<Boolean> mapUserCohorts(
-      Long userId, String tenantId, String projectId, MapUserCohortsRequest request) {
+      Long userId, String projectKey, MapUserCohortsRequest request) {
     String userKey = String.valueOf(userId);
     // Use default source since it's removed from API
     String source = Constants.SOURCE_DREAM11;
-    String setName = SetNameUtil.generateSetName(tenantId, projectId);
+    String setName = projectKey;
 
     Single<Boolean> single;
     try {
@@ -147,12 +146,12 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * <p>Implementation saves the CSV file to disk temporarily, then processes it with streaming to
    * avoid loading entire file into memory. The temp file is automatically cleaned up after
-   * processing. Uses set name generated from tenantId and projectId for multi-tenant isolation.
+   * processing. Uses projectKey directly as the Aerospike set name for multi-tenant isolation.
    */
   @Override
   public Single<BulkOperationResult> assignUsersToCohort(
-      String cohortName, String tenantId, String projectId, InputPart csvFilePart) {
-    String setName = SetNameUtil.generateSetName(tenantId, projectId);
+      String cohortName, String projectKey, InputPart csvFilePart) {
+    String setName = projectKey;
 
     // Read InputStream synchronously on request thread (required for JAX-RS context)
     java.io.InputStream inputStream;
@@ -340,7 +339,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * <ul>
    *   <li>Streams CSV file line by line without loading entire file into memory
-   *   <li>Validates UUID format and deduplicates user IDs
+   *   <li>Deduplicates user IDs
    *   <li>Processes users in batches with bounded concurrency
    *   <li>Retries failed operations with exponential backoff
    *   <li>Returns statistics about successful and failed assignments
@@ -348,7 +347,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * @param csvFile path to the CSV file on disk
    * @param cohortName name of the cohort to assign users to
-   * @param setName the Aerospike set name (generated from tenantId and projectId)
+   * @param setName the Aerospike set name (projectKey used directly)
    * @return Single emitting bulk operation result
    */
   public Single<BulkOperationResult> processCsvAndAssign(
@@ -363,13 +362,12 @@ public class UserCohortServiceImpl implements UserCohortsService {
         .flatMap(line -> Flowable.fromArray(line.split(",")))
         .map(String::trim)
         .filter(id -> !id.isEmpty())
-        .filter(UserCohortServiceImpl::isValidUuid)
         .distinct()
         .doOnNext(id -> total.incrementAndGet())
         .buffer(BulkCohortAssignmentConstants.BATCH_SIZE)
         .doOnNext(
             batch ->
-                log.info("Processing batch of {} UUIDs for cohort: {}", batch.size(), cohortName))
+                log.info("Processing batch of {} user IDs for cohort: {}", batch.size(), cohortName))
         .flatMap(
             batch ->
                 Flowable.fromIterable(batch)
@@ -513,13 +511,13 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * <p>Uses default expiry of 1 year from current time. Returns {@code false} if Aerospike key is
    * not found.
    *
-   * @param userUuid the user UUID to assign
+   * @param userUuid the user identifier to assign
    * @param cohortName the cohort name to assign user to
-   * @param setName the Aerospike set name (generated from tenantId and projectId)
+   * @param setName the Aerospike set name (projectKey used directly)
    * @return Single emitting {@code true} if assignment succeeded, {@code false} otherwise
    */
   private Single<Boolean> assignSingleUser(String userUuid, String cohortName, String setName) {
-    String userKey = userUuid; // UUID is used directly as userKey
+    String userKey = userUuid; // User ID is used directly as userKey
     long expiry = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(365); // 1-year default expiry
 
     return aerospikeClient
@@ -644,17 +642,4 @@ public class UserCohortServiceImpl implements UserCohortsService {
     return cleanedCount;
   }
 
-  /**
-   * Validates if a string matches UUID format pattern.
-   *
-   * @param value the string to validate
-   * @return {@code true} if valid UUID format, {@code false} otherwise
-   */
-  private static boolean isValidUuid(String value) {
-    if (!BulkCohortAssignmentConstants.UUID_PATTERN.matcher(value).matches()) {
-      log.warn("Skipping invalid UUID: {}", value);
-      return false;
-    }
-    return true;
-  }
 }
