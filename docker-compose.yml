@@ -152,7 +152,7 @@ services:
     env_file:
       - env.docker
     ports:
-      - "8082:8082"
+      - "8082:8080"
     volumes:
       - ./logs:/app/logs
     healthcheck:

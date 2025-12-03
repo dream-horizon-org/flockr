@@ -3,6 +3,7 @@ package io.ascend.flockr.admin.client.sink.impl;
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.sink.SinkPusher;
 import io.ascend.flockr.admin.client.webclient.WebClient;
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.WebhookSinkConfig;
@@ -25,11 +26,15 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>Sends audience records as JSON payloads to configured HTTP endpoints. Supports custom headers
  * for authentication and configurable HTTP methods (POST/PUT).
+ *
+ * <p>The pusher automatically sets the x-project-key header from the audience's xProjectId,
+ * enabling multi-tenant webhook endpoints to identify the project context.
  */
 @Slf4j
 public class WebhookSinkPusher implements SinkPusher {
 
   private static final String SINK_TYPE = "WEBHOOK";
+  private static final String PROJECT_KEY_HEADER = "x-project-key";
   private static final DateTimeFormatter EXPIRE_DATE_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC"));
 
@@ -47,22 +52,25 @@ public class WebhookSinkPusher implements SinkPusher {
 
   @Override
   public Completable pushBatch(
-      List<AudienceRecord> records, DataSinkDetails sink, Long audienceId) {
+      List<AudienceRecord> records, DataSinkDetails sink, AudienceMeta audience) {
     WebhookSinkConfig config =
         ConfigParser.parseSinkConfig(sink.getConfig(), WebhookSinkConfig.class);
 
+    Long audienceId = audience.getAudienceId();
+    String xProjectId = audience.getXProjectId();
+
     if (Boolean.TRUE.equals(config.getBatchMode())) {
       // Send all records in a single batch request
-      return sendBatchRequest(records, config, audienceId);
+      return sendBatchRequest(records, config, audienceId, xProjectId);
     } else {
       // Send each record individually
-      return sendIndividualRequests(records, config, audienceId);
+      return sendIndividualRequests(records, config, audienceId, xProjectId);
     }
   }
 
   /** Sends all records as a single batch JSON array. */
   private Completable sendBatchRequest(
-      List<AudienceRecord> records, WebhookSinkConfig config, Long audienceId) {
+      List<AudienceRecord> records, WebhookSinkConfig config, Long audienceId, String xProjectId) {
 
     JsonArray payload = buildBatchPayload(records);
 
@@ -72,7 +80,7 @@ public class WebhookSinkPusher implements SinkPusher {
         config.getUrl(),
         audienceId);
 
-    return executeRequest(config, payload)
+    return executeRequest(config, payload, xProjectId)
         .doOnComplete(
             () ->
                 log.info(
@@ -91,7 +99,7 @@ public class WebhookSinkPusher implements SinkPusher {
 
   /** Sends each record as an individual request. */
   private Completable sendIndividualRequests(
-      List<AudienceRecord> records, WebhookSinkConfig config, Long audienceId) {
+      List<AudienceRecord> records, WebhookSinkConfig config, Long audienceId, String xProjectId) {
 
     log.debug(
         "Sending {} individual records to webhook {} for audience {}",
@@ -103,7 +111,7 @@ public class WebhookSinkPusher implements SinkPusher {
         .flatMapCompletable(
             record -> {
               JsonObject payload = toWebhookPayload(record);
-              return executeRequest(config, payload);
+              return executeRequest(config, payload, xProjectId);
             },
             false,
             4) // Max 4 concurrent requests
@@ -124,10 +132,10 @@ public class WebhookSinkPusher implements SinkPusher {
   }
 
   /** Executes the HTTP request with the configured settings. */
-  private Completable executeRequest(WebhookSinkConfig config, Object payload) {
+  private Completable executeRequest(WebhookSinkConfig config, Object payload, String xProjectId) {
     HttpRequest<Buffer> request = createRequest(config);
 
-    // Add custom headers
+    // Add custom headers from config
     if (config.getHeaders() != null) {
       for (Map.Entry<String, String> header : config.getHeaders().entrySet()) {
         request.putHeader(header.getKey(), header.getValue());
@@ -136,6 +144,11 @@ public class WebhookSinkPusher implements SinkPusher {
 
     // Set content type
     request.putHeader("Content-Type", config.getContentType());
+
+    // Add x-project-key header for multi-tenant endpoints (e.g., flockr-users batch mapping)
+    if (xProjectId != null && !xProjectId.isBlank()) {
+      request.putHeader(PROJECT_KEY_HEADER, xProjectId);
+    }
 
     return webClient
         .execute(request, payload)
@@ -211,7 +224,7 @@ public class WebhookSinkPusher implements SinkPusher {
     // expire_at formatted as "yyyy-MM-dd HH:mm:ss"
     if (record.getExpireDate() != null) {
       String formattedDate =
-          EXPIRE_DATE_FORMATTER.format(Instant.ofEpochMilli(record.getExpireDate()));
+          EXPIRE_DATE_FORMATTER.format(Instant.ofEpochSecond(record.getExpireDate()));
       payload.put("expire_at", formattedDate);
     }
 

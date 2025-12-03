@@ -26,8 +26,12 @@ CREATE TABLE IF NOT EXISTS data_sources (
     created_by VARCHAR(128) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    name_vector tsvector,
     CONSTRAINT fk_data_sources_type FOREIGN KEY (type_id) REFERENCES data_connector_types(id)
 );
+
+-- GIN index for full-text search on data source names
+CREATE INDEX idx_data_sources_name_vector ON data_sources USING GIN(name_vector);
 
 -- Onboarded data sinks (instances configured by users)
 CREATE TABLE IF NOT EXISTS data_sinks (
@@ -39,8 +43,12 @@ CREATE TABLE IF NOT EXISTS data_sinks (
     created_by VARCHAR(128) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    name_vector tsvector,
     CONSTRAINT fk_data_sinks_type FOREIGN KEY (type_id) REFERENCES data_connector_types(id)
 );
+
+-- GIN index for full-text search on data sink names
+CREATE INDEX idx_data_sinks_name_vector ON data_sinks USING GIN(name_vector);
 
 CREATE TABLE audiences (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

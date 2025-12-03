@@ -1,6 +1,7 @@
 package io.ascend.flockr.admin.client.sink.impl;
 
 import io.ascend.flockr.admin.client.sink.SinkPusher;
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.KafkaSinkConfig;
@@ -38,7 +39,7 @@ public class KafkaSinkPusher implements SinkPusher {
 
   @Override
   public Completable pushBatch(
-      List<AudienceRecord> records, DataSinkDetails sink, Long audienceId) {
+      List<AudienceRecord> records, DataSinkDetails sink, AudienceMeta audience) {
     return Completable.fromAction(
         () -> {
           KafkaSinkConfig config =
@@ -47,6 +48,7 @@ public class KafkaSinkPusher implements SinkPusher {
               getOrCreateProducer(config.getBootstrapServersUrl());
 
           String topic = config.getTopic();
+          Long audienceId = audience.getAudienceId();
 
           log.debug(
               "Pushing {} records to Kafka topic '{}' for audience {}",

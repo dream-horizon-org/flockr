@@ -209,7 +209,7 @@ public class AudienceImportServiceImpl implements AudienceImportService {
         audience.getAudienceId());
 
     // Push to all sinks and block until complete (we're already on worker thread)
-    sinkPusherRegistry.pushBatchToAll(batch, sinks, audience.getAudienceId()).blockingAwait();
+    sinkPusherRegistry.pushBatchToAll(batch, sinks, audience).blockingAwait();
   }
 
   /** Fetches data sink details for the given sink IDs. */

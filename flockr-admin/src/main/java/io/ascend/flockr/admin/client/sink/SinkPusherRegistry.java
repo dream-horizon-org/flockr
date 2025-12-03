@@ -1,5 +1,6 @@
 package io.ascend.flockr.admin.client.sink;
 
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.reactivex.rxjava3.core.Completable;
@@ -33,11 +34,11 @@ public class SinkPusherRegistry {
    *
    * @param records list of audience records
    * @param sink the target sink
-   * @param audienceId the audience ID
+   * @param audience the audience metadata
    * @return Completable that completes when push is done
    */
   public Completable pushBatch(
-      List<AudienceRecord> records, DataSinkDetails sink, Long audienceId) {
+      List<AudienceRecord> records, DataSinkDetails sink, AudienceMeta audience) {
     String sinkType = sink.getType();
     SinkPusher pusher = pushersByType.get(sinkType);
 
@@ -46,7 +47,7 @@ public class SinkPusherRegistry {
       return Completable.complete();
     }
 
-    return pusher.pushBatch(records, sink, audienceId);
+    return pusher.pushBatch(records, sink, audience);
   }
 
   /**
@@ -54,21 +55,19 @@ public class SinkPusherRegistry {
    *
    * @param records list of audience records
    * @param sinks list of target sinks
-   * @param audienceId the audience ID
+   * @param audience the audience metadata
    * @return Completable that completes when all pushes are done
    */
   public Completable pushBatchToAll(
-      List<AudienceRecord> records, List<DataSinkDetails> sinks, Long audienceId) {
+      List<AudienceRecord> records, List<DataSinkDetails> sinks, AudienceMeta audience) {
     if (sinks == null || sinks.isEmpty()) {
-      log.debug("No sinks configured for audience {}, skipping push", audienceId);
+      log.debug("No sinks configured for audience {}, skipping push", audience.getAudienceId());
       return Completable.complete();
     }
 
     // Push to all sinks in parallel
     List<Completable> pushOps =
-        sinks.stream()
-            .map(sink -> pushBatch(records, sink, audienceId))
-            .collect(Collectors.toList());
+        sinks.stream().map(sink -> pushBatch(records, sink, audience)).collect(Collectors.toList());
 
     return Completable.merge(pushOps);
   }

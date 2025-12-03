@@ -1,5 +1,6 @@
 package io.ascend.flockr.admin.client.sink;
 
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.reactivex.rxjava3.core.Completable;
@@ -25,8 +26,8 @@ public interface SinkPusher {
    *
    * @param records list of audience records to push
    * @param sink the sink configuration details
-   * @param audienceId the audience ID for context/naming
+   * @param audience the audience metadata containing context info (xProjectId, audienceId, etc.)
    * @return Completable that completes when push is done
    */
-  Completable pushBatch(List<AudienceRecord> records, DataSinkDetails sink, Long audienceId);
+  Completable pushBatch(List<AudienceRecord> records, DataSinkDetails sink, AudienceMeta audience);
 }

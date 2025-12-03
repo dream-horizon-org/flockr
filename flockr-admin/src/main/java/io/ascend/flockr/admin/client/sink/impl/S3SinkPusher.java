@@ -1,6 +1,7 @@
 package io.ascend.flockr.admin.client.sink.impl;
 
 import io.ascend.flockr.admin.client.sink.SinkPusher;
+import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.S3FolderSinkConfig;
@@ -48,7 +49,7 @@ public class S3SinkPusher implements SinkPusher {
 
   @Override
   public Completable pushBatch(
-      List<AudienceRecord> records, DataSinkDetails sink, Long audienceId) {
+      List<AudienceRecord> records, DataSinkDetails sink, AudienceMeta audience) {
     return Completable.fromAction(
         () -> {
           S3FolderSinkConfig config =
@@ -58,6 +59,7 @@ public class S3SinkPusher implements SinkPusher {
           String bucket = config.getBucket();
           String folderPath = normalizeFolderPath(config.getFolderPath());
           String fileFormat = config.getFileFormat() != null ? config.getFileFormat() : "json";
+          Long audienceId = audience.getAudienceId();
 
           // Generate unique filename: audience_{id}_{timestamp}.{format}
           String timestamp = FILE_DATE_FORMAT.format(Instant.now());

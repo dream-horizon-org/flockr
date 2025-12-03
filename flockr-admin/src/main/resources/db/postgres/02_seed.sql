@@ -91,6 +91,28 @@ set
 	display_name = EXCLUDED.display_name,
 	config_schema = EXCLUDED.config_schema,
 	is_active = EXCLUDED.is_active;
+
+insert
+	into
+	data_connector_types (kind,
+	type,
+	display_name,
+	config_schema,
+	is_active)
+values
+  ('SINK',
+'WEBHOOK',
+'Webhook/HTTP API',
+   '{"type": "object", "properties": {"url": {"type": "string", "description": "The webhook/API URL to call"}, "method": {"type": "string", "enum": ["POST", "PUT", "PATCH"], "default": "POST"}, "headers": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Custom HTTP headers"}, "timeoutMs": {"type": "integer", "default": 30000}, "contentType": {"type": "string", "default": "application/json"}, "batchMode": {"type": "boolean", "default": true}}, "required": ["url"]}',
+   true)
+on
+CONFLICT (kind,
+type) DO
+update
+set
+	display_name = EXCLUDED.display_name,
+	config_schema = EXCLUDED.config_schema,
+	is_active = EXCLUDED.is_active;
 -- Insert sample data sources (configs match KafkaSourceConfig and AthenaSourceConfig POJOs)
 insert
 	into
@@ -182,6 +204,21 @@ where
 	and type = 'S3_FOLDER'
 limit 1),
   '{"connectorType": "S3_FOLDER", "bucket": "flockr-exports", "folderPath": "parquet/audiences", "region": "us-east-1", "accessKey": "AKIAIOSFODNN7EXAMPLE", "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "fileFormat": "parquet"}',
+  'ACTIVE',
+  'system'
+),
+(
+  'User Cohort Mapping Webhook',
+  (
+select
+	id
+from
+	data_connector_types
+where
+	kind = 'SINK'
+	and type = 'WEBHOOK'
+limit 1),
+  '{"connectorType": "WEBHOOK", "url": "http://flockr-users:8080/flockr/users/map-cohorts/batch", "method": "POST", "headers": {"Content-Type": "application/json"}, "timeoutMs": 30000, "contentType": "application/json", "batchMode": true}',
   'ACTIVE',
   'system'
 );
