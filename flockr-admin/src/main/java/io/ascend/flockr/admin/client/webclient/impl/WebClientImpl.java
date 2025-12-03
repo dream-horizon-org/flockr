@@ -52,7 +52,16 @@ public class WebClientImpl implements WebClient {
   @Override
   public HttpRequest<Buffer> prepareHttpPostAbsRequest(String absUri) {
     return webClient.postAbs(absUri).timeout(3000);
-    //        .expect(validateHttpResponse());
+  }
+
+  @Override
+  public HttpRequest<Buffer> prepareHttpPutAbsRequest(String absUri) {
+    return webClient.putAbs(absUri).timeout(3000);
+  }
+
+  @Override
+  public HttpRequest<Buffer> prepareHttpPatchAbsRequest(String absUri) {
+    return webClient.patchAbs(absUri).timeout(3000);
   }
 
   @Override
@@ -70,6 +79,16 @@ public class WebClientImpl implements WebClient {
     return request
         .rxSend()
         .retry(2, this::retryable)
+        .doOnSuccess(httpSuccessResponseConsumer(request))
+        .doOnError(httpErrorResponseConsumer(request))
+        .map(httpResponse -> httpResponse);
+  }
+
+  @Override
+  public Single<HttpResponse<Buffer>> execute(HttpRequest<Buffer> request, Object body) {
+    return request
+        .rxSendJson(body)
+        .retry(1, this::retryable)
         .doOnSuccess(httpSuccessResponseConsumer(request))
         .doOnError(httpErrorResponseConsumer(request))
         .map(httpResponse -> httpResponse);

@@ -2,6 +2,7 @@ package io.ascend.flockr.admin.client.sink.impl;
 
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.sink.SinkPusher;
+import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.WebhookSinkConfig;
@@ -10,10 +11,11 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.ext.web.client.HttpRequest;
-import io.vertx.rxjava3.ext.web.client.WebClient;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -28,12 +30,14 @@ import lombok.extern.slf4j.Slf4j;
 public class WebhookSinkPusher implements SinkPusher {
 
   private static final String SINK_TYPE = "WEBHOOK";
+  private static final DateTimeFormatter EXPIRE_DATE_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC"));
 
   private final WebClient webClient;
 
   @Inject
-  public WebhookSinkPusher(Vertx vertx) {
-    this.webClient = WebClient.create(vertx);
+  public WebhookSinkPusher(WebClient webClient) {
+    this.webClient = webClient;
   }
 
   @Override
@@ -60,7 +64,7 @@ public class WebhookSinkPusher implements SinkPusher {
   private Completable sendBatchRequest(
       List<AudienceRecord> records, WebhookSinkConfig config, Long audienceId) {
 
-    JsonObject payload = buildBatchPayload(records);
+    JsonArray payload = buildBatchPayload(records);
 
     log.debug(
         "Sending batch of {} records to webhook {} for audience {}",
@@ -98,7 +102,7 @@ public class WebhookSinkPusher implements SinkPusher {
     return Flowable.fromIterable(records)
         .flatMapCompletable(
             record -> {
-              JsonObject payload = record.toJson();
+              JsonObject payload = toWebhookPayload(record);
               return executeRequest(config, payload);
             },
             false,
@@ -120,7 +124,7 @@ public class WebhookSinkPusher implements SinkPusher {
   }
 
   /** Executes the HTTP request with the configured settings. */
-  private Completable executeRequest(WebhookSinkConfig config, JsonObject payload) {
+  private Completable executeRequest(WebhookSinkConfig config, Object payload) {
     HttpRequest<Buffer> request = createRequest(config);
 
     // Add custom headers
@@ -133,8 +137,8 @@ public class WebhookSinkPusher implements SinkPusher {
     // Set content type
     request.putHeader("Content-Type", config.getContentType());
 
-    return request
-        .rxSendJsonObject(payload)
+    return webClient
+        .execute(request, payload)
         .flatMapCompletable(
             response -> {
               int statusCode = response.statusCode();
@@ -164,30 +168,52 @@ public class WebhookSinkPusher implements SinkPusher {
 
     HttpRequest<Buffer> request =
         switch (method) {
-          case "PUT" -> webClient.putAbs(config.getUrl());
-          case "PATCH" -> webClient.patchAbs(config.getUrl());
-          default -> webClient.postAbs(config.getUrl()); // POST is default
+          case "PUT" -> webClient.prepareHttpPutAbsRequest(config.getUrl());
+          case "PATCH" -> webClient.prepareHttpPatchAbsRequest(config.getUrl());
+          default -> webClient.prepareHttpPostAbsRequest(config.getUrl()); // POST is default
         };
 
     return request.timeout(timeout);
   }
 
-  /** Builds a batch payload with all records. */
-  private JsonObject buildBatchPayload(List<AudienceRecord> records) {
+  /** Builds a batch payload with all records as a JSON array. */
+  private JsonArray buildBatchPayload(List<AudienceRecord> records) {
     JsonArray recordsArray = new JsonArray();
     for (AudienceRecord record : records) {
-      recordsArray.add(record.toJson());
+      recordsArray.add(toWebhookPayload(record));
     }
-
-    return new JsonObject()
-        .put("recordCount", records.size())
-        .put("timestamp", System.currentTimeMillis())
-        .put("records", recordsArray);
+    return recordsArray;
   }
 
-  /** Closes the web client. Call this on application shutdown. */
-  public void close() {
-    log.info("Closing webhook sink web client");
-    webClient.close();
+  /** Transforms an AudienceRecord to the webhook-specific payload format. */
+  private JsonObject toWebhookPayload(AudienceRecord record) {
+    JsonObject payload = new JsonObject();
+
+    // user_id as a number
+    try {
+      payload.put("user_id", Long.parseLong(record.getUserId()));
+    } catch (NumberFormatException e) {
+      // Fall back to string if not a valid number
+      payload.put("user_id", record.getUserId());
+    }
+
+    // cohort_key from audienceName
+    payload.put("cohort_key", record.getAudienceName());
+
+    // action mapping: "add" -> "append", others pass through
+    String action = record.getAction();
+    if ("add".equalsIgnoreCase(action)) {
+      payload.put("action", "append");
+    } else {
+      payload.put("action", action);
+    }
+
+    // expire_at formatted as "yyyy-MM-dd HH:mm:ss"
+    if (record.getExpireDate() != null) {
+      String formattedDate = EXPIRE_DATE_FORMATTER.format(Instant.ofEpochMilli(record.getExpireDate()));
+      payload.put("expire_at", formattedDate);
+    }
+
+    return payload;
   }
 }
