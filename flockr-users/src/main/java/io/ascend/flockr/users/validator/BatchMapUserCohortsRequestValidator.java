@@ -62,10 +62,9 @@ public class BatchMapUserCohortsRequestValidator {
 
   /** Validates the user ID field. */
   private static void validateUserId(BatchMapUserCohortsRequest request, int index) {
-    if (request.getUserId() == null || request.getUserId() <= 0) {
-      log.error("Invalid user_id at index {}: {}", index, request.getUserId());
-      throw ExceptionUtil.getException(
-          DefinedErrors.INVALID_USER_ID, String.valueOf(request.getUserId()));
+    if (request.getUserId() == null || request.getUserId().trim().isEmpty()) {
+      log.error("Missing user_id at index {}", index);
+      throw ExceptionUtil.getException(DefinedErrors.MISSING_USER_ID);
     }
   }
 

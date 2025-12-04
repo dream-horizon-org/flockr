@@ -113,7 +113,7 @@ public enum DefinedErrors implements RestError {
    *
    * <p>Thrown when userId is not a valid positive number.
    */
-  INVALID_USER_ID("INVALID_USER_ID", "Invalid userId: %s. userId must be a positive number", 400),
+  MISSING_USER_ID("MISSING_USER_ID", "User Id cannot be empty or null", 400),
 
   /**
    * Missing x-project-key header error.

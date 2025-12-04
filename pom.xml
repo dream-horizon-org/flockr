@@ -544,8 +544,8 @@
         <version>${maven-surefire-plugin.version}</version>
         <configuration>
           <trimStackTrace>false</trimStackTrace>
-          <!-- @{argLine} is set by JaCoCo, then we add our own JVM args for Mockito ByteBuddy with Java 21 -->
-          <argLine>@{argLine} -XX:+EnableDynamicAgentLoading --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED</argLine>
+          <!-- @{argLine} is set by JaCoCo, then we add our own JVM args for Mockito ByteBuddy with Java 23 -->
+          <argLine>@{argLine} -XX:+EnableDynamicAgentLoading --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED -Dnet.bytebuddy.experimental=true</argLine>
         </configuration>
       </plugin>
 
