@@ -253,12 +253,6 @@ components:
     InputPart:
       type: object
       properties:
-        body:
-          type: object
-        mediaType:
-          $ref: '#/components/schemas/MediaType'
-        bodyAsString:
-          type: string
         headers:
           type: object
           properties:
@@ -268,10 +262,16 @@ components:
             type: array
             items:
               type: string
-        contentTypeFromMessage:
-          type: boolean
         fileName:
           type: string
+        contentTypeFromMessage:
+          type: boolean
+        bodyAsString:
+          type: string
+        body:
+          type: object
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
     MediaType:
       type: object
       properties:
@@ -283,9 +283,9 @@ components:
           type: object
           additionalProperties:
             type: string
-        wildcardType:
-          type: boolean
         wildcardSubtype:
+          type: boolean
+        wildcardType:
           type: boolean
     MultipartFormDataInput:
       type: object
@@ -296,12 +296,12 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/InputPart'
+        preamble:
+          type: string
         parts:
           type: array
           items:
             $ref: '#/components/schemas/InputPart'
-        preamble:
-          type: string
     MultivaluedMapStringString:
       type: object
       properties:

@@ -24,7 +24,7 @@
         <swagger.configurationFilePath>
             ${project.basedir}/src/main/resources/config/swagger/swagger-info.json
         </swagger.configurationFilePath>
-        <swagger.outputFileName>flockr-users</swagger.outputFileName>
+        <swagger.outputFileName>swagger</swagger.outputFileName>
         <swagger.outputPath>
             ${project.basedir}/src/main/resources/webroot/swagger
         </swagger.outputPath>
@@ -54,13 +54,6 @@
             <groupId>io.d11</groupId>
             <artifactId>vertx-aerospike-client</artifactId>
             <version>${vertx-aerospike.version}</version>
-        </dependency>
-
-        <!-- RESTEasy multipart provider -->
-        <dependency>
-            <groupId>org.jboss.resteasy</groupId>
-            <artifactId>resteasy-multipart-provider</artifactId>
-            <version>${resteasy.version}</version>
         </dependency>
     </dependencies>
 
