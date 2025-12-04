@@ -35,7 +35,7 @@ public class BatchMapUserCohortsRequest {
   @Positive
   @JsonProperty("user_id")
   @Schema(description = "User ID to map (must be positive)", example = "12345")
-  private Long userId;
+  private String userId;
 
   @NotBlank
   @JsonProperty("cohort_key")
