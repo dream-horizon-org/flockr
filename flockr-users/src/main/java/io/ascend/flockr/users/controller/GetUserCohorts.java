@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
@@ -68,7 +69,9 @@ public class GetUserCohorts {
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
   public CompletionStage<ResponseEntity.Success<List<String>>> handle(
+      @NotNull(message = "userId header is required")
       @Parameter(required = true, example = "12345") @HeaderParam("userId") String userIdHeader,
+      @NotNull(message = "x-project-key header is required")
       @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,

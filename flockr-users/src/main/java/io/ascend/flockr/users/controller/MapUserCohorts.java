@@ -12,10 +12,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
@@ -75,16 +77,19 @@ public class MapUserCohorts {
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
   public CompletionStage<ResponseEntity.Success<Boolean>> handle(
+      @NotNull(message = "userId header is required")
       @Parameter(description = "User ID (must be positive)", required = true, example = "12345")
           @HeaderParam("userId")
           String userIdHeader,
+
+      @NotNull(message = "x-project-key header is required")
       @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
               example = "tenant1_project1")
           @HeaderParam("x-project-key")
           String projectKey,
-      @io.swagger.v3.oas.annotations.parameters.RequestBody(
+      @RequestBody(
               description = "Cohort mapping request",
               required = true,
               content =
@@ -140,13 +145,14 @@ public class MapUserCohorts {
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
   public CompletionStage<ResponseEntity.Success<BulkOperationResult>> handleBatch(
+      @NotNull(message = "x-project-key header is required")
       @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
               example = "tenant1_project1")
           @HeaderParam("x-project-key")
           String projectKey,
-      @io.swagger.v3.oas.annotations.parameters.RequestBody(
+      @RequestBody(
               description = "List of cohort mapping requests",
               required = true,
               content =
