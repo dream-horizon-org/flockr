@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
  * <ul>
  *   <li>System information (CPU cores)
  *   <li>User key generation (userId/guestId handling)
- *   <li>Aerospike set name generation based on source
  *   <li>Date/time parsing and epoch conversion
  * </ul>
  *
@@ -83,35 +82,6 @@ public class CommonUtils {
    */
   public static String getUserKey(Long userId, String guestId) {
     return Objects.nonNull(userId) ? userId.toString() : guestId;
-  }
-
-  /**
-   * Generates an Aerospike set name based on the base set name and source.
-   *
-   * <p>If the source is null or equals {@link Constants#SOURCE_DREAM11}, the base set name is
-   * returned unchanged. Otherwise, the source is appended to the base set name in lowercase,
-   * separated by a hyphen.
-   *
-   * <p><strong>Examples:</strong>
-   *
-   * <pre>{@code
-   * getAerospikeSetNameFromSource("users", "Dream11")
-   * // Returns "users"
-   *
-   * getAerospikeSetNameFromSource("users", "FanCode")
-   * // Returns "users-fancode"
-   *
-   * getAerospikeSetNameFromSource("users", null)
-   * // Returns "users"
-   * }</pre>
-   *
-   * @param baseSetName the base set name (e.g., "users", "cohorts")
-   * @param source the source identifier (e.g., "Dream11", "FanCode"), may be null
-   * @return the generated set name, with source suffix if applicable
-   */
-  public static String getAerospikeSetNameFromSource(String baseSetName, String source) {
-    if (Objects.isNull(source) || source.equals(Constants.SOURCE_DREAM11)) return baseSetName;
-    else return baseSetName + "-" + source.toLowerCase();
   }
 
   /**

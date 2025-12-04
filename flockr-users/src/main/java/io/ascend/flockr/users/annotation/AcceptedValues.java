@@ -1,5 +1,7 @@
 package io.ascend.flockr.users.annotation;
 
+import io.ascend.flockr.users.annotation.validators.AcceptedValuesConstraintValidator;
+import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -30,7 +32,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.PARAMETER, ElementType.FIELD})
-// @Constraint(validatedBy = AcceptedValuesConstraintValidator.class)
+@Constraint(validatedBy = AcceptedValuesConstraintValidator.class)
 public @interface AcceptedValues {
 
   /**

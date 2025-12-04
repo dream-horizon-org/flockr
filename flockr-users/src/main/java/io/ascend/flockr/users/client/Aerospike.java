@@ -23,8 +23,6 @@ import java.util.Map;
  * <ul>
  *   <li><strong>Set Name:</strong> Aerospike set (similar to a table) where user records are stored
  *   <li><strong>Cohort:</strong> A named group that users can belong to
- *   <li><strong>Source:</strong> The origin/platform that created the cohort assignment (e.g.,
- *       "Dream11", "FanCode")
  *   <li><strong>Cohort Expiry:</strong> Timestamp (epoch milliseconds) when the cohort membership
  *       expires
  * </ul>
@@ -97,7 +95,6 @@ public interface Aerospike {
    * Single<Boolean> result = aerospike.appendCohort(
    *     "12345",                    // user ID
    *     "premium-users",            // cohort name
-   *     "Dream11",                  // source
    *     1704067200000L,             // expiry timestamp
    *     "users"                     // set name
    * );
@@ -105,13 +102,11 @@ public interface Aerospike {
    *
    * @param id the user ID or guest ID
    * @param cohort the name of the cohort to add the user to
-   * @param source the source/platform identifier (e.g., "Dream11", "FanCode")
    * @param cohortExpiry the expiry timestamp in epoch milliseconds (UTC)
    * @param setName the Aerospike set name where the user record is stored
    * @return a {@link Single} that emits {@code true} when the operation completes successfully
    */
-  Single<Boolean> appendCohort(
-      String id, String cohort, String source, Long cohortExpiry, String setName);
+  Single<Boolean> appendCohort(String id, String cohort, Long cohortExpiry, String setName);
 
   /**
    * Removes a user from a cohort.
@@ -135,16 +130,14 @@ public interface Aerospike {
    * Single<Boolean> result = aerospike.removeCohort(
    *     "12345",           // user ID
    *     "premium-users",  // cohort name
-   *     "Dream11",        // source
    *     "users"           // set name
    * );
    * }</pre>
    *
    * @param id the user ID or guest ID
    * @param cohort the name of the cohort to remove the user from
-   * @param source the source/platform identifier (e.g., "Dream11", "FanCode")
    * @param setName the Aerospike set name where the user record is stored
    * @return a {@link Single} that emits {@code true} when the operation completes successfully
    */
-  Single<Boolean> removeCohort(String id, String cohort, String source, String setName);
+  Single<Boolean> removeCohort(String id, String cohort, String setName);
 }
