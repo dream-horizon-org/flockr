@@ -9,7 +9,7 @@ services:
       - "8202:3002"
     environment:
       - NAMESPACE=test
-      - DATA_IN_MEMORY=true
+      - DATA_IN_MEMORY=false
     volumes:
       - aerospike_data:/opt/aerospike/data
     healthcheck:

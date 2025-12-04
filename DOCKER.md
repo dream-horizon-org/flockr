@@ -11,8 +11,7 @@ Complete guide for running Flockr with Docker and Docker Compose.
 - [Configuration](#configuration)
 - [Running](#running)
 - [Management](#management)
-- [Development Mode](#development-mode)
-- [Production Mode](#production-mode)
+- [Production Considerations](#production-considerations)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -23,15 +22,16 @@ Complete guide for running Flockr with Docker and Docker Compose.
 # Clone and start
 git clone https://github.com/yourusername/flockr.git
 cd flockr
-./docker-start.sh
+./docker/docker-start.sh
 ```
 
 Access services:
-- **API**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger-ui/
-- **Flink Dashboard**: http://localhost:8081
-- **Spark Master**: http://localhost:8082
-- **Spark Worker**: http://localhost:8083
+- **Flockr Admin API**: http://localhost:8250
+- **Flockr Users API**: http://localhost:8260
+- **Swagger UI**: http://localhost:8250/swagger-ui/
+- **Flink Dashboard**: http://localhost:8240
+- **Spark Master**: http://localhost:8210
+- **Spark Worker**: http://localhost:8220
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ Access services:
 Verify installation:
 ```bash
 docker --version
-docker-compose --version
+docker compose version
 ```
 
 ## Services & Architecture
@@ -51,28 +51,30 @@ docker-compose --version
 ### Stack Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   Flockr Admin (8080)                    │
-│              REST API + Business Logic                   │
-└─────────────────────────────────────────────────────────┘
-          │         │         │
-          ▼         ▼         ▼
-   ┌──────────┐ ┌─────┐ ┌───────┐
-   │PostgreSQL│ │Flink│ │ Spark │
-   │   :5432  │ │:8081│ │ :8082 │
-   └──────────┘ └─────┘ └───────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  Flockr Admin (8250)           Flockr Users (8260)                  │
+│  REST API + Business Logic     User Cohort Management               │
+└─────────────────────────────────────────────────────────────────────┘
+          │         │         │              │
+          ▼         ▼         ▼              ▼
+   ┌──────────┐ ┌─────────┐ ┌───────┐ ┌───────────┐
+   │PostgreSQL│ │  Flink  │ │ Spark │ │ Aerospike │
+   │  :8230   │ │  :8240  │ │ :8210 │ │   :8200   │
+   └──────────┘ └─────────┘ └───────┘ └───────────┘
 ```
 
 ### Services
 
 | Service | Version | Port(s) | Description |
 |---------|---------|---------|-------------|
-| **Flockr Admin** | 1.0 | 8080 | Main application (Vert.x 4.4.9, Java 17) |
-| **PostgreSQL** | 16 | 5432 | Primary database with auto-initialization |
-| **Flink JobManager** | 1.17 | 8081 | Stream processing coordinator |
+| **Flockr Admin** | 1.0 | 8250 | Admin application (Vert.x 4.4.9, Java 17) |
+| **Flockr Users** | 1.0 | 8260 | User cohort service (Vert.x 4.4.9, Java 17) |
+| **PostgreSQL** | 16 | 8230 | Primary database with auto-initialization |
+| **Aerospike** | 6.4 | 8200-8202 | High-performance NoSQL for user data |
+| **Flink JobManager** | 1.17 | 8240 | Stream processing coordinator |
 | **Flink TaskManager** | 1.17 | - | Stream processing workers (scalable) |
-| **Spark Master** | 3.5 | 7077, 8082 | Distributed computing master |
-| **Spark Worker** | 3.5 | 8083 | Distributed computing worker (scalable) |
+| **Spark Master** | 3.5 | 8210, 8211 | Distributed computing master |
+| **Spark Worker** | 3.5 | 8220 | Distributed computing worker (scalable) |
 
 ### Key Features
 
@@ -92,16 +94,11 @@ git clone https://github.com/yourusername/flockr.git
 cd flockr
 ```
 
-### 2. Environment Setup (Optional)
+### 2. Environment Configuration
 
-The default configuration works out of the box. To customize:
+The default configuration in `env.docker` works out of the box.
 
-```bash
-cp env.docker .env
-# Edit .env with your settings
-```
-
-Key environment variables:
+Key environment variables in `env.docker`:
 ```bash
 POSTGRES_USER=flockr_user           # Database username
 POSTGRES_PASSWORD=flockr_password   # Database password
@@ -111,34 +108,16 @@ JAVA_OPTS=-Xms512m -Xmx1024m       # JVM settings
 ### 3. Build and Start
 
 ```bash
-./docker-start.sh
+./docker/docker-start.sh
 ```
 
 This script will:
-- Create `.env` if it doesn't exist
-- Build the application image
+- Build the application images
 - Start all services
 - Wait for health checks
 - Display service URLs
 
 ## Configuration
-
-### File Structure
-
-```
-flockr/
-├── Dockerfile                       # Multi-stage build
-├── docker-compose.yml               # Main services
-├── docker-compose.dev.yml           # Dev overrides (debug + PGAdmin)
-├── docker-compose.prod.yml          # Prod overrides (resource limits)
-├── .dockerignore                    # Build exclusions
-├── env.docker                       # Environment template
-├── docker/
-│   └── config/                      # Service configurations
-│       ├── flink.conf
-│       └── postgres.conf
-└── docker-*.sh                      # Management scripts
-```
 
 ### Environment Variables
 
@@ -146,9 +125,9 @@ flockr/
 |----------|---------|-------------|
 | `POSTGRES_USER` | flockr_user | Database username |
 | `POSTGRES_PASSWORD` | flockr_password | Database password |
-| `POSTGRES_HOST` | postgres | Database hostname |
-| `FLINK_HOST` | flink-jobmanager | Flink hostname |
-| `SPARK_MASTER_URL` | spark://spark-master:7077 | Spark master URL |
+| `POSTGRES_HOST` | flockr-postgres | Database hostname |
+| `FLINK_HOST` | flockr-flink-jobmanager | Flink hostname |
+| `SPARK_MASTER_URL` | spark://flockr-spark-master:7077 | Spark master URL |
 | `JAVA_OPTS` | -Xms512m -Xmx1024m | JVM options |
 
 ### Custom Overrides
@@ -156,13 +135,12 @@ flockr/
 Create `docker-compose.override.yml` for local customizations:
 
 ```yaml
-version: '3.8'
 services:
   flockr-admin:
     environment:
       - JAVA_OPTS=-Xms1g -Xmx2g
     ports:
-      - "8081:8080"  # Use different port
+      - "9250:8080"  # Use different port
 ```
 
 ## Running
@@ -171,16 +149,16 @@ services:
 
 ```bash
 # Start all services
-./docker-start.sh
+./docker/docker-start.sh
 
 # Check status and health
-./docker-status.sh
+./docker/docker-status.sh
 
 # Stop services
-./docker-stop.sh
+./docker/docker-stop.sh
 
 # Clean everything (removes volumes!)
-./docker-clean.sh
+./docker/docker-clean.sh
 ```
 
 ### Using Make (If installed)
@@ -199,30 +177,30 @@ make help        # See all commands
 
 ```bash
 # Start in background
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
-docker-compose logs -f flockr-admin
+docker compose logs -f
+docker compose logs -f flockr-admin
 
 # Check status
-docker-compose ps
+docker compose ps
 
 # Stop services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Scaling Services
 
 ```bash
 # Scale Flink TaskManagers
-docker-compose up -d --scale flink-taskmanager=3
+docker compose up -d --scale flockr-flink-taskmanager=3
 
 # Scale Spark Workers
-docker-compose up -d --scale spark-worker=2
+docker compose up -d --scale flockr-spark-worker=2
 ```
 
 ## Management
@@ -231,40 +209,44 @@ docker-compose up -d --scale spark-worker=2
 
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f flockr-admin
-docker-compose logs -f postgres
+docker compose logs -f flockr-admin
+docker compose logs -f flockr-users
+docker compose logs -f flockr-postgres
 
 # Last 100 lines
-docker-compose logs --tail=100 flockr-admin
+docker compose logs --tail=100 flockr-admin
 ```
 
 ### Execute Commands
 
 ```bash
 # PostgreSQL shell
-docker-compose exec postgres psql -U flockr_user -d flockr
+docker compose exec flockr-postgres psql -U flockr_user -d flockr
 
 # Application shell
-docker-compose exec flockr-admin sh
+docker compose exec flockr-admin sh
+
+# Aerospike shell
+docker compose exec flockr-aerospike aql
 
 # Run SQL script
-docker-compose exec -T postgres psql -U flockr_user -d flockr < script.sql
+docker compose exec -T flockr-postgres psql -U flockr_user -d flockr < script.sql
 ```
 
 ### Database Operations
 
 ```bash
 # Backup database
-docker-compose exec -T postgres pg_dump -U flockr_user flockr > backup.sql
+docker compose exec -T flockr-postgres pg_dump -U flockr_user flockr > backup.sql
 
 # Restore database
-docker-compose exec -T postgres psql -U flockr_user -d flockr < backup.sql
+docker compose exec -T flockr-postgres psql -U flockr_user -d flockr < backup.sql
 
 # Connect to database
-docker-compose exec postgres psql -U flockr_user -d flockr
+docker compose exec flockr-postgres psql -U flockr_user -d flockr
 ```
 
 ### Rebuild Application
@@ -273,78 +255,29 @@ After code changes:
 
 ```bash
 # Rebuild and restart
-docker-compose up -d --build flockr-admin
+docker compose up -d --build flockr-admin flockr-users
 
 # Or rebuild without cache
-docker-compose build --no-cache flockr-admin
-docker-compose up -d flockr-admin
+docker compose build --no-cache flockr-admin flockr-users
+docker compose up -d flockr-admin flockr-users
 ```
 
-## Development Mode
+## Production Considerations
 
-Development mode includes:
-- **Java Remote Debugging** - Port 5005
-- **PGAdmin** - Database management UI at http://localhost:5050
-- **Hot Reload Support** - Mount local resources
-- **Verbose Logging**
+### Production Checklist
 
-### Start Dev Mode
-
-```bash
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-```
-
-### PGAdmin Access
-
-- URL: http://localhost:5050
-- Email: `admin@flockr.local`
-- Password: `admin`
-
-Add server in PGAdmin:
-- Host: `postgres`
-- Port: `5432`
-- Database: `flockr`
-- Username: `flockr_user`
-- Password: `flockr_password`
-
-### Remote Debugging
-
-Configure your IDE to connect to `localhost:5005`:
-
-**IntelliJ IDEA:**
-1. Run → Edit Configurations
-2. Add Remote JVM Debug
-3. Host: `localhost`, Port: `5005`
-4. Start debugging
-
-**VS Code (launch.json):**
-```json
-{
-  "type": "java",
-  "name": "Debug Flockr",
-  "request": "attach",
-  "hostName": "localhost",
-  "port": 5005
-}
-```
-
-## Production Mode
-
-Production mode includes:
-- **Resource Limits** - CPU and memory constraints
-- **Auto-restart Policies** - Restart on failure
-- **Production JVM Settings** - Optimized heap and GC
-- **No Debug Tools** - Minimal attack surface
-
-### Start Production Mode
-
-```bash
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
+- [ ] Use external managed database (not containerized)
+- [ ] Configure secrets management (not environment files)
+- [ ] Enable TLS/SSL
+- [ ] Set resource limits in `docker-compose.yml`
+- [ ] Configure centralized logging
+- [ ] Set up monitoring (Prometheus/Grafana)
+- [ ] Regular backup strategy
+- [ ] Use orchestration (Kubernetes) for production scale
 
 ### Resource Configuration
 
-Edit `docker-compose.prod.yml` to adjust resources:
+Add resource limits to `docker-compose.yml`:
 
 ```yaml
 services:
@@ -359,42 +292,31 @@ services:
           memory: 2G
 ```
 
-### Production Checklist
-
-- [ ] Use external managed database (not containerized)
-- [ ] Configure secrets management (not `.env` files)
-- [ ] Enable TLS/SSL
-- [ ] Set resource limits
-- [ ] Configure centralized logging
-- [ ] Set up monitoring (Prometheus/Grafana)
-- [ ] Regular backup strategy
-- [ ] Use orchestration (Kubernetes) for production scale
-
 ## Troubleshooting
 
 ### Services Won't Start
 
 ```bash
 # Check logs
-docker-compose logs
+docker compose logs
 
 # Check specific service
-docker-compose logs flockr-admin
+docker compose logs flockr-admin
 
 # Restart service
-docker-compose restart flockr-admin
+docker compose restart flockr-admin
 
 # Clean start
-./docker-clean.sh
-./docker-start.sh
+./docker/docker-clean.sh
+./docker/docker-start.sh
 ```
 
 ### Port Already in Use
 
 Find what's using the port:
 ```bash
-lsof -i :8080  # macOS/Linux
-netstat -ano | findstr :8080  # Windows
+lsof -i :8250  # macOS/Linux
+netstat -ano | findstr :8250  # Windows
 ```
 
 Change port in `docker-compose.override.yml`:
@@ -402,40 +324,55 @@ Change port in `docker-compose.override.yml`:
 services:
   flockr-admin:
     ports:
-      - "8081:8080"
+      - "9250:8080"
 ```
 
 ### Database Connection Issues
 
 ```bash
 # Check PostgreSQL status
-docker-compose ps postgres
+docker compose ps flockr-postgres
 
 # Check PostgreSQL logs
-docker-compose logs postgres
+docker compose logs flockr-postgres
 
 # Test connection from app container
-docker-compose exec flockr-admin sh -c 'nc -zv postgres 5432'
+docker compose exec flockr-admin sh -c 'nc -zv flockr-postgres 5432'
 
 # Reset database
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
+```
+
+### Aerospike Connection Issues
+
+```bash
+# Check Aerospike status
+docker compose ps flockr-aerospike
+
+# Check Aerospike logs
+docker compose logs flockr-aerospike
+
+# Test connection
+docker compose exec flockr-aerospike asinfo -v status
 ```
 
 ### Application Won't Start
 
 ```bash
 # Check health
-curl http://localhost:8080/health
+curl http://localhost:8250/healthcheck
+curl http://localhost:8260/healthcheck
 
 # Check logs
-docker-compose logs flockr-admin
+docker compose logs flockr-admin
+docker compose logs flockr-users
 
 # Check Java process
-docker-compose exec flockr-admin ps aux
+docker compose exec flockr-admin ps aux
 
 # Restart with fresh build
-docker-compose up -d --build --force-recreate flockr-admin
+docker compose up -d --build --force-recreate flockr-admin flockr-users
 ```
 
 ### Out of Memory
@@ -445,7 +382,7 @@ docker-compose up -d --build --force-recreate flockr-admin
 - Increase to at least 4GB
 
 **Reduce Service Memory:**
-Edit `.env`:
+Edit `env.docker`:
 ```bash
 JAVA_OPTS=-Xms256m -Xmx512m
 ```
@@ -453,7 +390,7 @@ JAVA_OPTS=-Xms256m -Xmx512m
 Or in `docker-compose.yml`:
 ```yaml
 services:
-  spark-worker:
+  flockr-spark-worker:
     environment:
       - SPARK_WORKER_MEMORY=512M
 ```
@@ -462,9 +399,9 @@ services:
 
 ```bash
 # Recreate network
-docker-compose down
+docker compose down
 docker network prune
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Clean Slate
@@ -472,7 +409,7 @@ docker-compose up -d
 If nothing works:
 ```bash
 # Stop everything
-docker-compose down -v
+docker compose down -v
 
 # Remove images
 docker rmi $(docker images 'flockr*' -q)
@@ -481,7 +418,7 @@ docker rmi $(docker images 'flockr*' -q)
 docker system prune -a --volumes
 
 # Start fresh
-./docker-start.sh
+./docker/docker-start.sh
 ```
 
 ## Performance Tuning
@@ -489,7 +426,7 @@ docker system prune -a --volumes
 ### JVM Tuning
 
 ```bash
-# In .env file
+# In env.docker file
 JAVA_OPTS=-Xms1g -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+HeapDumpOnOutOfMemoryError
 ```
 
@@ -498,7 +435,7 @@ JAVA_OPTS=-Xms1g -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+HeapDumpOnOut
 Mount custom config in `docker-compose.yml`:
 ```yaml
 services:
-  postgres:
+  flockr-postgres:
     volumes:
       - ./postgresql.conf:/etc/postgresql/postgresql.conf
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
@@ -511,7 +448,7 @@ services:
 docker stats
 
 # Specific services
-docker stats $(docker-compose ps -q)
+docker stats $(docker compose ps -q)
 
 # Script-friendly output
 docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
@@ -540,8 +477,7 @@ docker run --rm -v flockr_postgres_data:/data -v $(pwd):/backup \
 ### Persistent Data Locations
 
 - `postgres_data` - PostgreSQL database files
-- `spark_master_data` - Spark master metadata
-- `spark_worker_data` - Spark worker data
+- `aerospike_data` - Aerospike database files
 
 ## Health Checks
 
@@ -549,23 +485,27 @@ docker run --rm -v flockr_postgres_data:/data -v $(pwd):/backup \
 
 ```bash
 # Using status script
-./docker-status.sh
+./docker/docker-status.sh
 
 # Manual checks
-curl http://localhost:8080/health          # Flockr Admin
-curl http://localhost:8081/                # Flink
-curl http://localhost:8082/                # Spark Master
-docker-compose exec postgres pg_isready    # PostgreSQL
+curl http://localhost:8250/healthcheck       # Flockr Admin
+curl http://localhost:8260/healthcheck       # Flockr Users
+curl http://localhost:8240/                  # Flink
+curl http://localhost:8210/                  # Spark Master
+docker compose exec flockr-postgres pg_isready    # PostgreSQL
+docker compose exec flockr-aerospike asinfo -v status  # Aerospike
 ```
 
 ### Health Endpoints
 
 | Service | Health Check |
 |---------|-------------|
-| Flockr Admin | `GET /health` |
-| Flink | `GET /` (returns HTML) |
-| Spark | `GET /` (returns HTML) |
+| Flockr Admin | `GET /healthcheck` (port 8250) |
+| Flockr Users | `GET /healthcheck` (port 8260) |
+| Flink | `GET /` (port 8240, returns HTML) |
+| Spark | `GET /` (port 8210, returns HTML) |
 | PostgreSQL | `pg_isready` command |
+| Aerospike | `asinfo -v status` command |
 
 ## CI/CD Integration
 
@@ -580,13 +520,15 @@ The project includes GitHub Actions workflow at `.github/workflows/docker-build.
 
 ```bash
 # Build like CI does
-docker build -t flockr-admin:test .
+docker build -t flockr-admin:test -f flockr-admin/Dockerfile .
+docker build -t flockr-users:test -f flockr-users/Dockerfile .
 
 # Test like CI does
-docker-compose up -d
+docker compose up -d
 sleep 30
-curl -f http://localhost:8080/health
-docker-compose down -v
+curl -f http://localhost:8250/healthcheck
+curl -f http://localhost:8260/healthcheck
+docker compose down -v
 ```
 
 ## Architecture Notes
@@ -594,14 +536,14 @@ docker-compose down -v
 ### Data Flow
 
 ```
-Client Request → [Flockr Admin]
-                      ↓
-      ┌───────────────┼───────────────┐
-      ↓               ↓               ↓
-[PostgreSQL]       [Flink]        [Spark]
-   (Store)        (Process)     (Compute)
-      ↓               ↓               ↓
-   Response ← [Business Logic] ←────┘
+Client Request → [Flockr Admin] ←→ [Flockr Users]
+                      ↓                  ↓
+      ┌───────────────┼──────────────────┼───────────────┐
+      ↓               ↓                  ↓               ↓
+[PostgreSQL]       [Flink]          [Aerospike]      [Spark]
+   (Store)        (Process)          (Users)        (Compute)
+      ↓               ↓                  ↓               ↓
+   Response ← [Business Logic] ←────────┴───────────────┘
 ```
 
 ### Internal Networking
@@ -609,17 +551,19 @@ Client Request → [Flockr Admin]
 All services communicate via `flockr-network` bridge network.
 
 **Internal hostnames:**
-- `flockr-admin` - Application
-- `postgres` - Database
-- `flink-jobmanager` - Flink coordinator
-- `flink-taskmanager` - Flink workers
-- `spark-master` - Spark master
-- `spark-worker` - Spark workers
+- `flockr-admin` - Admin Application
+- `flockr-users` - Users Application
+- `flockr-postgres` - Database
+- `flockr-aerospike` - Aerospike Database
+- `flockr-flink-jobmanager` - Flink coordinator
+- `flockr-flink-taskmanager` - Flink workers
+- `flockr-spark-master` - Spark master
+- `flockr-spark-worker` - Spark workers
 
 ## Additional Resources
 
 - **Main README**: [README.md](README.md)
-- **API Documentation**: http://localhost:8080/swagger-ui/
+- **API Documentation**: http://localhost:8250/swagger-ui/
 - **Docker Docs**: https://docs.docker.com/
 - **Compose Docs**: https://docs.docker.com/compose/
 
@@ -630,4 +574,4 @@ All services communicate via `flockr-network` bridge network.
 
 ---
 
-**Built with ❤️ using Docker, Vert.x, Flink, and Spark**
+**Built with ❤️ using Docker, Vert.x, Flink, Spark, and Aerospike**
