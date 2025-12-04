@@ -6,6 +6,7 @@ import io.ascend.flockr.users.dto.ResponseEntity;
 import io.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import io.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import io.ascend.flockr.users.service.UserCohortsService;
+import io.ascend.flockr.users.util.ErrorHandler;
 import io.ascend.flockr.users.validator.BatchMapUserCohortsRequestValidator;
 import io.ascend.flockr.users.validator.HeaderValidator;
 import io.ascend.flockr.users.validator.MapUserCohortsRequestValidator;
@@ -18,7 +19,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +75,7 @@ public class MapUserCohorts {
                 mediaType = MediaType.APPLICATION_JSON,
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
-  public CompletionStage<Response> handle(
+  public CompletionStage<ResponseEntity.Success<Boolean>> handle(
       @Parameter(description = "User ID (must be positive)", required = true, example = "12345")
           @HeaderParam("userId")
           String userIdHeader,
@@ -96,16 +96,12 @@ public class MapUserCohorts {
 
     // Validate headers
     HeaderValidator.validateProjectKeyHeader(projectKey);
-    Long userId = HeaderValidator.validateAndParseUserId(userIdHeader);
 
     // Validate request body
     MapUserCohortsRequestValidator.validate(request);
 
-    return userCohortsService
-        .mapUserCohorts(userId, projectKey, request)
-        .map(ResponseEntity.Success::new)
-        .map(res -> Response.ok(res).build())
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(
+        userCohortsService.mapUserCohorts(userIdHeader, projectKey, request), "mapUserCohorts");
   }
 
   /**
@@ -147,7 +143,7 @@ public class MapUserCohorts {
                 mediaType = MediaType.APPLICATION_JSON,
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
-  public CompletionStage<Response> handleBatch(
+  public CompletionStage<ResponseEntity.Success<BulkOperationResult>> handleBatch(
       @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
@@ -166,20 +162,7 @@ public class MapUserCohorts {
     HeaderValidator.validateProjectKeyHeader(projectKey);
     BatchMapUserCohortsRequestValidator.validate(requests);
 
-    return userCohortsService
-        .batchMapUserCohorts(projectKey, requests)
-        .map(ResponseEntity.Success<BulkOperationResult>::new)
-        .map(Response::ok)
-        .map(Response.ResponseBuilder::build)
-        .onErrorReturn(this::buildErrorResponse)
-        .toCompletionStage();
-  }
-
-  /** Builds an error response for batch mapping failures. */
-  private Response buildErrorResponse(Throwable error) {
-    log.error("Batch cohort mapping failed", error);
-    ResponseEntity.Failure failure =
-        new ResponseEntity.Failure("BATCH_MAPPING_FAILED", error.getMessage(), null);
-    return Response.serverError().entity(failure).build();
+    return ErrorHandler.handleAsync(
+        userCohortsService.batchMapUserCohorts(projectKey, requests), "batchMapUserCohorts");
   }
 }

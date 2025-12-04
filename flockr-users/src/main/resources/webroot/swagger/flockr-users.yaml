@@ -71,7 +71,6 @@ paths:
       parameters:
       - name: userId
         in: header
-        description: User ID (must be positive)
         required: true
         schema:
           type: string
@@ -246,9 +245,22 @@ components:
       properties:
         error:
           $ref: '#/components/schemas/ErrorEntity'
+    SuccessBulkOperationResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BulkOperationResult'
     InputPart:
       type: object
       properties:
+        bodyAsString:
+          type: string
+        body:
+          type: object
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
+        contentTypeFromMessage:
+          type: boolean
         headers:
           type: object
           properties:
@@ -260,14 +272,6 @@ components:
               type: string
         fileName:
           type: string
-        bodyAsString:
-          type: string
-        body:
-          type: object
-        mediaType:
-          $ref: '#/components/schemas/MediaType'
-        contentTypeFromMessage:
-          type: boolean
     MediaType:
       type: object
       properties:
@@ -279,9 +283,9 @@ components:
           type: object
           additionalProperties:
             type: string
-        wildcardSubtype:
-          type: boolean
         wildcardType:
+          type: boolean
+        wildcardSubtype:
           type: boolean
     MultipartFormDataInput:
       type: object
@@ -292,12 +296,12 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/InputPart'
-        preamble:
-          type: string
         parts:
           type: array
           items:
             $ref: '#/components/schemas/InputPart'
+        preamble:
+          type: string
     MultivaluedMapStringString:
       type: object
       properties:
@@ -307,6 +311,13 @@ components:
         type: array
         items:
           type: string
+    SuccessListString:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: string
     JsonObject:
       type: object
       properties:
@@ -316,6 +327,11 @@ components:
             type: object
         empty:
           type: boolean
+    SuccessJsonObject:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/JsonObject'
     Success:
       type: object
       properties:

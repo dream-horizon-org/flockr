@@ -3,6 +3,7 @@ package io.ascend.flockr.users.controller;
 import com.google.inject.Inject;
 import io.ascend.flockr.users.dto.ResponseEntity;
 import io.ascend.flockr.users.service.UserCohortsService;
+import io.ascend.flockr.users.util.ErrorHandler;
 import io.ascend.flockr.users.validator.HeaderValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,7 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import java.util.List;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,10 +67,8 @@ public class GetUserCohorts {
                 mediaType = MediaType.APPLICATION_JSON,
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
-  public CompletionStage<Response> handle(
-      @Parameter(description = "User ID (must be positive)", required = true, example = "12345")
-          @HeaderParam("userId")
-          String userIdHeader,
+  public CompletionStage<ResponseEntity.Success<List<String>>> handle(
+      @Parameter(required = true, example = "12345") @HeaderParam("userId") String userIdHeader,
       @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
@@ -79,12 +78,8 @@ public class GetUserCohorts {
 
     // Validate headers
     HeaderValidator.validateProjectKeyHeader(projectKey);
-    Long userId = HeaderValidator.validateAndParseUserId(userIdHeader);
 
-    return userCohortsService
-        .getCohorts(userId, projectKey)
-        .map(ResponseEntity.Success::new)
-        .map(res -> Response.ok(res).build())
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(
+        userCohortsService.getCohorts(userIdHeader, projectKey), "getUserCohorts");
   }
 }

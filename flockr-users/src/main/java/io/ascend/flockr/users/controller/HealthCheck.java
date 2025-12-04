@@ -1,7 +1,9 @@
 package io.ascend.flockr.users.controller;
 
 import com.google.inject.Inject;
+import io.ascend.flockr.users.dto.ResponseEntity;
 import io.ascend.flockr.users.service.HealthCheckService;
+import io.ascend.flockr.users.util.ErrorHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -59,7 +61,7 @@ public class HealthCheck {
                             "{\"status\": \"UP\", \"aerospike\": \"connected\", \"timestamp\": 1701619200000}"))),
     @ApiResponse(responseCode = "503", description = "Application is unhealthy or degraded")
   })
-  public CompletionStage<JsonObject> handle() {
-    return healthCheckService.healthCheck().toCompletionStage();
+  public CompletionStage<ResponseEntity.Success<JsonObject>> handle() {
+    return ErrorHandler.handleAsync(healthCheckService.healthCheck(), "healthcheck");
   }
 }

@@ -37,7 +37,7 @@ public interface UserCohortsService {
    * @author Sudhanshu Rai
    * @since 1.0
    */
-  Single<List<String>> getCohorts(Long userId, String projectKey);
+  Single<List<String>> getCohorts(String userId, String projectKey);
 
   /**
    * Maps a user to a cohort (assigns or removes user from cohort).
@@ -52,7 +52,7 @@ public interface UserCohortsService {
    * @author Sudhanshu Rai
    * @since 1.0
    */
-  Single<Boolean> mapUserCohorts(Long userId, String projectKey, MapUserCohortsRequest request);
+  Single<Boolean> mapUserCohorts(String userId, String projectKey, MapUserCohortsRequest request);
 
   /**
    * Bulk assigns users from a CSV file to a cohort.

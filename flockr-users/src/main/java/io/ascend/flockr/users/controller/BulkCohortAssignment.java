@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import io.ascend.flockr.users.dto.BulkOperationResult;
 import io.ascend.flockr.users.dto.ResponseEntity;
 import io.ascend.flockr.users.service.UserCohortsService;
+import io.ascend.flockr.users.util.ErrorHandler;
 import io.ascend.flockr.users.validator.BulkCohortAssignmentValidator;
 import io.ascend.flockr.users.validator.HeaderValidator;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +16,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,7 +81,7 @@ public class BulkCohortAssignment {
                 mediaType = MediaType.APPLICATION_JSON,
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
-  public CompletionStage<Response> bulkAssignUsers(
+  public CompletionStage<ResponseEntity.Success<BulkOperationResult>> bulkAssignUsers(
       @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
@@ -100,17 +100,8 @@ public class BulkCohortAssignment {
     String cohortName = BulkCohortAssignmentValidator.validateAndExtractCohortName(input);
     InputPart filePart = BulkCohortAssignmentValidator.validateAndExtractCsvFile(input);
 
-    return userCohortsService
-        .assignUsersToCohort(cohortName, projectKey, filePart)
-        .map(ResponseEntity.Success<BulkOperationResult>::new)
-        .map(res -> Response.ok(res).build())
-        .onErrorReturn(
-            error -> {
-              log.error("Bulk cohort assignment failed", error);
-              ResponseEntity.Failure failure =
-                  new ResponseEntity.Failure("BULK_ASSIGNMENT_FAILED", error.getMessage(), null);
-              return Response.serverError().entity(failure).build();
-            })
-        .toCompletionStage();
+    return ErrorHandler.handleAsync(
+        userCohortsService.assignUsersToCohort(cohortName, projectKey, filePart),
+        "bulkCohortAssignment");
   }
 }

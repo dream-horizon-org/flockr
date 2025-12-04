@@ -75,10 +75,9 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * for multi-tenant isolation.
    */
   @Override
-  public Single<List<String>> getCohorts(Long userId, String projectKey) {
-    String userKey = String.valueOf(userId);
+  public Single<List<String>> getCohorts(String userId, String projectKey) {
     String setName = projectKey;
-    return aerospikeClient.getCohortExpiryBin(userKey, setName).map(this::getActiveCohortsFromMap);
+    return aerospikeClient.getCohortExpiryBin(userId, setName).map(this::getActiveCohortsFromMap);
   }
 
   /**
@@ -91,7 +90,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    */
   @Override
   public Single<Boolean> mapUserCohorts(
-      Long userId, String projectKey, MapUserCohortsRequest request) {
+      String userId, String projectKey, MapUserCohortsRequest request) {
     String userKey = String.valueOf(userId);
     // Use default source since it's removed from API
     String source = Constants.SOURCE_DREAM11;

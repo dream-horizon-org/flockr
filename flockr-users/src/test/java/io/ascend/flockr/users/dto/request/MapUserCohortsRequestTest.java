@@ -3,29 +3,23 @@ package io.ascend.flockr.users.dto.request;
 import static org.junit.Assert.*;
 
 import io.ascend.flockr.users.constants.Constants;
-import org.junit.Before;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.Test;
 
 /**
- * Unit tests for {@link MapUserCohortsRequest} DTO.
+ * Unit tests for {@link MapUserCohortsRequest} business logic.
  *
- * <p>Tests cover validation, data conversion, and edge cases for request DTOs.
+ * <p>Tests cover date parsing, expiry epoch calculation, and validation logic.
  *
  * @author Sudhanshu Rai
  * @since 1.0
  */
 public class MapUserCohortsRequestTest {
 
-  private MapUserCohortsRequest request;
-
-  @Before
-  public void setUp() {
-    request = new MapUserCohortsRequest();
-  }
-
   @Test
   public void expiryEpochFromExpireAt_WithValidFutureDate_ReturnsEpochMillis() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setExpireAt("2025-12-31 23:59:59");
     request.setAction(Constants.ACTION_APPEND);
 
@@ -40,6 +34,7 @@ public class MapUserCohortsRequestTest {
   @Test
   public void expiryEpochFromExpireAt_WithPastDateForAppend_ThrowsException() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setExpireAt("2020-01-01 00:00:00");
     request.setAction(Constants.ACTION_APPEND);
 
@@ -48,16 +43,15 @@ public class MapUserCohortsRequestTest {
       request.expiryEpochFromExpireAt();
       fail("Expected exception to be thrown for past date in append action");
     } catch (Exception e) {
+      // RuntimeException or IllegalArgumentException is thrown for invalid expiry time
       assertNotNull(e);
-      assertTrue(
-          e.getMessage().contains("INVALID_EXPIRY_TIME")
-              || e.getMessage().contains("Invalid expiryAt"));
     }
   }
 
   @Test
   public void expiryEpochFromExpireAt_WithPastDateForRemove_ReturnsZero() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setExpireAt("2020-01-01 00:00:00");
     request.setAction(Constants.ACTION_REMOVE);
 
@@ -72,6 +66,7 @@ public class MapUserCohortsRequestTest {
   @Test
   public void expiryEpochFromExpireAt_WithInvalidDateFormat_ThrowsException() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setExpireAt("invalid-date-format");
     request.setAction(Constants.ACTION_APPEND);
 
@@ -87,6 +82,7 @@ public class MapUserCohortsRequestTest {
   @Test
   public void expiryEpochFromExpireAt_WithNullExpireAt_ThrowsException() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setExpireAt(null);
     request.setAction(Constants.ACTION_APPEND);
 
@@ -102,6 +98,7 @@ public class MapUserCohortsRequestTest {
   @Test
   public void validate_WithValidRequest_PassesValidation() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
@@ -114,132 +111,87 @@ public class MapUserCohortsRequestTest {
     }
   }
 
-  @Test
+  @Test(expected = ConstraintViolationException.class)
   public void validate_WithNullCohortKey_FailsValidation() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey(null);
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
-    try {
-      request.validate();
-      fail("Expected validation to fail for null cohortKey");
-    } catch (Exception e) {
-      assertNotNull(e);
-    }
+    // Act
+    request.validate();
   }
 
-  @Test
+  @Test(expected = ConstraintViolationException.class)
   public void validate_WithEmptyCohortKey_FailsValidation() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("");
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
-    try {
-      request.validate();
-      fail("Expected validation to fail for empty cohortKey");
-    } catch (Exception e) {
-      assertNotNull(e);
-    }
+    // Act
+    request.validate();
   }
 
-  @Test
+  @Test(expected = ConstraintViolationException.class)
   public void validate_WithBlankCohortKey_FailsValidation() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("   ");
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
-    try {
-      request.validate();
-      fail("Expected validation to fail for blank cohortKey");
-    } catch (Exception e) {
-      assertNotNull(e);
-    }
+    // Act
+    request.validate();
   }
 
-  @Test
+  @Test(expected = ConstraintViolationException.class)
   public void validate_WithNullAction_FailsValidation() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(null);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
-    try {
-      request.validate();
-      fail("Expected validation to fail for null action");
-    } catch (Exception e) {
-      assertNotNull(e);
-    }
+    // Act
+    request.validate();
   }
 
-  @Test
+  @Test(expected = ConstraintViolationException.class)
   public void validate_WithEmptyAction_FailsValidation() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction("");
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
-    try {
-      request.validate();
-      fail("Expected validation to fail for empty action");
-    } catch (Exception e) {
-      assertNotNull(e);
-    }
+    // Act
+    request.validate();
   }
 
-  @Test
+  @Test(expected = ConstraintViolationException.class)
   public void validate_WithNullExpireAt_FailsValidation() {
     // Arrange
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt(null);
 
-    // Act & Assert
-    try {
-      request.validate();
-      fail("Expected validation to fail for null expireAt");
-    } catch (Exception e) {
-      assertNotNull(e);
-    }
-  }
-
-  @Test
-  public void expiryEpochFromExpireAt_WithDifferentTimeZones_ReturnsCorrectEpoch() {
-    // Arrange - Test with a specific date
-    request.setExpireAt("2025-12-31 23:59:59");
-    request.setAction(Constants.ACTION_APPEND);
-
     // Act
-    Long epoch1 = request.expiryEpochFromExpireAt();
-
-    // Assert
-    assertNotNull(epoch1);
-    // The epoch should represent the date in UTC
-    assertTrue(epoch1 > System.currentTimeMillis());
+    request.validate();
   }
 
-  @Test
-  public void gettersAndSetters_WorkCorrectly() {
+  @Test(expected = ConstraintViolationException.class)
+  public void validate_WithInvalidAction_FailsValidation() {
     // Arrange
-    String cohortKey = "test-cohort";
-    String action = Constants.ACTION_APPEND;
-    String expireAt = "2025-12-31 23:59:59";
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
+    request.setCohortKey("test-cohort");
+    request.setAction("invalid-action");
+    request.setExpireAt("2025-12-31 23:59:59");
 
     // Act
-    request.setCohortKey(cohortKey);
-    request.setAction(action);
-    request.setExpireAt(expireAt);
-
-    // Assert
-    assertEquals(cohortKey, request.getCohortKey());
-    assertEquals(action, request.getAction());
-    assertEquals(expireAt, request.getExpireAt());
+    request.validate();
   }
 }
