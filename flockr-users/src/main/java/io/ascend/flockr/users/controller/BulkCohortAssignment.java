@@ -84,7 +84,7 @@ public class BulkCohortAssignment {
   })
   public CompletionStage<ResponseEntity.Success<BulkOperationResult>> bulkAssignUsers(
       @NotNull(message = "x-project-key header is required")
-      @Parameter(
+          @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
               example = "tenant1_project1")

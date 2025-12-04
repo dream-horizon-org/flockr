@@ -78,12 +78,11 @@ public class MapUserCohorts {
   })
   public CompletionStage<ResponseEntity.Success<Boolean>> handle(
       @NotNull(message = "userId header is required")
-      @Parameter(description = "User ID (must be positive)", required = true, example = "12345")
+          @Parameter(description = "User ID (must be positive)", required = true, example = "12345")
           @HeaderParam("userId")
           String userIdHeader,
-
       @NotNull(message = "x-project-key header is required")
-      @Parameter(
+          @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
               example = "tenant1_project1")
@@ -146,7 +145,7 @@ public class MapUserCohorts {
   })
   public CompletionStage<ResponseEntity.Success<BulkOperationResult>> handleBatch(
       @NotNull(message = "x-project-key header is required")
-      @Parameter(
+          @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
               example = "tenant1_project1")

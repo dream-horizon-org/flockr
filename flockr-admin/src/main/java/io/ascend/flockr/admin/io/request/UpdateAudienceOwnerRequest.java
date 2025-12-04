@@ -16,7 +16,8 @@ import lombok.Data;
 public class UpdateAudienceOwnerRequest {
 
   /** The action to perform (ADD or REMOVE). */
-  @NotNull(message = "Action is required") private UpdateAudienceOwnerAction action;
+  @NotNull(message = "Action is required")
+  private UpdateAudienceOwnerAction action;
 
   /** The email address of the owner to add or remove. */
   @NotEmpty private String email;

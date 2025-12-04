@@ -47,9 +47,14 @@ public class StreamConfiguration<T extends SourceInfo> implements RuleConfigurat
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonIgnoreProperties()
   public static class Constraint {
-    @NotNull(message = "Temporal is required") private Temporal temporal;
-    @NotNull(message = "Time unit is required") private String timeUnit;
-    @NotNull(message = "Value is required") private Long value;
+    @NotNull(message = "Temporal is required")
+    private Temporal temporal;
+
+    @NotNull(message = "Time unit is required")
+    private String timeUnit;
+
+    @NotNull(message = "Value is required")
+    private Long value;
   }
 
   public enum Temporal {
