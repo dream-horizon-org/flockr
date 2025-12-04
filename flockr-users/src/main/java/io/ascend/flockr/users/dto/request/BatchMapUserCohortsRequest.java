@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.ascend.flockr.users.annotation.DateTimeFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,8 +29,7 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Single user cohort mapping request for batch operations")
 public class BatchMapUserCohortsRequest {
 
-  @NotNull
-  @Positive
+  @NotBlank
   @JsonProperty("user_id")
   @Schema(description = "User ID to map (must be positive)", example = "12345")
   private String userId;

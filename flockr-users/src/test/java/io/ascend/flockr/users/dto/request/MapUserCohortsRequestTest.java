@@ -183,15 +183,22 @@ public class MapUserCohortsRequestTest {
     request.validate();
   }
 
-  @Test(expected = ConstraintViolationException.class)
-  public void validate_WithInvalidAction_FailsValidation() {
+  @Test
+  public void validate_WithInvalidAction_PassesBeanValidation() {
     // Arrange
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction("invalid-action");
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act
-    request.validate();
+    // Act & Assert
+    // Bean Validation only checks @NotBlank, not action values
+    // Action value validation happens in MapUserCohortsRequestValidator.validate()
+    // So request.validate() should pass (no exception thrown)
+    try {
+      request.validate();
+    } catch (Exception e) {
+      fail("Bean Validation should pass for non-blank action value: " + e.getMessage());
+    }
   }
 }

@@ -9,6 +9,7 @@ import com.aerospike.client.ResultCode;
 import io.ascend.flockr.users.client.Aerospike;
 import io.ascend.flockr.users.config.AerospikeConfig;
 import io.ascend.flockr.users.constants.Constants;
+import io.ascend.flockr.users.dto.BulkOperationResult;
 import io.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.buffer.Buffer;
@@ -35,7 +36,6 @@ import org.mockito.junit.MockitoJUnitRunner;
  * <p>Tests cover all service methods including cohort retrieval, mapping, and bulk assignment
  * operations with various edge cases and error scenarios.
  *
- * @author Sudhanshu Rai
  * @since 1.0
  */
 @RunWith(MockitoJUnitRunner.class)
@@ -81,7 +81,7 @@ public class UserCohortServiceImplTest {
     cohortMap.put("cohort2", currentTime + 20000); // active
     cohortMap.put("cohort3", currentTime - 10000); // expired
 
-    when(aerospikeClient.getCohortExpiryBin(eq("123L"), eq(projectKey)))
+    when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(projectKey)))
         .thenReturn(Single.just(cohortMap));
 
     // Act
@@ -224,6 +224,29 @@ public class UserCohortServiceImplTest {
   }
 
   @Test
+  public void mapUserCohorts_WithValidParams_ProcessesRequest() {
+    // Arrange
+    String userId = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
+    request.setCohortKey("test-cohort");
+    request.setAction(Constants.ACTION_REMOVE);
+    request.setExpireAt("2025-12-31 23:59:59");
+
+    when(aerospikeClient.removeCohort(
+            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey)))
+        .thenReturn(Single.just(true));
+
+    // Act
+    Boolean result = service.mapUserCohorts(userId, projectKey, request).blockingGet();
+
+    // Assert
+    assertTrue(result);
+    verify(aerospikeClient)
+        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey));
+  }
+
+  @Test
   public void mapUserCohorts_WithKeyNotFoundError_ReturnsFalse() {
     // Arrange
     String userId = "123";
@@ -292,6 +315,29 @@ public class UserCohortServiceImplTest {
   }
 
   @Test
+  public void mapUserCohorts_WithValidParams_ProcessesSuccessfully() {
+    // Arrange
+    String userId = "123";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    MapUserCohortsRequest request = new MapUserCohortsRequest();
+    request.setCohortKey("test-cohort");
+    request.setAction(Constants.ACTION_REMOVE);
+    request.setExpireAt("2025-12-31 23:59:59");
+
+    when(aerospikeClient.removeCohort(
+            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey)))
+        .thenReturn(Single.just(true));
+
+    // Act
+    Boolean result = service.mapUserCohorts(userId, projectKey, request).blockingGet();
+
+    // Assert
+    assertTrue(result);
+    verify(aerospikeClient)
+        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey));
+  }
+
+  @Test
   public void mapUserCohorts_WithExceptionInExpiryCalculation_ReturnsError() {
     // Arrange
     String userId = "123";
@@ -346,7 +392,8 @@ public class UserCohortServiceImplTest {
         .handler(any());
 
     // Act
-    var result = service.assignUsersToCohort(cohortName, projectKey, csvFilePart).blockingGet();
+    BulkOperationResult result =
+        service.assignUsersToCohort(cohortName, projectKey, csvFilePart).blockingGet();
 
     // Assert
     assertNotNull(result);
@@ -425,14 +472,13 @@ public class UserCohortServiceImplTest {
   }
 
   @Test
-  public void getActiveCohortsFromMap_WithFutureTime_IncludesCohort() {
+  public void getActiveCohortsFromMap_WithExactCurrentTime_IncludesCohort() {
     // Arrange
     String userId = "123";
     String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     Map<String, Long> cohortMap = new HashMap<>();
-    // Use a future time to avoid timing issues
-    long futureTime = System.currentTimeMillis() + 60000; // 1 minute in future
-    cohortMap.put("future", futureTime);
+    long currentTime = System.currentTimeMillis();
+    cohortMap.put("exact", currentTime); // Exactly current time (should be included)
 
     when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(projectKey)))
         .thenReturn(Single.just(cohortMap));
@@ -442,6 +488,6 @@ public class UserCohortServiceImplTest {
 
     // Assert
     assertEquals(1, result.size());
-    assertTrue(result.contains("future"));
+    assertTrue(result.contains("exact"));
   }
 }

@@ -740,7 +740,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    * @param userId the user ID being processed (for logging)
    * @return Single emitting false (operation failed)
    */
-  private Single<Boolean> handleOperationError(Throwable throwable, Long userId) {
+  private Single<Boolean> handleOperationError(Throwable throwable, String userId) {
     if (isKeyNotFoundError(throwable)) {
       log.debug("Aerospike key not found for user {}", userId);
       return Single.just(false);

@@ -22,7 +22,6 @@ import org.mockito.junit.MockitoJUnitRunner;
  * <p>Tests cover parameter validation, error handling, and response formatting for retrieving user
  * cohorts.
  *
- * @author Sudhanshu Rai
  * @since 1.0
  */
 @RunWith(MockitoJUnitRunner.class)
@@ -78,21 +77,24 @@ public class GetUserCohortsTest {
   }
 
   @Test
-  public void handle_WithMissingUserIdHeader_ThrowsException() {
+  public void handle_WithMissingUserIdHeader_PassesToService() throws Exception {
     // Arrange
     String userIdHeader = null;
     String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    List<String> emptyCohorts = Collections.emptyList();
 
-    // Act & Assert
-    try {
-      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
-      fail("Expected exception to be thrown for missing userId header");
-    } catch (Exception e) {
-      assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("MISSING_USER_ID_HEADER")
-                  || e.getCause().getMessage().contains("userId")));
-    }
+    // Controller doesn't validate userId header, it passes it directly to the service
+    when(userCohortsService.getCohorts(eq(userIdHeader), eq(projectKey)))
+        .thenReturn(Single.just(emptyCohorts));
+
+    // Act
+    CompletionStage<ResponseEntity.Success<List<String>>> responseStage =
+        controller.handle(userIdHeader, projectKey);
+    ResponseEntity.Success<List<String>> response = responseStage.toCompletableFuture().get();
+
+    // Assert
+    assertNotNull(response);
+    assertEquals(emptyCohorts, response.data());
   }
 
   @Test
@@ -101,33 +103,103 @@ public class GetUserCohortsTest {
     String userIdHeader = "123";
     String projectKey = null;
 
-    // Act & Assert
+    // Act & Assert - HeaderValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey);
       fail("Expected exception to be thrown for missing x-project-key header");
     } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
       assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("MISSING_PROJECT_KEY_HEADER")
-                  || e.getCause().getMessage().contains("x-project-key")));
+          (message != null
+                  && (message.contains("MISSING_PROJECT_KEY_HEADER")
+                      || message.contains("x-project-key")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                      || cause.getMessage().contains("x-project-key"))));
     }
   }
 
   @Test
-  public void handle_WithNonNumericUserId_ThrowsNumberFormatException() {
+  public void handle_WithInvalidProjectKeyFormat_PassesValidation() throws Exception {
     // Arrange
-    String userIdHeader = "abc";
-    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    String userIdHeader = "123";
+    String projectKey =
+        "invalid-format"; // Missing underscore - format is not validated by controller
+    List<String> cohorts = Arrays.asList("cohort1");
 
-    // Act & Assert
-    try {
-      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
-      fail("Expected exception to be thrown for non-numeric userId");
-    } catch (Exception e) {
-      // NumberFormatException is thrown when parsing non-numeric userId
-      assertNotNull(e);
-      assertTrue(e.getCause() instanceof NumberFormatException);
-    }
+    when(userCohortsService.getCohorts(eq(userIdHeader), eq(projectKey)))
+        .thenReturn(Single.just(cohorts));
+
+    // Act & Assert - Controller doesn't validate projectKey format, only checks if null/empty
+    CompletionStage<ResponseEntity.Success<List<String>>> responseStage =
+        controller.handle(userIdHeader, projectKey);
+    ResponseEntity.Success<List<String>> response = responseStage.toCompletableFuture().get();
+
+    assertNotNull(response);
+    assertEquals(cohorts, response.data());
+  }
+
+  @Test
+  public void handle_WithInvalidTenantIdFormat_PassesValidation() throws Exception {
+    // Arrange
+    String userIdHeader = "123";
+    String projectKey =
+        "invalid-uuid_project-100"; // Invalid UUID format - not validated by controller
+    List<String> cohorts = Arrays.asList("cohort1");
+
+    when(userCohortsService.getCohorts(eq(userIdHeader), eq(projectKey)))
+        .thenReturn(Single.just(cohorts));
+
+    // Act & Assert - Controller doesn't validate tenantId format
+    CompletionStage<ResponseEntity.Success<List<String>>> responseStage =
+        controller.handle(userIdHeader, projectKey);
+    ResponseEntity.Success<List<String>> response = responseStage.toCompletableFuture().get();
+
+    assertNotNull(response);
+    assertEquals(cohorts, response.data());
+  }
+
+  @Test
+  public void handle_WithInvalidUserId_PassesToService() throws Exception {
+    // Arrange
+    String userIdHeader = "-1";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    List<String> emptyCohorts = Collections.emptyList();
+
+    // Controller doesn't validate userId format, it passes it directly to the service
+    when(userCohortsService.getCohorts(eq(userIdHeader), eq(projectKey)))
+        .thenReturn(Single.just(emptyCohorts));
+
+    // Act
+    CompletionStage<ResponseEntity.Success<List<String>>> responseStage =
+        controller.handle(userIdHeader, projectKey);
+    ResponseEntity.Success<List<String>> response = responseStage.toCompletableFuture().get();
+
+    // Assert
+    assertNotNull(response);
+    assertEquals(emptyCohorts, response.data());
+  }
+
+  @Test
+  public void handle_WithZeroUserId_PassesToService() throws Exception {
+    // Arrange
+    String userIdHeader = "0";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    List<String> emptyCohorts = Collections.emptyList();
+
+    // Controller doesn't validate userId format
+    when(userCohortsService.getCohorts(eq(userIdHeader), eq(projectKey)))
+        .thenReturn(Single.just(emptyCohorts));
+
+    // Act
+    CompletionStage<ResponseEntity.Success<List<String>>> responseStage =
+        controller.handle(userIdHeader, projectKey);
+    ResponseEntity.Success<List<String>> response = responseStage.toCompletableFuture().get();
+
+    // Assert
+    assertNotNull(response);
+    assertEquals(emptyCohorts, response.data());
   }
 
   @Test

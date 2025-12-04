@@ -253,6 +253,8 @@ components:
     InputPart:
       type: object
       properties:
+        contentTypeFromMessage:
+          type: boolean
         headers:
           type: object
           properties:
@@ -262,16 +264,14 @@ components:
             type: array
             items:
               type: string
-        fileName:
-          type: string
         bodyAsString:
           type: string
         body:
           type: object
         mediaType:
           $ref: '#/components/schemas/MediaType'
-        contentTypeFromMessage:
-          type: boolean
+        fileName:
+          type: string
     MediaType:
       type: object
       properties:
@@ -296,12 +296,12 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/InputPart'
-        preamble:
-          type: string
         parts:
           type: array
           items:
             $ref: '#/components/schemas/InputPart'
+        preamble:
+          type: string
     MultivaluedMapStringString:
       type: object
       properties:
@@ -379,10 +379,9 @@ components:
           - append
           - remove
         user_id:
-          type: integer
+          type: string
           description: User ID to map (must be positive)
-          format: int64
-          example: 12345
+          example: "12345"
         cohort_key:
           type: string
           description: Cohort key/name to assign or remove user from

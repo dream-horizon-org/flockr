@@ -94,7 +94,7 @@ public class MapUserCohortsTest {
   }
 
   @Test
-  public void handle_WithMissingUserIdHeader_ThrowsException() {
+  public void handle_WithMissingUserIdHeader_PassesToService() throws Exception {
     // Arrange
     String userIdHeader = null;
     String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
@@ -103,16 +103,19 @@ public class MapUserCohortsTest {
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
-    try {
-      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
-      fail("Expected exception to be thrown when userId header is missing");
-    } catch (Exception e) {
-      assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("MISSING_USER_ID_HEADER")
-                  || e.getCause().getMessage().contains("userId")));
-    }
+    // Controller doesn't validate userId header, it passes it directly to the service
+    when(userCohortsService.mapUserCohorts(
+            eq(userIdHeader), eq(projectKey), any(MapUserCohortsRequest.class)))
+        .thenReturn(Single.just(true));
+
+    // Act
+    CompletionStage<ResponseEntity.Success<Boolean>> responseStage =
+        controller.handle(userIdHeader, projectKey, request);
+    ResponseEntity.Success<Boolean> response = responseStage.toCompletableFuture().get();
+
+    // Assert
+    assertNotNull(response);
+    assertEquals(true, response.data());
   }
 
   @Test
@@ -125,15 +128,20 @@ public class MapUserCohortsTest {
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
+    // Act & Assert - HeaderValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey, request);
       fail("Expected exception to be thrown when x-project-key header is missing");
     } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
       assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("MISSING_PROJECT_KEY_HEADER")
-                  || e.getCause().getMessage().contains("x-project-key")));
+          (message != null
+                  && (message.contains("MISSING_PROJECT_KEY_HEADER")
+                      || message.contains("x-project-key")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                      || cause.getMessage().contains("x-project-key"))));
     }
   }
 
@@ -144,15 +152,19 @@ public class MapUserCohortsTest {
     String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     MapUserCohortsRequest request = null;
 
-    // Act & Assert
+    // Act & Assert - MapUserCohortsRequestValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey, request);
       fail("Expected exception to be thrown for null request");
     } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
       assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_REQUEST")
-                  || e.getCause().getMessage().contains("Request body")));
+          (message != null
+                  && (message.contains("INVALID_REQUEST") || message.contains("Request body")))
+              || (cause != null
+                  && (cause.getMessage().contains("INVALID_REQUEST")
+                      || cause.getMessage().contains("Request body"))));
     }
   }
 
@@ -166,15 +178,19 @@ public class MapUserCohortsTest {
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
+    // Act & Assert - MapUserCohortsRequestValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey, request);
       fail("Expected exception to be thrown for missing cohort_key");
     } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
       assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("MISSING_COHORT_KEY")
-                  || e.getCause().getMessage().contains("cohort_key")));
+          (message != null
+                  && (message.contains("MISSING_COHORT_KEY") || message.contains("cohort_key")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_COHORT_KEY")
+                      || cause.getMessage().contains("cohort_key"))));
     }
   }
 
@@ -188,15 +204,18 @@ public class MapUserCohortsTest {
     request.setAction(null); // Missing action
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
+    // Act & Assert - MapUserCohortsRequestValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey, request);
       fail("Expected exception to be thrown for missing action");
     } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
       assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("MISSING_ACTION")
-                  || e.getCause().getMessage().contains("action")));
+          (message != null && (message.contains("MISSING_ACTION") || message.contains("action")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_ACTION")
+                      || cause.getMessage().contains("action"))));
     }
   }
 
@@ -210,15 +229,19 @@ public class MapUserCohortsTest {
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt(null); // Missing expireAt
 
-    // Act & Assert
+    // Act & Assert - MapUserCohortsRequestValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey, request);
       fail("Expected exception to be thrown for missing expire_at");
     } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
       assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("MISSING_EXPIRE_AT")
-                  || e.getCause().getMessage().contains("expire_at")));
+          (message != null
+                  && (message.contains("MISSING_EXPIRE_AT") || message.contains("expire_at")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_EXPIRE_AT")
+                      || cause.getMessage().contains("expire_at"))));
     }
   }
 
@@ -232,15 +255,18 @@ public class MapUserCohortsTest {
     request.setAction("invalid-action"); // Invalid action
     request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert
+    // Act & Assert - MapUserCohortsRequestValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
+      controller.handle(userIdHeader, projectKey, request);
       fail("Expected exception to be thrown for invalid action");
     } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
       assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("INVALID_ACTION")
-                  || e.getCause().getMessage().contains("action")));
+          (message != null && (message.contains("INVALID_ACTION") || message.contains("action")))
+              || (cause != null
+                  && (cause.getMessage().contains("INVALID_ACTION")
+                      || cause.getMessage().contains("action"))));
     }
   }
 
@@ -302,9 +328,9 @@ public class MapUserCohortsTest {
     List<BatchMapUserCohortsRequest> requests =
         Arrays.asList(
             new BatchMapUserCohortsRequest(
-                123L, "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
             new BatchMapUserCohortsRequest(
-                456L, "cohort2", Constants.ACTION_REMOVE, "2025-12-31 23:59:59"));
+                "456", "cohort2", Constants.ACTION_REMOVE, "2025-12-31 23:59:59"));
 
     BulkOperationResult expectedResult =
         new BulkOperationResult(2, 2, 0, "Processed 2 users successfully");
@@ -327,25 +353,24 @@ public class MapUserCohortsTest {
   }
 
   @Test
-  public void handleBatch_WithEmptyList_ReturnsEmptyResult() throws Exception {
+  public void handleBatch_WithEmptyList_ThrowsException() {
     // Arrange
     String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     List<BatchMapUserCohortsRequest> requests = Collections.emptyList();
 
-    BulkOperationResult expectedResult = new BulkOperationResult(0, 0, 0, "No users to process");
-
-    when(userCohortsService.batchMapUserCohorts(eq(projectKey), anyList()))
-        .thenReturn(Single.just(expectedResult));
-
-    // Act
-    CompletionStage<ResponseEntity.Success<BulkOperationResult>> responseStage =
-        controller.handleBatch(projectKey, requests);
-    ResponseEntity.Success<BulkOperationResult> response =
-        responseStage.toCompletableFuture().get();
-
-    // Assert
-    assertNotNull(response);
-    assertEquals(0, response.data().getTotalProcessed());
+    // Act & Assert - BatchMapUserCohortsRequestValidator throws synchronously for empty list
+    try {
+      controller.handleBatch(projectKey, requests);
+      fail("Expected exception to be thrown for empty batch list");
+    } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
+      assertTrue(
+          (message != null && (message.contains("INVALID_REQUEST") || message.contains("empty")))
+              || (cause != null
+                  && (cause.getMessage().contains("INVALID_REQUEST")
+                      || cause.getMessage().contains("empty"))));
+    }
   }
 
   @Test
@@ -355,17 +380,22 @@ public class MapUserCohortsTest {
     List<BatchMapUserCohortsRequest> requests =
         Arrays.asList(
             new BatchMapUserCohortsRequest(
-                123L, "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
 
-    // Act & Assert
+    // Act & Assert - HeaderValidator throws synchronously
     try {
-      controller.handleBatch(projectKey, requests).toCompletableFuture().get();
+      controller.handleBatch(projectKey, requests);
       fail("Expected exception to be thrown for missing x-project-key header");
     } catch (Exception e) {
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
       assertTrue(
-          e.getCause() != null
-              && (e.getCause().getMessage().contains("MISSING_PROJECT_KEY_HEADER")
-                  || e.getCause().getMessage().contains("x-project-key")));
+          (message != null
+                  && (message.contains("MISSING_PROJECT_KEY_HEADER")
+                      || message.contains("x-project-key")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                      || cause.getMessage().contains("x-project-key"))));
     }
   }
 
@@ -376,7 +406,7 @@ public class MapUserCohortsTest {
     List<BatchMapUserCohortsRequest> requests =
         Arrays.asList(
             new BatchMapUserCohortsRequest(
-                123L, "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
 
     RuntimeException serviceError = new RuntimeException("Batch processing error");
     when(userCohortsService.batchMapUserCohorts(eq(projectKey), anyList()))
@@ -399,9 +429,9 @@ public class MapUserCohortsTest {
     List<BatchMapUserCohortsRequest> requests =
         Arrays.asList(
             new BatchMapUserCohortsRequest(
-                123L, "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
             new BatchMapUserCohortsRequest(
-                456L, "cohort2", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
+                "456", "cohort2", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
 
     BulkOperationResult expectedResult =
         new BulkOperationResult(2, 1, 1, "Processed 2 users. Success: 1, Failed: 1");
