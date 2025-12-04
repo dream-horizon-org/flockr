@@ -60,4 +60,4 @@ EXPOSE ${SERVER_PORT}
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${SERVER_PORT}${HEALTHCHECK_PATH} || exit 1
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dapp.environment=${ENV:-docker} -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dapp.environment=${ENV:-docker} -Dlogback.configurationFile=./resources/logback/logback-docker.xml -jar app.jar"]

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logback configuration for Docker environment
+  
+  Optimized for containerized deployments:
+  - Console-only output (logs captured by Docker)
+  - Colored output for better readability with docker logs
+  - INFO level by default for production-like behavior
+  - JSON format option available via LogstashEncoder
+-->
+<configuration>
+
+  <!-- =================================================================== -->
+  <!-- Property Definitions                                                -->
+  <!-- =================================================================== -->
+  <property name="LOG_PATTERN" 
+            value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) - %msg%n"/>
+
+  <!-- =================================================================== -->
+  <!-- Console Appender - Standard output for Docker                       -->
+  <!-- =================================================================== -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>${LOG_PATTERN}</pattern>
+      <charset>UTF-8</charset>
+    </encoder>
+    <immediateFlush>true</immediateFlush>
+  </appender>
+
+  <!-- =================================================================== -->
+  <!-- Application Loggers                                                 -->
+  <!-- =================================================================== -->
+  
+  <!-- Application package -->
+  <logger name="io.ascend.flockr.admin" level="INFO" additivity="false">
+    <appender-ref ref="CONSOLE"/>
+  </logger>
+
+  <!-- REST API logging -->
+  <logger name="io.ascend.flockr.admin.rest" level="INFO"/>
+  
+  <!-- Service layer logging -->
+  <logger name="io.ascend.flockr.admin.service" level="INFO"/>
+  
+  <!-- Repository/Database logging -->
+  <logger name="io.ascend.flockr.admin.repository" level="INFO"/>
+  
+  <!-- Client integrations (Flink, Kafka, etc.) -->
+  <logger name="io.ascend.flockr.admin.client" level="INFO"/>
+
+  <!-- =================================================================== -->
+  <!-- Third-party Library Loggers                                         -->
+  <!-- =================================================================== -->
+  
+  <!-- Vert.x framework -->
+  <logger name="io.vertx" level="INFO"/>
+  <logger name="io.vertx.core.impl.BlockedThreadChecker" level="WARN"/>
+  
+  <!-- Netty -->
+  <logger name="io.netty" level="WARN"/>
+  
+  <!-- HTTP Client/Server -->
+  <logger name="io.vertx.ext.web" level="INFO"/>
+  
+  <!-- SQL Client -->
+  <logger name="io.vertx.sqlclient" level="INFO"/>
+  <logger name="io.vertx.pgclient" level="INFO"/>
+  
+  <!-- Kafka Client -->
+  <logger name="org.apache.kafka" level="WARN"/>
+  <logger name="io.vertx.kafka.client" level="INFO"/>
+  
+  <!-- Guice -->
+  <logger name="com.google.inject" level="WARN"/>
+  
+  <!-- RESTEasy -->
+  <logger name="org.jboss.resteasy" level="WARN"/>
+  
+  <!-- Circuit Breaker -->
+  <logger name="io.github.resilience4j" level="INFO"/>
+  
+  <!-- Jackson JSON -->
+  <logger name="com.fasterxml.jackson" level="WARN"/>
+  
+  <!-- Json Validator -->
+  <logger name="com.networknt" level="WARN"/>
+
+  <!-- =================================================================== -->
+  <!-- Root Logger                                                         -->
+  <!-- =================================================================== -->
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+
+</configuration>
+
