@@ -7,9 +7,7 @@ import io.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import io.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import io.ascend.flockr.users.service.UserCohortsService;
 import io.ascend.flockr.users.util.ErrorHandler;
-import io.ascend.flockr.users.validator.BatchMapUserCohortsRequestValidator;
 import io.ascend.flockr.users.validator.HeaderValidator;
-import io.ascend.flockr.users.validator.MapUserCohortsRequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -17,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
@@ -92,14 +91,11 @@ public class MapUserCohorts {
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
                       schema = @Schema(implementation = MapUserCohortsRequest.class)))
+          @Valid
           MapUserCohortsRequest request) {
 
     // Validate headers
     HeaderValidator.validateProjectKeyHeader(projectKey);
-
-    // Validate request body
-    MapUserCohortsRequestValidator.validate(request);
-
     return ErrorHandler.handleAsync(
         userCohortsService.mapUserCohorts(userIdHeader, projectKey, request), "mapUserCohorts");
   }
@@ -157,10 +153,10 @@ public class MapUserCohorts {
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
                       schema = @Schema(implementation = BatchMapUserCohortsRequest[].class)))
+          @Valid
           List<BatchMapUserCohortsRequest> requests) {
 
     HeaderValidator.validateProjectKeyHeader(projectKey);
-    BatchMapUserCohortsRequestValidator.validate(requests);
 
     return ErrorHandler.handleAsync(
         userCohortsService.batchMapUserCohorts(projectKey, requests), "batchMapUserCohorts");

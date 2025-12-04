@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.dream11.rest.exception.RestException;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceOwner;
+import io.ascend.flockr.admin.exception.ForbiddenAccessException;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerAction;
 import io.ascend.flockr.admin.io.request.UpdateAudienceOwnerRequest;
 import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
@@ -147,7 +148,7 @@ public class AudienceServiceImplTest {
 
     TestObserver<Boolean> to =
         service.updateAudienceOwner(xProjectId, audienceId, actor, request).test();
-    to.assertError(IllegalAccessException.class);
+    to.assertError(ForbiddenAccessException.class);
   }
 
   @Test

@@ -62,14 +62,9 @@ public class Constants {
    */
   public static final String SOURCE_DREAM11 = "Dream11";
 
-  /**
-   * Source identifier for FanCode platform.
-   *
-   * <p>When used with {@link
-   * io.ascend.flockr.users.util.CommonUtils#getAerospikeSetNameFromSource(String, String)}, it
-   * appends "-fancode" to the base set name.
-   */
-  public static final String SOURCE_FANCODE = "FanCode";
+  /* Delimiter Constants */
+  /** Comma delimiter string. */
+  public static final String COMMA = ",";
 
   /**
    * Private constructor to prevent instantiation.
