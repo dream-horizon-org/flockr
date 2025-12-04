@@ -106,6 +106,34 @@ public enum ErrorEnum implements RestError {
       "No validator found for the specified connector type",
       HttpStatus.SC_BAD_REQUEST),
 
+  // Audience Type Errors (400)
+  RULES_NOT_ALLOWED_FOR_STATIC_AUDIENCE(
+      "RULES_NOT_ALLOWED",
+      "Rules cannot be added to STATIC audiences. Use CSV import instead.",
+      HttpStatus.SC_BAD_REQUEST),
+
+  IMPORT_NOT_ALLOWED_FOR_CONDITIONAL_AUDIENCE(
+      "IMPORT_NOT_ALLOWED",
+      "CSV import is not allowed for CONDITIONAL audiences. Use rules instead.",
+      HttpStatus.SC_BAD_REQUEST),
+
+  INVALID_AUDIENCE_TYPE(
+      "INVALID_AUDIENCE_TYPE",
+      "Invalid audience type. Must be CONDITIONAL or STATIC.",
+      HttpStatus.SC_BAD_REQUEST),
+
+  IMPORT_NOT_FOUND("IMPORT_NOT_FOUND", "Import record not found", HttpStatus.SC_NOT_FOUND),
+
+  INVALID_CSV_FORMAT(
+      "INVALID_CSV_FORMAT",
+      "The uploaded file is not a valid CSV format",
+      HttpStatus.SC_BAD_REQUEST),
+
+  IMPORT_ALREADY_PROCESSING(
+      "IMPORT_ALREADY_PROCESSING",
+      "An import is already in progress for this audience",
+      HttpStatus.SC_CONFLICT),
+
   // Server Errors (500)
   DATABASE_ERROR(
       "DATABASE_ERROR", "Database operation failed", HttpStatus.SC_INTERNAL_SERVER_ERROR),

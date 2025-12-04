@@ -1,7 +1,8 @@
 package io.ascend.flockr.admin.io.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.domain.rule.*;
 import io.ascend.flockr.admin.validation.ValidRuleTypeConfiguration;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties()
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class CreateRulesRequest {
   /** The ID of the audience to create rules for (set from path parameter). */
   private Long audienceId;
@@ -39,34 +41,35 @@ public class CreateRulesRequest {
   @NoArgsConstructor
   @ValidRuleTypeConfiguration
   @JsonIgnoreProperties()
+  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public static class Rule {
     /** The name of the rule. */
-    @NotNull private String name;
+    @NotNull(message = "Rule name is required")
+    private String name;
 
     /** A description of the rule's purpose or logic. */
-    @NotNull private String description;
+    @NotNull(message = "Rule description is required")
+    private String description;
 
     /** The start time for rule execution (epoch seconds). */
-    @NotNull
-    @JsonProperty("start_time")
+    @NotNull(message = "Start time is required")
     private Long startTime;
 
     /** The end time for rule execution (epoch seconds). */
-    @NotNull
-    @JsonProperty("end_time")
+    @NotNull(message = "End time is required")
     private Long endTime;
 
     /** The type of rule (BATCH or STREAM). */
-    @NotNull
-    @JsonProperty("rule_type")
+    @NotNull(message = "Rule type is required")
     private RuleType ruleType;
 
     /** The action to perform when the rule matches (ADD or REMOVE). */
-    @NotNull
-    @JsonProperty("rule_action")
+    @NotNull(message = "Rule action is required")
     private RuleAction ruleAction;
 
     /** The rule configuration containing execution details specific to the rule type. */
-    @Valid @NotNull private RuleConfiguration<SourceInfo> configuration;
+    @Valid
+    @NotNull(message = "Rule configuration is required")
+    private RuleConfiguration<SourceInfo> configuration;
   }
 }

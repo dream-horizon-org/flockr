@@ -9,6 +9,8 @@ servers:
 tags:
 - name: Audiences
   description: Audience management APIs
+- name: Audience Imports
+  description: CSV import API for STATIC audiences
 - name: Data Connectors
   description: Data source and sink management APIs
 paths:
@@ -21,7 +23,7 @@ paths:
         \ counts. Supports filtering by name, creator, and verification status."
       operationId: getAudiencesList
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -86,7 +88,7 @@ paths:
       description: Creates a new audience and returns the audience ID
       operationId: createAudience
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier (amalgamation of tenantId and projectId)
         required: true
@@ -130,7 +132,7 @@ paths:
       description: Creates rules for a specific audience
       operationId: createRules
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -181,7 +183,7 @@ paths:
       description: Retrieves detailed information about a specific audience
       operationId: getAudienceDetails
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -223,7 +225,7 @@ paths:
       description: Retrieves all owners (active and inactive) for a specific audience
       operationId: getAudienceOwners
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -269,7 +271,7 @@ paths:
         must be an existing owner.
       operationId: updateAudienceOwner
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -333,7 +335,7 @@ paths:
         audience
       operationId: getRuleDetails
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -368,6 +370,65 @@ paths:
                 $ref: '#/components/schemas/Failure'
         "404":
           description: Rule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /v1/audiences/{audienceId}/imports:
+    post:
+      tags:
+      - Audience Imports
+      summary: Import CSV data for a STATIC audience
+      description: Uploads a CSV file for a STATIC audience. The data is streamed
+        and pushed to configured sinks. This endpoint is only available for audiences
+        with type=STATIC. Send the file as multipart/form-data with field name 'file'.
+      operationId: createImport
+      parameters:
+      - name: X-Project-Key
+        in: header
+        description: Encrypted project identifier
+        required: true
+        schema:
+          type: string
+      - name: email
+        in: header
+        description: Actor email/username
+        schema:
+          type: string
+          default: system
+      - name: audienceId
+        in: path
+        description: ID of the STATIC audience
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CsvImportForm'
+      responses:
+        "200":
+          description: Import completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Bad Request - Invalid CSV or audience type is not STATIC
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "404":
+          description: Audience not found
           content:
             application/json:
               schema:
@@ -676,9 +737,9 @@ components:
     CreateAudienceRequest:
       required:
       - description
-      - expireDate
+      - expire_date
       - name
-      - sinkIds
+      - sink_ids
       - type
       type: object
       properties:
@@ -686,15 +747,15 @@ components:
           type: string
         description:
           type: string
-        customAudienceConfig:
+        custom_audience_config:
           $ref: '#/components/schemas/JsonObject'
         type:
           type: string
-        expireDate:
+        expire_date:
           maximum: 2177452799000
           type: integer
           format: int64
-        sinkIds:
+        sink_ids:
           type: array
           items:
             type: integer
@@ -755,7 +816,7 @@ components:
       - rules
       type: object
       properties:
-        audienceId:
+        audience_id:
           type: integer
           format: int64
         rules:
@@ -863,8 +924,6 @@ components:
           type: string
         description:
           type: string
-        configuration:
-          $ref: '#/components/schemas/RuleConfigurationSourceInfo'
         start_time:
           type: integer
           format: int64
@@ -881,6 +940,8 @@ components:
           enum:
           - ADD
           - REMOVE
+        configuration:
+          $ref: '#/components/schemas/RuleConfigurationSourceInfo'
     RuleConfigurationSourceInfo:
       required:
       - configuration_type
@@ -926,7 +987,7 @@ components:
     AudienceDetailsResponse:
       type: object
       properties:
-        audienceMeta:
+        audience_meta:
           $ref: '#/components/schemas/AudienceMeta'
         sinks:
           type: array
@@ -1063,17 +1124,17 @@ components:
         id:
           type: integer
           format: int64
-        audienceId:
+        audience_id:
           type: integer
           format: int64
-        ownerEmail:
+        owner_email:
           type: string
         status:
           type: string
-        createdAt:
+        created_at:
           type: integer
           format: int64
-        updatedAt:
+        updated_at:
           type: integer
           format: int64
     SuccessListAudienceOwnerResponse:
@@ -1095,6 +1156,17 @@ components:
           - ADD
           - REMOVE
         email:
+          type: string
+    CsvImportForm:
+      type: object
+      properties:
+        file:
+          type: object
+        fileName:
+          type: string
+        action:
+          type: string
+        actionOrDefault:
           type: string
     DataConnectorType:
       type: object
@@ -1123,15 +1195,15 @@ components:
         page:
           type: integer
           format: int32
-        pageSize:
+        page_size:
           type: integer
           format: int32
-        hasMore:
+        has_more:
           type: boolean
     PaginatedResponseDataSinkDetails:
       type: object
       properties:
-        pageInfo:
+        page_info:
           $ref: '#/components/schemas/PageInfo'
         data:
           type: array
@@ -1164,7 +1236,7 @@ components:
     PaginatedResponseDataSourceDetails:
       type: object
       properties:
-        pageInfo:
+        page_info:
           $ref: '#/components/schemas/PageInfo'
         data:
           type: array
@@ -1184,7 +1256,7 @@ components:
             $ref: '#/components/schemas/DataConnectorType'
     OnboardConnectorTypeRequest:
       required:
-      - displayName
+      - display_name
       - kind
       - type
       type: object
@@ -1193,9 +1265,9 @@ components:
           type: string
         type:
           type: string
-        displayName:
+        display_name:
           type: string
-        configSchema:
+        config_schema:
           $ref: '#/components/schemas/JsonObject'
     SuccessDataSinkDetails:
       type: object
@@ -1205,12 +1277,12 @@ components:
     OnboardDataSinkRequest:
       required:
       - name
-      - typeId
+      - type_id
       type: object
       properties:
         name:
           type: string
-        typeId:
+        type_id:
           type: integer
           format: int64
         config:
@@ -1223,12 +1295,12 @@ components:
     OnboardDataSourceRequest:
       required:
       - name
-      - typeId
+      - type_id
       type: object
       properties:
         name:
           type: string
-        typeId:
+        type_id:
           type: integer
           format: int64
         config:

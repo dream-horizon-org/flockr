@@ -74,10 +74,26 @@ public interface WebClient {
   /**
    * Prepares an HTTP POST request with an absolute URL.
    *
-   * @param host the absolute URL including protocol, host, port, and path
+   * @param absUri the absolute URL including protocol, host, port, and path
    * @return an HttpRequest that can be further configured and executed
    */
-  HttpRequest<Buffer> prepareHttpPostAbsRequest(String host);
+  HttpRequest<Buffer> prepareHttpPostAbsRequest(String absUri);
+
+  /**
+   * Prepares an HTTP PUT request with an absolute URL.
+   *
+   * @param absUri the absolute URL including protocol, host, port, and path
+   * @return an HttpRequest that can be further configured and executed
+   */
+  HttpRequest<Buffer> prepareHttpPutAbsRequest(String absUri);
+
+  /**
+   * Prepares an HTTP PATCH request with an absolute URL.
+   *
+   * @param absUri the absolute URL including protocol, host, port, and path
+   * @return an HttpRequest that can be further configured and executed
+   */
+  HttpRequest<Buffer> prepareHttpPatchAbsRequest(String absUri);
 
   /**
    * Executes an HTTP request without a request body.
@@ -95,4 +111,13 @@ public interface WebClient {
    * @return a Single emitting the HTTP response
    */
   Single<HttpResponse<Buffer>> execute(HttpRequest<Buffer> request, JsonObject jsonObject);
+
+  /**
+   * Executes an HTTP request with any JSON body (JsonObject or JsonArray).
+   *
+   * @param request the prepared HTTP request
+   * @param body the JSON body to send (can be JsonObject or JsonArray)
+   * @return a Single emitting the HTTP response
+   */
+  Single<HttpResponse<Buffer>> execute(HttpRequest<Buffer> request, Object body);
 }

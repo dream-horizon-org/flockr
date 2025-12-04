@@ -1,5 +1,7 @@
 package io.ascend.flockr.admin.io.request;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.validation.NotEmptyJsonObject;
 import io.vertx.core.json.JsonObject;
 import jakarta.validation.constraints.NotEmpty;
@@ -14,12 +16,14 @@ import lombok.Data;
  * @since 1.0
  */
 @Data
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class OnboardDataSinkRequest {
   /** The name of the data sink. Must not be empty. */
   @NotEmpty private String name;
 
   /** The ID of the connector type (references data_connector_types.id). */
-  @NotNull private Long typeId;
+  @NotNull(message = "Type ID is required")
+  private Long typeId;
 
   /** The connector-specific configuration (validated against the type's schema). */
   @NotEmptyJsonObject private JsonObject config;

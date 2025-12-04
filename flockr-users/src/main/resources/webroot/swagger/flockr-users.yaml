@@ -1,8 +1,0 @@
-openapi: 3.0.1
-info:
-  title: Flockr Users API
-  description: Flockr Users Service - User management and authentication
-  version: "1.0"
-servers:
-- url: http://localhost:8081
-  description: Local development server

@@ -1,5 +1,7 @@
 package io.ascend.flockr.admin.io.response;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import java.util.List;
 
 /**
@@ -14,6 +16,7 @@ import java.util.List;
  * @author Prithu Sharma
  * @since 1.0
  */
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record PaginatedResponse<T>(PageInfo pageInfo, List<T> data) {
 
   /**
@@ -23,5 +26,6 @@ public record PaginatedResponse<T>(PageInfo pageInfo, List<T> data) {
    * @param pageSize the number of items per page
    * @param hasMore true if more pages are available, false otherwise
    */
+  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public record PageInfo(int page, int pageSize, boolean hasMore) {}
 }

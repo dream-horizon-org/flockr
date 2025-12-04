@@ -26,8 +26,12 @@ CREATE TABLE IF NOT EXISTS data_sources (
     created_by VARCHAR(128) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    name_vector tsvector,
     CONSTRAINT fk_data_sources_type FOREIGN KEY (type_id) REFERENCES data_connector_types(id)
 );
+
+-- GIN index for full-text search on data source names
+CREATE INDEX idx_data_sources_name_vector ON data_sources USING GIN(name_vector);
 
 -- Onboarded data sinks (instances configured by users)
 CREATE TABLE IF NOT EXISTS data_sinks (
@@ -39,8 +43,12 @@ CREATE TABLE IF NOT EXISTS data_sinks (
     created_by VARCHAR(128) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    name_vector tsvector,
     CONSTRAINT fk_data_sinks_type FOREIGN KEY (type_id) REFERENCES data_connector_types(id)
 );
+
+-- GIN index for full-text search on data sink names
+CREATE INDEX idx_data_sinks_name_vector ON data_sinks USING GIN(name_vector);
 
 CREATE TABLE audiences (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -55,7 +63,7 @@ CREATE TABLE audiences (
     last_audience_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     user_count BIGINT DEFAULT 0,
     custom_audience_config JSONB,
-    type VARCHAR(50) DEFAULT 'STANDARD' NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('CONDITIONAL', 'STATIC')),
     verified BOOLEAN DEFAULT FALSE,
     expire_date TIMESTAMP not NULL,
     name_vector tsvector,
@@ -74,8 +82,8 @@ CREATE TABLE rules (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     rule_action VARCHAR(50) NOT NULL,
-    rule_type VARCHAR(50) NOT NULL,
-    status VARCHAR(50) DEFAULT 'SCHEDULED' NOT NULL,
+    rule_type VARCHAR(50) NOT NULL CHECK (rule_type IN ('STREAM', 'BATCH')),
+    status VARCHAR(50) NOT NULL,
     configuration JSONB NOT NULL,
     created_by VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,

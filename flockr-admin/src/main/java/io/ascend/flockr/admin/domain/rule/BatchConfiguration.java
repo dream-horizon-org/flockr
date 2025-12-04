@@ -18,7 +18,10 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties()
 public class BatchConfiguration<T extends SourceInfo> implements RuleConfiguration<T> {
-  @Valid @NotNull private T source;
+  @Valid
+  @NotNull(message = "Source is required")
+  private T source;
+
   @NotEmpty @ValidSqlQuery private String query;
   private String cronExpression;
 }
