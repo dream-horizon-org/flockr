@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logback configuration for Docker environment
+  
+  Optimized for containerized deployments:
+  - Console-only output (logs captured by Docker)
+  - Colored output for better readability with docker logs
+  - INFO level by default for production-like behavior
+-->
+<configuration>
+
+  <!-- =================================================================== -->
+  <!-- Property Definitions                                                -->
+  <!-- =================================================================== -->
+  <property name="LOG_PATTERN" 
+            value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) - %msg%n"/>
+
+  <!-- =================================================================== -->
+  <!-- Console Appender - Standard output for Docker                       -->
+  <!-- =================================================================== -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>${LOG_PATTERN}</pattern>
+      <charset>UTF-8</charset>
+    </encoder>
+    <immediateFlush>true</immediateFlush>
+  </appender>
+
+  <!-- =================================================================== -->
+  <!-- Application Loggers                                                 -->
+  <!-- =================================================================== -->
+  
+  <!-- Application package -->
+  <logger name="io.ascend.flockr.users" level="INFO" additivity="false">
+    <appender-ref ref="CONSOLE"/>
+  </logger>
+
+  <!-- =================================================================== -->
+  <!-- Third-party Library Loggers                                         -->
+  <!-- =================================================================== -->
+  
+  <!-- Vert.x framework -->
+  <logger name="io.vertx" level="INFO"/>
+  <logger name="io.vertx.core.impl.BlockedThreadChecker" level="WARN"/>
+  
+  <!-- Netty -->
+  <logger name="io.netty" level="WARN"/>
+  
+  <!-- Aerospike -->
+  <logger name="com.aerospike" level="INFO"/>
+  
+  <!-- Jackson JSON -->
+  <logger name="com.fasterxml.jackson" level="WARN"/>
+
+  <!-- =================================================================== -->
+  <!-- Root Logger                                                         -->
+  <!-- =================================================================== -->
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+
+</configuration>
+
