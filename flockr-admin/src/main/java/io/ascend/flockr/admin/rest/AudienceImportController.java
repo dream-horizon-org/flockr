@@ -59,7 +59,7 @@ public class AudienceImportController {
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<AudienceImportResponse>> createImport(
       @Parameter(description = "Encrypted project identifier", required = true)
-          @HeaderParam("X-Project-Id")
+          @HeaderParam("X-Project-Key")
           String xProjectId,
       @Parameter(description = "Actor email/username", required = false)
           @HeaderParam("email")

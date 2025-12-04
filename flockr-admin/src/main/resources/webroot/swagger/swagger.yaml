@@ -23,7 +23,7 @@ paths:
         \ counts. Supports filtering by name, creator, and verification status."
       operationId: getAudiencesList
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -88,7 +88,7 @@ paths:
       description: Creates a new audience and returns the audience ID
       operationId: createAudience
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier (amalgamation of tenantId and projectId)
         required: true
@@ -132,7 +132,7 @@ paths:
       description: Creates rules for a specific audience
       operationId: createRules
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -183,7 +183,7 @@ paths:
       description: Retrieves detailed information about a specific audience
       operationId: getAudienceDetails
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -225,7 +225,7 @@ paths:
       description: Retrieves all owners (active and inactive) for a specific audience
       operationId: getAudienceOwners
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -271,7 +271,7 @@ paths:
         must be an existing owner.
       operationId: updateAudienceOwner
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -335,7 +335,7 @@ paths:
         audience
       operationId: getRuleDetails
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
@@ -390,7 +390,7 @@ paths:
         with type=STATIC. Send the file as multipart/form-data with field name 'file'.
       operationId: createImport
       parameters:
-      - name: X-Project-Id
+      - name: X-Project-Key
         in: header
         description: Encrypted project identifier
         required: true
