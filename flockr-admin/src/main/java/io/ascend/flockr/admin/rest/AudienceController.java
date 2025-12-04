@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.concurrent.CompletionStage;
@@ -68,7 +69,8 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Long>> createAudience(
-      @Parameter(
+      @NotNull
+          @Parameter(
               description = "Encrypted project identifier (amalgamation of tenantId and projectId)",
               required = true)
           @HeaderParam("X-Project-Key")
@@ -105,7 +107,8 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<AudienceDetailsResponse>> getAudienceDetails(
-      @Parameter(description = "Encrypted project identifier", required = true)
+      @NotNull
+          @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Key")
           String xProjectId,
       @Parameter(description = "ID of the audience to retrieve", required = true)
@@ -135,7 +138,8 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Boolean>> createRules(
-      @Parameter(description = "Encrypted project identifier", required = true)
+      @NotNull
+          @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Key")
           String xProjectId,
       @Parameter(
@@ -177,7 +181,8 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<RuleDetailsResponse>> getRuleDetails(
-      @Parameter(description = "Encrypted project identifier", required = true)
+      @NotNull
+          @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Key")
           String xProjectId,
       @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
@@ -209,7 +214,8 @@ public class AudienceController {
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<PaginatedResponse<AudienceMetaResponse>>>
       getAudiencesList(
-          @Parameter(description = "Encrypted project identifier", required = true)
+          @NotNull
+              @Parameter(description = "Encrypted project identifier", required = true)
               @HeaderParam("X-Project-Key")
               String xProjectId,
           @Parameter(description = "Search audiences by name (partial match)")
@@ -259,7 +265,8 @@ public class AudienceController {
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<java.util.List<AudienceOwnerResponse>>>
       getAudienceOwners(
-          @Parameter(description = "Encrypted project identifier", required = true)
+          @NotNull
+              @Parameter(description = "Encrypted project identifier", required = true)
               @HeaderParam("X-Project-Key")
               String xProjectId,
           @Parameter(description = "ID of the audience", required = true) @PathParam("audienceId")
@@ -297,7 +304,8 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Boolean>> updateAudienceOwner(
-      @Parameter(description = "Encrypted project identifier", required = true)
+      @NotNull
+          @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Key")
           String xProjectId,
       @Parameter(description = "ID of the audience whose owner is to be updated", required = true)
