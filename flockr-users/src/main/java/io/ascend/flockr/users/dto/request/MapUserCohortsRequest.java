@@ -1,8 +1,10 @@
 package io.ascend.flockr.users.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.ascend.flockr.users.annotation.AcceptedValues;
 import io.ascend.flockr.users.annotation.DateTimeFormat;
 import io.ascend.flockr.users.annotation.validators.Validator;
+import io.ascend.flockr.users.constants.Constants;
 import io.ascend.flockr.users.util.CommonUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -35,6 +37,7 @@ public class MapUserCohortsRequest {
 
   /** Action type: "append" to add user, "remove" to remove user. */
   @NotBlank
+  @AcceptedValues(values = {Constants.ACTION_APPEND, Constants.ACTION_REMOVE})
   @Schema(
       description = "Action to perform: 'append' to add user or 'remove' to remove user",
       example = "append",

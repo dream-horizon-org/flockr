@@ -9,7 +9,6 @@ package io.ascend.flockr.users.constants;
  *   <li>Configuration limits (max verticles)
  *   <li>Date/time patterns
  *   <li>Action identifiers
- *   <li>Source identifiers
  *   <li>Key prefixes
  * </ul>
  *
@@ -52,15 +51,6 @@ public class Constants {
    * <p>Used when removing or deleting data (e.g., removing a user from a cohort).
    */
   public static final String ACTION_REMOVE = "remove";
-
-  /**
-   * Source identifier for Dream11 platform.
-   *
-   * <p>This is the default source identifier. When used with {@link
-   * io.ascend.flockr.users.util.CommonUtils#getAerospikeSetNameFromSource(String, String)}, it does
-   * not modify the base set name.
-   */
-  public static final String SOURCE_DREAM11 = "Dream11";
 
   /* Delimiter Constants */
   /** Comma delimiter string. */

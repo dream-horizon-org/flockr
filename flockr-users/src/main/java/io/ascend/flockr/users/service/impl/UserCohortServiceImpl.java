@@ -85,15 +85,12 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * <p>Implementation handles both append and remove actions. For append operations, validates
    * expiry time. Returns {@code false} if Aerospike key is not found. Uses projectKey directly as
-   * the Aerospike set name for multi-tenant isolation. Uses default source since it's removed from
-   * API.
+   * the Aerospike set name for multi-tenant isolation.
    */
   @Override
   public Single<Boolean> mapUserCohorts(
       String userId, String projectKey, MapUserCohortsRequest request) {
     String userKey = String.valueOf(userId);
-    // Use default source since it's removed from API
-    String source = Constants.SOURCE_DREAM11;
     String setName = projectKey;
 
     Single<Boolean> single;
@@ -101,10 +98,9 @@ public class UserCohortServiceImpl implements UserCohortsService {
       if (request.getAction().equals(Constants.ACTION_APPEND)) {
         Long cohortExpiry = request.expiryEpochFromExpireAt();
         single =
-            aerospikeClient.appendCohort(
-                userKey, request.getCohortKey(), source, cohortExpiry, setName);
+            aerospikeClient.appendCohort(userKey, request.getCohortKey(), cohortExpiry, setName);
       } else {
-        single = aerospikeClient.removeCohort(userKey, request.getCohortKey(), source, setName);
+        single = aerospikeClient.removeCohort(userKey, request.getCohortKey(), setName);
       }
     } catch (Exception e) {
       single = Single.error(e);
@@ -524,7 +520,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
     long expiry = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(365); // 1-year default expiry
 
     return aerospikeClient
-        .appendCohort(userKey, cohortName, Constants.SOURCE_DREAM11, expiry, setName)
+        .appendCohort(userKey, cohortName, expiry, setName)
         .onErrorResumeNext(
             throwable -> {
               if (throwable instanceof AerospikeException ae
@@ -684,9 +680,8 @@ public class UserCohortServiceImpl implements UserCohortsService {
       BatchMapUserCohortsRequest request, String setName) {
 
     String userKey = String.valueOf(request.getUserId());
-    String source = Constants.SOURCE_DREAM11;
 
-    Single<Boolean> operation = createOperation(request, userKey, source, setName);
+    Single<Boolean> operation = createOperation(request, userKey, setName);
 
     return operation.onErrorResumeNext(
         throwable -> handleOperationError(throwable, request.getUserId()));
@@ -697,18 +692,17 @@ public class UserCohortServiceImpl implements UserCohortsService {
    *
    * @param request the mapping request
    * @param userKey the user key for Aerospike
-   * @param source the source identifier
    * @param setName the Aerospike set name
    * @return Single emitting the operation result
    */
   private Single<Boolean> createOperation(
-      BatchMapUserCohortsRequest request, String userKey, String source, String setName) {
+      BatchMapUserCohortsRequest request, String userKey, String setName) {
 
     try {
       if (isAppendAction(request.getAction())) {
-        return createAppendOperation(request, userKey, source, setName);
+        return createAppendOperation(request, userKey, setName);
       } else {
-        return createRemoveOperation(request, userKey, source, setName);
+        return createRemoveOperation(request, userKey, setName);
       }
     } catch (Exception e) {
       log.error("Error creating operation for user {}: {}", request.getUserId(), e.getMessage());
@@ -718,19 +712,18 @@ public class UserCohortServiceImpl implements UserCohortsService {
 
   /** Creates an append operation for adding a user to a cohort. */
   private Single<Boolean> createAppendOperation(
-      BatchMapUserCohortsRequest request, String userKey, String source, String setName) {
+      BatchMapUserCohortsRequest request, String userKey, String setName) {
 
     Long cohortExpiry =
         CommonUtils.getEpochFromExpireAt(request.getExpireAt(), request.getAction());
-    return aerospikeClient.appendCohort(
-        userKey, request.getCohortKey(), source, cohortExpiry, setName);
+    return aerospikeClient.appendCohort(userKey, request.getCohortKey(), cohortExpiry, setName);
   }
 
   /** Creates a remove operation for removing a user from a cohort. */
   private Single<Boolean> createRemoveOperation(
-      BatchMapUserCohortsRequest request, String userKey, String source, String setName) {
+      BatchMapUserCohortsRequest request, String userKey, String setName) {
 
-    return aerospikeClient.removeCohort(userKey, request.getCohortKey(), source, setName);
+    return aerospikeClient.removeCohort(userKey, request.getCohortKey(), setName);
   }
 
   /**

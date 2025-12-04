@@ -129,8 +129,7 @@ public class AerospikeImpl implements Aerospike {
    * timestamps.
    */
   @Override
-  public Single<Boolean> appendCohort(
-      String id, String cohort, String source, Long cohortExpiry, String setName) {
+  public Single<Boolean> appendCohort(String id, String cohort, Long cohortExpiry, String setName) {
     WritePolicy writePolicy = getWritePolicy();
 
     String namespace = aerospikeConfig.getNamespace();
@@ -163,7 +162,7 @@ public class AerospikeImpl implements Aerospike {
    * <p>The operation is idempotent - if the cohort doesn't exist, it still succeeds.
    */
   @Override
-  public Single<Boolean> removeCohort(String id, String cohort, String source, String setName) {
+  public Single<Boolean> removeCohort(String id, String cohort, String setName) {
     WritePolicy writePolicy = getWritePolicy();
 
     String namespace = aerospikeConfig.getNamespace();
@@ -283,7 +282,7 @@ public class AerospikeImpl implements Aerospike {
   }
 
   public Single<Boolean> appendBatchCohort(
-      String id, String cohort, String source, Long cohortExpiry, String setName) {
+      String id, String cohort, Long cohortExpiry, String setName) {
     WritePolicy writePolicy = getWritePolicy();
 
     String namespace = aerospikeConfig.getNamespace();

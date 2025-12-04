@@ -253,6 +253,12 @@ components:
     InputPart:
       type: object
       properties:
+        body:
+          type: object
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
+        bodyAsString:
+          type: string
         headers:
           type: object
           properties:
@@ -262,15 +268,9 @@ components:
             type: array
             items:
               type: string
-        fileName:
-          type: string
         contentTypeFromMessage:
           type: boolean
-        body:
-          type: object
-        mediaType:
-          $ref: '#/components/schemas/MediaType'
-        bodyAsString:
+        fileName:
           type: string
     MediaType:
       type: object

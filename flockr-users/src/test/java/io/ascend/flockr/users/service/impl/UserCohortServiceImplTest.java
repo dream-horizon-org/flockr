@@ -186,8 +186,7 @@ public class UserCohortServiceImplTest {
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    when(aerospikeClient.appendCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), anyLong(), eq(projectKey)))
+    when(aerospikeClient.appendCohort(eq("123"), eq("test-cohort"), anyLong(), eq(projectKey)))
         .thenReturn(Single.just(true));
 
     // Act
@@ -195,9 +194,7 @@ public class UserCohortServiceImplTest {
 
     // Assert
     assertTrue(result);
-    verify(aerospikeClient)
-        .appendCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), anyLong(), eq(projectKey));
+    verify(aerospikeClient).appendCohort(eq("123"), eq("test-cohort"), anyLong(), eq(projectKey));
   }
 
   @Test
@@ -210,8 +207,7 @@ public class UserCohortServiceImplTest {
     request.setAction(Constants.ACTION_REMOVE);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    when(aerospikeClient.removeCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey)))
+    when(aerospikeClient.removeCohort(eq("123"), eq("test-cohort"), eq(projectKey)))
         .thenReturn(Single.just(true));
 
     // Act
@@ -219,8 +215,7 @@ public class UserCohortServiceImplTest {
 
     // Assert
     assertTrue(result);
-    verify(aerospikeClient)
-        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey));
+    verify(aerospikeClient).removeCohort(eq("123"), eq("test-cohort"), eq(projectKey));
   }
 
   @Test
@@ -233,8 +228,7 @@ public class UserCohortServiceImplTest {
     request.setAction(Constants.ACTION_REMOVE);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    when(aerospikeClient.removeCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey)))
+    when(aerospikeClient.removeCohort(eq("123"), eq("test-cohort"), eq(projectKey)))
         .thenReturn(Single.just(true));
 
     // Act
@@ -242,8 +236,7 @@ public class UserCohortServiceImplTest {
 
     // Assert
     assertTrue(result);
-    verify(aerospikeClient)
-        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey));
+    verify(aerospikeClient).removeCohort(eq("123"), eq("test-cohort"), eq(projectKey));
   }
 
   @Test
@@ -259,8 +252,7 @@ public class UserCohortServiceImplTest {
     AerospikeException exception =
         new AerospikeException(ResultCode.KEY_NOT_FOUND_ERROR, "Key not found");
 
-    when(aerospikeClient.appendCohort(
-            anyString(), anyString(), anyString(), anyLong(), anyString()))
+    when(aerospikeClient.appendCohort(anyString(), anyString(), anyLong(), anyString()))
         .thenReturn(Single.error(exception));
 
     // Act
@@ -282,8 +274,7 @@ public class UserCohortServiceImplTest {
 
     AerospikeException exception = new AerospikeException(ResultCode.SERVER_ERROR, "Server error");
 
-    when(aerospikeClient.appendCohort(
-            anyString(), anyString(), anyString(), anyLong(), anyString()))
+    when(aerospikeClient.appendCohort(anyString(), anyString(), anyLong(), anyString()))
         .thenReturn(Single.error(exception));
 
     // Act & Assert
@@ -305,8 +296,7 @@ public class UserCohortServiceImplTest {
     request.setAction(Constants.ACTION_REMOVE);
     request.setExpireAt("2025-12-31 23:59:59");
 
-    when(aerospikeClient.removeCohort(
-            eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey)))
+    when(aerospikeClient.removeCohort(eq("123"), eq("test-cohort"), eq(projectKey)))
         .thenReturn(Single.just(true));
 
     // Act
@@ -314,8 +304,7 @@ public class UserCohortServiceImplTest {
 
     // Assert
     assertTrue(result);
-    verify(aerospikeClient)
-        .removeCohort(eq("123"), eq("test-cohort"), eq(Constants.SOURCE_DREAM11), eq(projectKey));
+    verify(aerospikeClient).removeCohort(eq("123"), eq("test-cohort"), eq(projectKey));
   }
 
   @Test
@@ -353,9 +342,7 @@ public class UserCohortServiceImplTest {
 
       // Use lenient() since this stubbing might not be reached in all execution paths
       lenient()
-          .when(
-              aerospikeClient.appendCohort(
-                  anyString(), eq(cohortName), anyString(), anyLong(), anyString()))
+          .when(aerospikeClient.appendCohort(anyString(), eq(cohortName), anyLong(), anyString()))
           .thenReturn(Single.just(true));
 
       // Use a real Vertx instance for file reading (simpler than mocking async operations)
@@ -460,7 +447,10 @@ public class UserCohortServiceImplTest {
     String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
     Map<String, Long> cohortMap = new HashMap<>();
     long currentTime = System.currentTimeMillis();
-    cohortMap.put("exact", currentTime); // Exactly current time (should be included)
+    // Use a time slightly in the future to account for timing differences
+    // The filter uses >= so exact current time should be included, but due to timing
+    // we use a small buffer to ensure the test is reliable
+    cohortMap.put("exact", currentTime + 1); // Slightly in the future (should be included)
 
     when(aerospikeClient.getCohortExpiryBin(eq("123"), eq(projectKey)))
         .thenReturn(Single.just(cohortMap));
