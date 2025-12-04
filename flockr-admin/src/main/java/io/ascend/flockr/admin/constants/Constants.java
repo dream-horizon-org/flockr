@@ -28,7 +28,7 @@ public final class Constants {
   public static final String DEFAULT_APP_ENV = "dev";
 
   /** Maximum number of REST API verticle instances to deploy. */
-  public static final Integer MAX_NUM_REST_VERTICLES = 1;
+  public static final Integer MAX_NUM_REST_VERTICLES = 14;
 
   /* Delimiter Constants */
   /** Comma delimiter string. */
