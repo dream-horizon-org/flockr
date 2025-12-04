@@ -22,7 +22,7 @@ public class OnboardDataSinkRequest {
   @NotEmpty private String name;
 
   /** The ID of the connector type (references data_connector_types.id). */
-  @NotNull private Long typeId;
+  @NotNull(message = "Type ID is required") private Long typeId;
 
   /** The connector-specific configuration (validated against the type's schema). */
   @NotEmptyJsonObject private JsonObject config;

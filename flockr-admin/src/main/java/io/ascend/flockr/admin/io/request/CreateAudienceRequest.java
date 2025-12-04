@@ -53,7 +53,7 @@ public class CreateAudienceRequest {
    * overflow issues.
    */
   @Max(2177452799000L)
-  @NotNull
+  @NotNull(message = "Expire date is required")
   private Long expireDate;
 
   /** List of data sink IDs to associate with this audience. Must contain at least one sink. */

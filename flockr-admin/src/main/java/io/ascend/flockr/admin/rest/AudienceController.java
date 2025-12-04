@@ -69,7 +69,7 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Long>> createAudience(
-      @NotNull
+      @NotNull(message = "X-Project-Key header is required")
           @Parameter(
               description = "Encrypted project identifier (amalgamation of tenantId and projectId)",
               required = true)
@@ -107,7 +107,7 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<AudienceDetailsResponse>> getAudienceDetails(
-      @NotNull
+      @NotNull(message = "X-Project-Key header is required")
           @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Key")
           String xProjectId,
@@ -138,7 +138,7 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Boolean>> createRules(
-      @NotNull
+      @NotNull(message = "X-Project-Key header is required")
           @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Key")
           String xProjectId,
@@ -181,7 +181,7 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<RuleDetailsResponse>> getRuleDetails(
-      @NotNull
+      @NotNull(message = "X-Project-Key header is required")
           @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Key")
           String xProjectId,
@@ -214,7 +214,7 @@ public class AudienceController {
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<PaginatedResponse<AudienceMetaResponse>>>
       getAudiencesList(
-          @NotNull
+          @NotNull(message = "X-Project-Key header is required")
               @Parameter(description = "Encrypted project identifier", required = true)
               @HeaderParam("X-Project-Key")
               String xProjectId,
@@ -265,7 +265,7 @@ public class AudienceController {
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<java.util.List<AudienceOwnerResponse>>>
       getAudienceOwners(
-          @NotNull
+          @NotNull(message = "X-Project-Key header is required")
               @Parameter(description = "Encrypted project identifier", required = true)
               @HeaderParam("X-Project-Key")
               String xProjectId,
@@ -304,7 +304,7 @@ public class AudienceController {
       description = "Internal Server Error",
       content = @Content(schema = @Schema(implementation = ResponseEntity.Failure.class)))
   public CompletionStage<ResponseEntity.Success<Boolean>> updateAudienceOwner(
-      @NotNull
+      @NotNull(message = "X-Project-Key header is required")
           @Parameter(description = "Encrypted project identifier", required = true)
           @HeaderParam("X-Project-Key")
           String xProjectId,
