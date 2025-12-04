@@ -57,21 +57,20 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 
 **Audience Segmentation (Flockr Admin)**
 - Create and manage audience segments with metadata and custom configurations
-- **BATCH Rules**: SQL-based queries executed periodically on data sources (Kafka, PostgreSQL, MySQL, S3)
+- Bulk CSV upload for assigning thousands of users to a audience
+- **BATCH Rules**: SQL-based queries executed periodically on data sources (Kafka, PostgreSQL, MySQL, S3)  ⚠️ *In Development*
 - **STREAM Rules**: Real-time event pattern matching using Apache Flink CEP ⚠️ *In Development*
 - Track audience lifecycle, user counts, ownership, and verification
 - Set expiry dates for automatic audience cleanup
 
 **User Cohort Management (Flockr Users)**
 - Retrieve user cohorts with sub-millisecond latency using Aerospike
-- Bulk CSV upload for assigning thousands of users to cohorts
 - Batch cohort mapping for multiple user assignments
 - Multi-tenant isolation with project-based segmentation
 
 **Data Connectors**
 - Pluggable data sources: Kafka, PostgreSQL, MySQL, S3, Google Cloud Storage
 - Pluggable data sinks: S3, GCS, Meta Conversions API, The Trade Desk
-- JSON schema validation for connector configurations
 
 **Stream Processing & Analytics**
 - Apache Flink for real-time event processing
@@ -94,7 +93,7 @@ Flockr is a **multi-module Maven project** with two microservices and supporting
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      FLOCKR PLATFORM                         │
+│                      FLOCKR PLATFORM                        │
 ├───────────────────────────┬─────────────────────────────────┤
 │     FLOCKR-ADMIN          │       FLOCKR-USERS              │
 │  (Audience Management)    │    (User Cohort Access)         │
