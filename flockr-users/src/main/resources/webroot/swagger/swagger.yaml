@@ -266,12 +266,12 @@ components:
           type: string
         mediaType:
           $ref: '#/components/schemas/MediaType'
+        body:
+          type: object
         bodyAsString:
           type: string
         contentTypeFromMessage:
           type: boolean
-        body:
-          type: object
     MediaType:
       type: object
       properties:
