@@ -80,8 +80,7 @@
   <!-- SQL Client logging -->
   <logger name="io.vertx.sqlclient" level="DEBUG"/>
   <logger name="io.vertx.pgclient" level="DEBUG"/>
-  <logger name="io.vertx.mysqlclient" level="DEBUG"/>
-  
+
   <!-- Kafka Client -->
   <logger name="org.apache.kafka" level="WARN"/>
   <logger name="io.vertx.kafka.client" level="INFO"/>
