@@ -20,8 +20,7 @@ import org.junit.jupiter.api.*;
  * @author Flockr Team
  * @since 1.0
  */
-@DisplayName("AsyncValidationUtil Tests")
-class AsyncJakartaValidationUtilTest {
+class AsyncValidationUtilTest {
 
   private static Vertx vertx;
   private static Validator validator;

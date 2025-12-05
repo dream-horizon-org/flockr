@@ -264,14 +264,14 @@ components:
               type: string
         fileName:
           type: string
-        contentTypeFromMessage:
-          type: boolean
-        bodyAsString:
-          type: string
-        body:
-          type: object
         mediaType:
           $ref: '#/components/schemas/MediaType'
+        body:
+          type: object
+        bodyAsString:
+          type: string
+        contentTypeFromMessage:
+          type: boolean
     MediaType:
       type: object
       properties:
@@ -283,9 +283,9 @@ components:
           type: object
           additionalProperties:
             type: string
-        wildcardSubtype:
-          type: boolean
         wildcardType:
+          type: boolean
+        wildcardSubtype:
           type: boolean
     MultipartFormDataInput:
       type: object

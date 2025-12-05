@@ -43,12 +43,8 @@
 
     <!-- dependency versions -->
     <caffeine.version>3.1.8</caffeine.version>
-    <commons-collections.version>4.5.0-M1</commons-collections.version>
-    <commons-compress.version>1.26.1</commons-compress.version>
-    <commons-io.version>2.17.0</commons-io.version>
     <dropwizard.version>4.2.23</dropwizard.version>
     <guice.version>7.0.0</guice.version>
-    <java-dogstatsd-client.version>4.2.0</java-dogstatsd-client.version>
     <junit.version>4.13.1</junit.version>
     <junit-vintage.version>5.10.0</junit-vintage.version>
     <kafka-client.version>3.6.0</kafka-client.version>
@@ -58,15 +54,11 @@
     <mockito.version>5.11.0</mockito.version>
     <netty.version>4.1.112.Final</netty.version>
     <resilience4j.version>2.2.0</resilience4j.version>
-    <rest-assured.version>5.3.2</rest-assured.version>
     <resteasy.version>6.2.8.Final</resteasy.version>
     <slf4j.version>2.0.9</slf4j.version>
-    <swagger-validator.version>2.40.0</swagger-validator.version>
-    <testcontainers.version>1.19.8</testcontainers.version>
     <typesafe.version>1.4.3</typesafe.version>
     <vertx.version>4.4.9</vertx.version>
     <vertx-rest.version>1.1.0</vertx-rest.version>
-    <wiremock.version>3.6.0</wiremock.version>
   </properties>
 
   <dependencyManagement>
@@ -101,13 +93,6 @@
     </dependency>
 
     <dependency>
-      <groupId>com.atlassian.oai</groupId>
-      <artifactId>swagger-request-validator-restassured</artifactId>
-      <version>${swagger-validator.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
         <groupId>org.jboss.resteasy</groupId>
         <artifactId>resteasy-multipart-provider</artifactId>
         <version>${resteasy.version}</version>
@@ -129,12 +114,6 @@
       <groupId>org.webjars</groupId>
       <artifactId>swagger-ui</artifactId>
       <version>5.10.3</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.datadoghq</groupId>
-      <artifactId>java-dogstatsd-client</artifactId>
-      <version>${java-dogstatsd-client.version}</version>
     </dependency>
 
     <dependency>
@@ -167,11 +146,6 @@
       <version>${typesafe.version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>${commons-io.version}</version>
-    </dependency>
 
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
@@ -216,13 +190,6 @@
     </dependency>
 
     <dependency>
-      <groupId>io.rest-assured</groupId>
-      <artifactId>rest-assured</artifactId>
-      <version>${rest-assured.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-codegen</artifactId>
     </dependency>
@@ -242,13 +209,6 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-kafka-client</artifactId>
     </dependency>
-
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-mysql-client</artifactId>
-    </dependency>
-
-
 
     <dependency>
       <groupId>io.vertx</groupId>
@@ -279,19 +239,6 @@
       <groupId>net.logstash.logback</groupId>
       <artifactId>logstash-logback-encoder</artifactId>
       <version>${logstash-encoder.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-collections4</artifactId>
-      <version>${commons-collections.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-compress</artifactId>
-      <version>${commons-compress.version}</version>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -340,41 +287,6 @@
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j.version}</version>
       <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>kafka</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>mysql</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>testcontainers</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.wiremock</groupId>
-      <artifactId>wiremock</artifactId>
-      <version>${wiremock.version}</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-fileupload</groupId>
-          <artifactId>commons-fileupload</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 

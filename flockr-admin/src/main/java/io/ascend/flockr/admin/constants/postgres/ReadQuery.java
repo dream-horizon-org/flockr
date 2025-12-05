@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.constants.mysql;
+package io.ascend.flockr.admin.constants.postgres;
 
 import lombok.experimental.UtilityClass;
 
