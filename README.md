@@ -14,6 +14,8 @@
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
+  - [Quick Start with Docker](#quick-start-with-docker)
+  - [Local Development Setup](#local-development-setup)
 - [Modules](#modules)
 - [Development](#development)
 - [Configuration](#configuration)
@@ -147,6 +149,54 @@ cd flockr
 ./docker/docker-stop.sh     # Stop services
 ./docker/docker-clean.sh    # Clean up everything
 ```
+
+### Local Development Setup
+
+**1. Set Up Databases**
+
+```bash
+# PostgreSQL (flockr-admin)
+createdb flockr
+psql -d flockr -f flockr-admin/src/main/resources/db/postgres/01_schema.sql
+psql -d flockr -f flockr-admin/src/main/resources/db/postgres/02_seed.sql  # optional
+
+# Aerospike (flockr-users) - via Docker
+docker run -d --name aerospike -p 3000:3000 aerospike/aerospike-server:6.4.0.0
+```
+
+**2. Set Environment Variables**
+
+```bash
+# PostgreSQL
+export POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_DATABASE=flockr
+export POSTGRES_USER=your_user POSTGRES_PASSWORD=your_password
+
+# Aerospike
+export AEROSPIKE_HOST=localhost AEROSPIKE_PORT=3000 AEROSPIKE_NAMESPACE=test
+```
+
+**3. Build & Run**
+
+```bash
+mvn clean install -DskipTests
+
+# Run flockr-admin (terminal 1)
+cd flockr-admin/target/flockr
+java -Dapp.environment=local -jar flockr-admin-1.0-fat.jar
+
+# Run flockr-users (terminal 2)
+cd flockr-users/target/flockr
+java -Dapp.environment=local -jar flockr-users-1.0-fat.jar
+```
+
+**IDE Setup (IntelliJ IDEA)**
+
+| Module | Main Class | Program Arguments |
+|--------|------------|-------------------|
+| flockr-admin | `io.ascend.flockr.admin.MainLauncher` | `run io.ascend.flockr.admin.verticle.MainVerticle` |
+| flockr-users | `io.ascend.flockr.users.MainLauncher` | `run io.ascend.flockr.users.verticle.MainVerticle` |
+
+VM options: `-Dapp.environment=local`
 
 ## Modules
 
