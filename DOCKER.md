@@ -29,9 +29,6 @@ Access services:
 - **Flockr Admin API**: http://localhost:8250
 - **Flockr Users API**: http://localhost:8260
 - **Swagger UI**: http://localhost:8250/swagger-ui/
-- **Flink Dashboard**: http://localhost:8240
-- **Spark Master**: http://localhost:8210
-- **Spark Worker**: http://localhost:8220
 
 ## Prerequisites
 
@@ -55,12 +52,12 @@ docker compose version
 │  Flockr Admin (8250)           Flockr Users (8260)                  │
 │  REST API + Business Logic     User Cohort Management               │
 └─────────────────────────────────────────────────────────────────────┘
-          │         │         │              │
-          ▼         ▼         ▼              ▼
-   ┌──────────┐ ┌─────────┐ ┌───────┐ ┌───────────┐
-   │PostgreSQL│ │  Flink  │ │ Spark │ │ Aerospike │
-   │  :8230   │ │  :8240  │ │ :8210 │ │   :8200   │
-   └──────────┘ └─────────┘ └───────┘ └───────────┘
+          │                                │
+          ▼                                ▼
+   ┌──────────┐                     ┌───────────┐
+   │PostgreSQL│                     │ Aerospike │
+   │  :8230   │                     │   :8200   │
+   └──────────┘                     └───────────┘
 ```
 
 ### Services
@@ -71,17 +68,12 @@ docker compose version
 | **Flockr Users** | 1.0 | 8260 | User cohort service (Vert.x 4.4.9, Java 17) |
 | **PostgreSQL** | 16 | 8230 | Primary database with auto-initialization |
 | **Aerospike** | 6.4 | 8200-8202 | High-performance NoSQL for user data |
-| **Flink JobManager** | 1.17 | 8240 | Stream processing coordinator |
-| **Flink TaskManager** | 1.17 | - | Stream processing workers (scalable) |
-| **Spark Master** | 3.5 | 8210, 8211 | Distributed computing master |
-| **Spark Worker** | 3.5 | 8220 | Distributed computing worker (scalable) |
 
 ### Key Features
 
 - **Multi-stage Docker build** - Optimized image size with Alpine JRE
 - **Health checks** - All services monitored
 - **Auto-initialization** - Database schema loaded on startup
-- **Horizontal scaling** - Scale Flink and Spark workers
 - **Non-root execution** - Enhanced security
 - **Resource management** - Configurable limits and reservations
 
@@ -126,8 +118,6 @@ This script will:
 | `POSTGRES_USER` | flockr_user | Database username |
 | `POSTGRES_PASSWORD` | flockr_password | Database password |
 | `POSTGRES_HOST` | flockr-postgres | Database hostname |
-| `FLINK_HOST` | flockr-flink-jobmanager | Flink hostname |
-| `SPARK_MASTER_URL` | spark://flockr-spark-master:7077 | Spark master URL |
 | `JAVA_OPTS` | -Xms512m -Xmx1024m | JVM options |
 
 ### Custom Overrides
@@ -191,16 +181,6 @@ docker compose down
 
 # Stop and remove volumes
 docker compose down -v
-```
-
-### Scaling Services
-
-```bash
-# Scale Flink TaskManagers
-docker compose up -d --scale flockr-flink-taskmanager=3
-
-# Scale Spark Workers
-docker compose up -d --scale flockr-spark-worker=2
 ```
 
 ## Management
@@ -387,14 +367,6 @@ Edit `env.docker`:
 JAVA_OPTS=-Xms256m -Xmx512m
 ```
 
-Or in `docker-compose.yml`:
-```yaml
-services:
-  flockr-spark-worker:
-    environment:
-      - SPARK_WORKER_MEMORY=512M
-```
-
 ### Network Issues
 
 ```bash
@@ -490,8 +462,6 @@ docker run --rm -v flockr_postgres_data:/data -v $(pwd):/backup \
 # Manual checks
 curl http://localhost:8250/healthcheck       # Flockr Admin
 curl http://localhost:8260/healthcheck       # Flockr Users
-curl http://localhost:8240/                  # Flink
-curl http://localhost:8210/                  # Spark Master
 docker compose exec flockr-postgres pg_isready    # PostgreSQL
 docker compose exec flockr-aerospike asinfo -v status  # Aerospike
 ```
@@ -502,8 +472,6 @@ docker compose exec flockr-aerospike asinfo -v status  # Aerospike
 |---------|-------------|
 | Flockr Admin | `GET /healthcheck` (port 8250) |
 | Flockr Users | `GET /healthcheck` (port 8260) |
-| Flink | `GET /` (port 8240, returns HTML) |
-| Spark | `GET /` (port 8210, returns HTML) |
 | PostgreSQL | `pg_isready` command |
 | Aerospike | `asinfo -v status` command |
 
@@ -540,10 +508,10 @@ Client Request → [Flockr Admin] ←→ [Flockr Users]
                       ↓                  ↓
       ┌───────────────┼──────────────────┼───────────────┐
       ↓               ↓                  ↓               ↓
-[PostgreSQL]       [Flink]          [Aerospike]      [Spark]
-   (Store)        (Process)          (Users)        (Compute)
-      ↓               ↓                  ↓               ↓
-   Response ← [Business Logic] ←────────┴───────────────┘
+[PostgreSQL]                        [Aerospike]
+   (Store)                           (Users)
+      ↓                                  ↓
+   Response ← [Business Logic] ←────────┘
 ```
 
 ### Internal Networking
@@ -555,10 +523,6 @@ All services communicate via `flockr-network` bridge network.
 - `flockr-users` - Users Application
 - `flockr-postgres` - Database
 - `flockr-aerospike` - Aerospike Database
-- `flockr-flink-jobmanager` - Flink coordinator
-- `flockr-flink-taskmanager` - Flink workers
-- `flockr-spark-master` - Spark master
-- `flockr-spark-worker` - Spark workers
 
 ## Additional Resources
 
@@ -574,4 +538,4 @@ All services communicate via `flockr-network` bridge network.
 
 ---
 
-**Built with ❤️ using Docker, Vert.x, Flink, Spark, and Aerospike**
+**Built with ❤️ using Docker, Vert.x, and Aerospike**

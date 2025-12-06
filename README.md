@@ -27,20 +27,19 @@
 
 **Flockr** is an enterprise-grade platform for **audience segmentation** and **user cohort management**, designed for organizations that need to:
 
-- **Segment audiences dynamically** using rule-based logic with both batch (SQL) and streaming (event-pattern) processing
-- **Manage user cohorts** with high-performance, real-time access using Aerospike
-- **Connect multiple data sources and sinks** for unified data ingestion and export
-- **Process data at scale** with Apache Flink for stream processing and Apache Spark for distributed computing
+- **Manage static audiences** with bulk CSV imports and lifecycle management
+- **Access user cohorts** with high-performance, real-time lookups using Aerospike
 - **Ensure multi-tenancy** with project-level isolation and security
+- **Segment audiences dynamically** *(Coming Soon)* using rule-based logic with batch and streaming processing
 
 Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-driven architecture to deliver high throughput and low latency.
 
 ### Supported Audience Types
 
-| Type | Description | Use Case |
-|------|-------------|----------|
-| **CONDITIONAL** | Dynamic membership through rules | Batch SQL queries (Spark) and real-time event patterns (Flink CEP) for automatic membership updates |
-| **STATIC** | Manual membership via CSV uploads | Bulk user imports with direct push to configured data sinks, no rules required |
+| Type | Description | Use Case | Status |
+|------|-------------|----------|--------|
+| **STATIC** | Manual membership via CSV uploads | Bulk user imports with direct push to configured data sinks, no rules required | ✅ Available |
+| **CONDITIONAL** | Dynamic membership through rules | Batch SQL queries and real-time event patterns for automatic membership updates | 🚧 Coming Soon |
 
 ## Key Features
 
@@ -48,9 +47,7 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 
 **Audience Segmentation (Flockr Admin)**
 - Create and manage audience segments with metadata and custom configurations
-- Bulk CSV upload for assigning users to audiences
-- **BATCH Rules**: SQL-based queries executed periodically on data sources
-- **STREAM Rules**: Real-time event pattern matching using Apache Flink CEP
+- Bulk CSV upload for assigning users to static audiences
 - Track audience lifecycle, user counts, ownership, and verification
 - Set expiry dates for automatic audience cleanup
 
@@ -59,8 +56,11 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 - Batch cohort mapping for multiple user assignments
 - Multi-tenant isolation with project-based segmentation
 
-**Data Connectors** *(Coming Soon)*
-- S3, Kafka, Webhooks integration planned
+**Coming Soon**
+- **Conditional Audiences**: Dynamic membership through rule-based logic
+- **BATCH Rules**: SQL-based queries executed periodically on data sources
+- **STREAM Rules**: Real-time event pattern matching
+- **Data Connectors**: S3, Kafka, Webhooks integration
 
 ### Technical Features
 
@@ -83,12 +83,6 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 │         ↓                 │           ↓                     │
 │    PostgreSQL 16          │     Aerospike 6.4               │
 └───────────────────────────┴─────────────────────────────────┘
-                     ↓
-        ┌────────────────────────┐
-        │  Processing Engines    │
-        │  • Apache Flink 1.17   │
-        │  • Apache Spark 3.5    │
-        └────────────────────────┘
 ```
 
 ### Technology Stack
@@ -97,7 +91,6 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 |----------|-------------|
 | **Core Framework** | Vert.x 4.4.9, RxJava 3, Java 17+ |
 | **Data Storage** | PostgreSQL 16, Aerospike 6.4 |
-| **Processing** | Apache Flink 1.17, Apache Spark 3.5 |
 | **Application** | Google Guice 7.0, RESTEasy 6.2, Resilience4j 2.2 |
 | **Observability** | Logback, Dropwizard Metrics |
 | **Testing** | JUnit 5, Mockito 5, REST Assured, Testcontainers |
@@ -137,8 +130,6 @@ cd flockr
 | Flockr Admin Swagger | http://localhost:8250/swagger-ui/ |
 | Flockr Users API | http://localhost:8260 |
 | Flockr Users Swagger | http://localhost:8260/swagger-ui/ |
-| Flink Dashboard | http://localhost:8240 |
-| Spark Master UI | http://localhost:8210 |
 | PostgreSQL | localhost:8230 |
 | Aerospike | localhost:8200 |
 
@@ -202,11 +193,11 @@ VM options: `-Dapp.environment=local`
 
 ### Flockr Admin
 
-Audience segmentation, rule management, and data connector administration.
+Audience segmentation and management.
 
 - **Port**: 8080 (8250 via Docker)
 - **Database**: PostgreSQL
-- **Features**: Create audiences, define BATCH/STREAM rules, manage data connectors
+- **Features**: Create and manage static audiences, bulk CSV imports, audience lifecycle management
 
 ### Flockr Users
 
@@ -254,8 +245,6 @@ This project follows [Google Java Style Guide](https://google.github.io/stylegui
 
 **Flockr Admin**
 - `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE`
-- `FLINK_HOST`, `FLINK_PORT`
-- `SPARK_MASTER_URL`
 
 **Flockr Users**
 - `AEROSPIKE_HOST`, `AEROSPIKE_PORT`, `AEROSPIKE_NAMESPACE`
