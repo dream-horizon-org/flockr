@@ -50,7 +50,6 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 - Create and manage audience segments with metadata and custom configurations
 - Bulk CSV upload for assigning users to static audiences
 - Track audience lifecycle, user counts, ownership, and verification
-- Set expiry dates for automatic audience cleanup
 
 **User Cohort Management (Flockr Users)**
 - Retrieve user cohorts with sub-millisecond latency using Aerospike
