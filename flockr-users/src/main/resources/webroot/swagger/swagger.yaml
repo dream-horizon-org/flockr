@@ -1,0 +1,394 @@
+openapi: 3.0.1
+info:
+  title: Flockr Users API
+  description: Flockr Users Service - User management and authentication
+  version: "1.0"
+servers:
+- url: http://localhost:8081
+  description: Local development server
+tags:
+- name: Bulk Cohort Assignment
+  description: Bulk operations for assigning users to cohorts via CSV upload
+- name: User Cohorts
+  description: Operations for retrieving user cohort memberships
+- name: Health Check
+  description: Application health and readiness endpoints
+- name: User Cohort Mapping
+  description: Operations for assigning or removing users from cohorts
+paths:
+  /flockr/users/assignments/bulk:
+    post:
+      tags:
+      - Bulk Cohort Assignment
+      summary: Bulk assign users to cohort from CSV
+      description: "Uploads a CSV file containing user identifiers and assigns all\
+        \ users to the specified cohort. The CSV file is processed line by line, with\
+        \ each line containing comma-separated user identifiers. Response includes\
+        \ statistics about total processed, successful, and failed assignments."
+      operationId: bulkAssignUsers
+      parameters:
+      - name: x-project-key
+        in: header
+        description: Project key used as Aerospike set name for multi-tenant isolation
+        required: true
+        schema:
+          type: string
+        example: tenant1_project1
+      requestBody:
+        description: Multipart form data with 'csv_file' (CSV file with user IDs)
+          and 'cohort_name' (target cohort)
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MultipartFormDataInput'
+      responses:
+        "200":
+          description: Bulk assignment completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResult'
+        "400":
+          description: Invalid request - missing or invalid file/cohort_name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal server error during processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /flockr/users/get-cohorts:
+    get:
+      tags:
+      - User Cohorts
+      summary: Get user cohorts
+      description: Retrieves a list of active cohort names that the specified user
+        belongs to. Only returns cohorts that have not expired.
+      operationId: handle
+      parameters:
+      - name: userId
+        in: header
+        required: true
+        schema:
+          type: string
+        example: 12345
+      - name: x-project-key
+        in: header
+        description: Project key used as Aerospike set name for multi-tenant isolation
+        required: true
+        schema:
+          type: string
+        example: tenant1_project1
+      responses:
+        "200":
+          description: Successfully retrieved user cohorts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        "400":
+          description: Invalid request - missing or invalid userId/x-project-key header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /healthcheck:
+    get:
+      tags:
+      - Health Check
+      summary: Health check
+      description: Returns the health status of the application and its dependencies
+        including Aerospike connection status.
+      operationId: handle_1
+      responses:
+        "200":
+          description: Application is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: UP
+                aerospike: connected
+                timestamp: 1701619200000
+        "503":
+          description: Application is unhealthy or degraded
+  /flockr/users/map-cohorts:
+    post:
+      tags:
+      - User Cohort Mapping
+      summary: Map user to cohort
+      description: "Assigns or removes a user from a cohort. Use action 'append' to\
+        \ add a user with an expiry time, or 'remove' to remove the user from the\
+        \ cohort."
+      operationId: handle_2
+      parameters:
+      - name: userId
+        in: header
+        description: User ID (must be positive)
+        required: true
+        schema:
+          type: string
+        example: 12345
+      - name: x-project-key
+        in: header
+        description: Project key used as Aerospike set name for multi-tenant isolation
+        required: true
+        schema:
+          type: string
+        example: tenant1_project1
+      requestBody:
+        description: Cohort mapping request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapUserCohortsRequest'
+        required: true
+      responses:
+        "200":
+          description: User successfully mapped to cohort
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Invalid request - missing or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+  /flockr/users/map-cohorts/batch:
+    post:
+      tags:
+      - User Cohort Mapping
+      summary: Batch map users to cohorts
+      description: "Batch operation to assign or remove multiple users from cohorts\
+        \ in a single request. Each item in the request array specifies a user, cohort,\
+        \ action, and expiry time."
+      operationId: handleBatch
+      parameters:
+      - name: x-project-key
+        in: header
+        description: Project key used as Aerospike set name for multi-tenant isolation
+        required: true
+        schema:
+          type: string
+        example: tenant1_project1
+      requestBody:
+        description: List of cohort mapping requests
+        content:
+          application/json:
+            schema:
+              type: string
+        required: true
+      responses:
+        "200":
+          description: Batch operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResult'
+        "400":
+          description: Invalid request - missing or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+        "500":
+          description: Internal server error during batch processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Failure'
+components:
+  schemas:
+    BulkOperationResult:
+      type: object
+      properties:
+        totalProcessed:
+          type: integer
+          description: Total number of users processed
+          format: int32
+          example: 1000
+        successCount:
+          type: integer
+          description: Number of successful assignments
+          format: int32
+          example: 995
+        failedCount:
+          type: integer
+          description: Number of failed assignments
+          format: int32
+          example: 5
+        message:
+          type: string
+          description: Summary message of the operation
+          example: "Bulk assignment completed: 995 succeeded, 5 failed out of 1000\
+            \ total"
+      description: Result of a bulk cohort assignment operation
+    ErrorEntity:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        cause:
+          type: string
+    Failure:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorEntity'
+    SuccessBulkOperationResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BulkOperationResult'
+    InputPart:
+      type: object
+      properties:
+        headers:
+          type: object
+          properties:
+            empty:
+              type: boolean
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        fileName:
+          type: string
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
+        body:
+          type: object
+        bodyAsString:
+          type: string
+        contentTypeFromMessage:
+          type: boolean
+    MediaType:
+      type: object
+      properties:
+        type:
+          type: string
+        subtype:
+          type: string
+        parameters:
+          type: object
+          additionalProperties:
+            type: string
+        wildcardType:
+          type: boolean
+        wildcardSubtype:
+          type: boolean
+    MultipartFormDataInput:
+      type: object
+      properties:
+        formDataMap:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/InputPart'
+        preamble:
+          type: string
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/InputPart'
+    MultivaluedMapStringString:
+      type: object
+      properties:
+        empty:
+          type: boolean
+      additionalProperties:
+        type: array
+        items:
+          type: string
+    SuccessListString:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: string
+    JsonObject:
+      type: object
+      properties:
+        map:
+          type: object
+          additionalProperties:
+            type: object
+        empty:
+          type: boolean
+    SuccessJsonObject:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/JsonObject'
+    Success:
+      type: object
+      properties:
+        data:
+          type: object
+    MapUserCohortsRequest:
+      required:
+      - action
+      - cohort_key
+      - expire_at
+      type: object
+      properties:
+        action:
+          type: string
+          description: "Action to perform: 'append' to add user or 'remove' to remove\
+            \ user"
+          example: append
+          enum:
+          - append
+          - remove
+        cohort_key:
+          type: string
+          description: Cohort key/name to assign or remove user from
+          example: premium-users
+        expire_at:
+          type: string
+          description: Expiry time for the cohort membership (required for append
+            action)
+          example: 2025-12-31 23:59:59
+      description: Request to map a user to a cohort
+    BatchMapUserCohortsRequest:
+      required:
+      - action
+      - cohort_key
+      - expire_at
+      - user_id
+      type: object
+      properties:
+        action:
+          type: string
+          description: "Action to perform: 'append' to add user or 'remove' to remove\
+            \ user"
+          example: append
+          enum:
+          - append
+          - remove
+        user_id:
+          type: string
+          description: User ID to map (must be positive)
+          example: "12345"
+        cohort_key:
+          type: string
+          description: Cohort key/name to assign or remove user from
+          example: premium-users
+        expire_at:
+          type: string
+          description: Expiry time for the cohort membership (required for append
+            action)
+          example: 2025-12-31 23:59:59
+      description: Single user cohort mapping request for batch operations

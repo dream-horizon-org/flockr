@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ascend</groupId>
+        <artifactId>flockr</artifactId>
+        <version>1.0</version>
+    </parent>
+
+    <artifactId>flockr-admin</artifactId>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Main class and verticle for this module -->
+        <main.class>io.ascend.flockr.admin.MainLauncher</main.class>
+        <main.verticle>io.ascend.flockr.admin.verticle.MainVerticle</main.verticle>
+
+        <!-- Swagger configuration for this module -->
+        <swagger.configurationFilePath>
+            ${project.basedir}/src/main/resources/config/swagger/swagger-info.json
+        </swagger.configurationFilePath>
+        <swagger.outputFileName>swagger</swagger.outputFileName>
+        <swagger.outputPath>
+            ${project.basedir}/src/main/resources/webroot/swagger
+        </swagger.outputPath>
+        <swagger.resourcePackage>io.ascend.flockr.admin.rest</swagger.resourcePackage>
+
+        <!-- Dependencies -->
+        <networknt-json-schema.version>1.0.76</networknt-json-schema.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>4.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${networknt-json-schema.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.javatuples</groupId>
+            <artifactId>javatuples</artifactId>
+            <version>1.2</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Enable Swagger generation for this module using parent pluginManagement config -->
+            <plugin>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-maven-plugin-jakarta</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

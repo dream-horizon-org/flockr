@@ -1,0 +1,16 @@
+{
+  "prettyPrint": true,
+  "openAPI": {
+    "info": {
+      "version": "1.0",
+      "title": "Flockr Admin API",
+      "description": "Flockr Admin Service - Manage audiences, rules, and data connectors"
+    },
+    "servers": [
+      {
+        "url": "http://localhost:8080",
+        "description": "Local development server"
+      }
+    ]
+  }
+}
