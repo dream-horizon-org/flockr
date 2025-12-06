@@ -52,15 +52,15 @@ up: ## Start all services
 
 up-admin: ## Start flockr-admin with dependencies
 	@echo "🚀 Starting flockr-admin..."
-	docker-compose up -d postgres flink-jobmanager flink-taskmanager flockr-admin
+	docker-compose up -d flockr-postgres flockr-admin
 
 up-users: ## Start flockr-users with dependencies
 	@echo "🚀 Starting flockr-users..."
-	docker-compose up -d aerospike flockr-users
+	docker-compose up -d flockr-aerospike flockr-users
 
-up-infra: ## Start infrastructure only (postgres, flink, aerospike)
+up-infra: ## Start infrastructure only (postgres, aerospike)
 	@echo "🚀 Starting infrastructure..."
-	docker-compose up -d postgres flink-jobmanager flink-taskmanager aerospike spark-master spark-worker
+	docker-compose up -d flockr-postgres flockr-aerospike
 
 down: ## Stop all services
 	@echo "🛑 Stopping all services..."
@@ -106,7 +106,7 @@ logs-users: ## View flockr-users logs
 	docker-compose logs -f flockr-users
 
 logs-infra: ## View infrastructure logs
-	docker-compose logs -f postgres flink-jobmanager aerospike
+	docker-compose logs -f flockr-postgres flockr-aerospike
 
 stats: ## Show container resource usage
 	docker stats --no-stream $$(docker-compose ps -q)
@@ -122,10 +122,8 @@ health: ## Check health of all services
 	@curl -sf http://localhost:8082/healthcheck >/dev/null 2>&1 && echo "  ✅ flockr-users (8082): Healthy" || echo "  ❌ flockr-users (8082): Unhealthy"
 	@echo ""
 	@echo "Infrastructure:"
-	@curl -sf http://localhost:8081/ >/dev/null 2>&1 && echo "  ✅ Flink UI (8081): Healthy" || echo "  ❌ Flink UI (8081): Unhealthy"
-	@curl -sf http://localhost:8090/ >/dev/null 2>&1 && echo "  ✅ Spark UI (8090): Healthy" || echo "  ❌ Spark UI (8090): Unhealthy"
-	@docker-compose exec -T postgres pg_isready -U flockr_user >/dev/null 2>&1 && echo "  ✅ PostgreSQL (5432): Healthy" || echo "  ❌ PostgreSQL (5432): Unhealthy"
-	@docker-compose exec -T aerospike asinfo -v status >/dev/null 2>&1 && echo "  ✅ Aerospike (3000): Healthy" || echo "  ❌ Aerospike (3000): Unhealthy"
+	@docker-compose exec -T flockr-postgres pg_isready -U flockr_user >/dev/null 2>&1 && echo "  ✅ PostgreSQL (5432): Healthy" || echo "  ❌ PostgreSQL (5432): Unhealthy"
+	@docker-compose exec -T flockr-aerospike asinfo -v status >/dev/null 2>&1 && echo "  ✅ Aerospike (3000): Healthy" || echo "  ❌ Aerospike (3000): Unhealthy"
 
 # -----------------------------------------------------------------------------
 # Shell Access
@@ -137,10 +135,10 @@ shell-users: ## Open shell in flockr-users container
 	docker-compose exec flockr-users sh
 
 shell-db: ## Open PostgreSQL shell
-	docker-compose exec postgres psql -U flockr_user -d flockr
+	docker-compose exec flockr-postgres psql -U flockr_user -d flockr
 
 shell-aerospike: ## Open Aerospike shell (aql)
-	docker-compose exec aerospike aql
+	docker-compose exec flockr-aerospike aql
 
 # -----------------------------------------------------------------------------
 # Database Operations
@@ -148,7 +146,7 @@ shell-aerospike: ## Open Aerospike shell (aql)
 backup-db: ## Backup PostgreSQL database
 	@echo "💾 Backing up database..."
 	@mkdir -p backups
-	docker-compose exec -T postgres pg_dump -U flockr_user flockr > backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+	docker-compose exec -T flockr-postgres pg_dump -U flockr_user flockr > backups/backup_$$(date +%Y%m%d_%H%M%S).sql
 	@echo "✅ Backup created in backups/"
 
 restore-db: ## Restore database (usage: make restore-db FILE=backup.sql)
@@ -157,7 +155,7 @@ restore-db: ## Restore database (usage: make restore-db FILE=backup.sql)
 		exit 1; \
 	fi
 	@echo "📥 Restoring database from $(FILE)..."
-	docker-compose exec -T postgres psql -U flockr_user -d flockr < $(FILE)
+	docker-compose exec -T flockr-postgres psql -U flockr_user -d flockr < $(FILE)
 	@echo "✅ Database restored"
 
 # -----------------------------------------------------------------------------
@@ -186,17 +184,15 @@ dev: ## Start in development mode (all services)
 	@echo "Services available at:"
 	@echo "  • flockr-admin:  http://localhost:8080"
 	@echo "  • flockr-users:  http://localhost:8082"
-	@echo "  • Flink UI:      http://localhost:8081"
-	@echo "  • Spark UI:      http://localhost:8090"
 
 dev-admin: ## Start flockr-admin in dev mode with hot reload
 	@echo "🛠️  Starting flockr-admin dev environment..."
-	docker-compose up -d postgres flink-jobmanager flink-taskmanager
+	docker-compose up -d flockr-postgres
 	@echo "Run locally: mvn compile exec:java -pl flockr-admin"
 
 dev-users: ## Start flockr-users in dev mode with hot reload
 	@echo "🛠️  Starting flockr-users dev environment..."
-	docker-compose up -d aerospike
+	docker-compose up -d flockr-aerospike
 	@echo "Run locally: mvn compile exec:java -pl flockr-users"
 
 # -----------------------------------------------------------------------------

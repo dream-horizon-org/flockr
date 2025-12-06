@@ -28,19 +28,19 @@
 
 **Flockr** is an enterprise-grade platform for **audience segmentation** and **user cohort management**, designed for organizations that need to:
 
-- **Segment audiences dynamically** using rule-based logic with both batch (SQL) and streaming (event-pattern) processing
-- **Manage user cohorts** with high-performance, real-time access using Aerospike
-- **Connect multiple data sources and sinks** for unified data ingestion and export
+- **Manage static audiences** with bulk CSV imports and lifecycle management
+- **Access user cohorts** with high-performance, real-time lookups using Aerospike
 - **Ensure multi-tenancy** with project-level isolation and security
+- **Segment audiences dynamically** *(Coming Soon)* using rule-based logic with batch and streaming processing
 
 Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-driven architecture to deliver high throughput and low latency.
 
 ### Supported Audience Types
 
-| Type | Description | Use Case |
-|------|-------------|----------|
-| **CONDITIONAL** | Dynamic membership through rules | Batch SQL queries and real-time event patterns for automatic membership updates |
-| **STATIC** | Manual membership via CSV uploads | Bulk user imports with direct push to configured data sinks, no rules required |
+| Type | Description | Use Case | Status |
+|------|-------------|----------|--------|
+| **STATIC** | Manual membership via CSV uploads | Bulk user imports with direct push to configured data sinks, no rules required | ✅ Available |
+| **CONDITIONAL** | Dynamic membership through rules | Batch SQL queries and real-time event patterns for automatic membership updates | 🚧 Coming Soon |
 
 ## Key Features
 
@@ -48,19 +48,19 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 
 **Audience Segmentation (Flockr Admin)**
 - Create and manage audience segments with metadata and custom configurations
-- Bulk CSV upload for assigning users to audiences
-- **BATCH Rules**: SQL-based queries executed periodically on data sources
-- **STREAM Rules**: Real-time event pattern matching for dynamic membership
+- Bulk CSV upload for assigning users to static audiences
 - Track audience lifecycle, user counts, ownership, and verification
-- Set expiry dates for automatic audience cleanup
 
 **User Cohort Management (Flockr Users)**
 - Retrieve user cohorts with sub-millisecond latency using Aerospike
 - Batch cohort mapping for multiple user assignments
 - Multi-tenant isolation with project-based segmentation
 
-**Data Connectors** *(Coming Soon)*
-- S3, Kafka, Webhooks integration planned
+**Coming Soon**
+- **Conditional Audiences**: Dynamic membership through rule-based logic
+- **BATCH Rules**: SQL-based queries executed periodically on data sources
+- **STREAM Rules**: Real-time event pattern matching
+- **Data Connectors**: S3, Kafka, Webhooks integration
 
 ### Technical Features
 
@@ -193,11 +193,11 @@ VM options: `-Dapp.environment=local`
 
 ### Flockr Admin
 
-Audience segmentation, rule management, and data connector administration.
+Audience segmentation and management.
 
 - **Port**: 8080 (8250 via Docker)
 - **Database**: PostgreSQL
-- **Features**: Create audiences, define BATCH/STREAM rules, manage data connectors
+- **Features**: Create and manage static audiences, bulk CSV imports, audience lifecycle management
 
 ### Flockr Users
 
