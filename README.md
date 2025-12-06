@@ -18,6 +18,7 @@
   - [Local Development Setup](#local-development-setup)
 - [Modules](#modules)
 - [Development](#development)
+- [API Documentation](#api-documentation)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
@@ -30,7 +31,6 @@
 - **Segment audiences dynamically** using rule-based logic with both batch (SQL) and streaming (event-pattern) processing
 - **Manage user cohorts** with high-performance, real-time access using Aerospike
 - **Connect multiple data sources and sinks** for unified data ingestion and export
-- **Process data at scale** with Apache Flink for stream processing and Apache Spark for distributed computing
 - **Ensure multi-tenancy** with project-level isolation and security
 
 Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-driven architecture to deliver high throughput and low latency.
@@ -39,7 +39,7 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 
 | Type | Description | Use Case |
 |------|-------------|----------|
-| **CONDITIONAL** | Dynamic membership through rules | Batch SQL queries (Spark) and real-time event patterns (Flink CEP) for automatic membership updates |
+| **CONDITIONAL** | Dynamic membership through rules | Batch SQL queries and real-time event patterns for automatic membership updates |
 | **STATIC** | Manual membership via CSV uploads | Bulk user imports with direct push to configured data sinks, no rules required |
 
 ## Key Features
@@ -50,7 +50,7 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 - Create and manage audience segments with metadata and custom configurations
 - Bulk CSV upload for assigning users to audiences
 - **BATCH Rules**: SQL-based queries executed periodically on data sources
-- **STREAM Rules**: Real-time event pattern matching using Apache Flink CEP
+- **STREAM Rules**: Real-time event pattern matching for dynamic membership
 - Track audience lifecycle, user counts, ownership, and verification
 - Set expiry dates for automatic audience cleanup
 
@@ -83,12 +83,6 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 │         ↓                 │           ↓                     │
 │    PostgreSQL 16          │     Aerospike 6.4               │
 └───────────────────────────┴─────────────────────────────────┘
-                     ↓
-        ┌────────────────────────┐
-        │  Processing Engines    │
-        │  • Apache Flink 1.17   │
-        │  • Apache Spark 3.5    │
-        └────────────────────────┘
 ```
 
 ### Technology Stack
@@ -97,7 +91,6 @@ Built on the **Vert.x reactive toolkit**, Flockr leverages non-blocking, event-d
 |----------|-------------|
 | **Core Framework** | Vert.x 4.4.9, RxJava 3, Java 17+ |
 | **Data Storage** | PostgreSQL 16, Aerospike 6.4 |
-| **Processing** | Apache Flink 1.17, Apache Spark 3.5 |
 | **Application** | Google Guice 7.0, RESTEasy 6.2, Resilience4j 2.2 |
 | **Observability** | Logback, Dropwizard Metrics |
 | **Testing** | JUnit 5, Mockito 5, REST Assured, Testcontainers |
@@ -137,8 +130,6 @@ cd flockr
 | Flockr Admin Swagger | http://localhost:8250/swagger-ui/ |
 | Flockr Users API | http://localhost:8260 |
 | Flockr Users Swagger | http://localhost:8260/swagger-ui/ |
-| Flink Dashboard | http://localhost:8240 |
-| Spark Master UI | http://localhost:8210 |
 | PostgreSQL | localhost:8230 |
 | Aerospike | localhost:8200 |
 
@@ -248,14 +239,77 @@ mvn fmt:check                                  # Check formatting
 
 This project follows [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html).
 
+## API Documentation
+
+### Flockr Admin APIs
+
+#### Audiences
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/v1/audiences` | List audiences with filters (name, creator, verification status) |
+| `POST` | `/v1/audiences` | Create a new audience |
+| `GET` | `/v1/audiences/{audienceId}` | Get audience details |
+| `POST` | `/v1/audiences/{audienceId}/rules` | Create rules for an audience |
+| `GET` | `/v1/audiences/{audienceId}/rules/{ruleId}` | Get rule details |
+| `GET` | `/v1/audiences/{audienceId}/owners` | Get all audience owners |
+| `POST` | `/v1/audiences/{audienceId}/owners` | Add or remove an audience owner |
+| `POST` | `/v1/audiences/{audienceId}/imports` | Import CSV data for a STATIC audience |
+
+**Headers:**
+- `X-Project-Key` (required): Encrypted project identifier
+- `email` (optional): Actor email/username (defaults to 'system')
+
+#### Data Connectors
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/v1/connectors/types` | List connector types (filter by SOURCE or SINK) |
+| `POST` | `/v1/connectors/types/onboard` | Onboard a new connector type |
+| `GET` | `/v1/connectors/types/{typeId}` | Get connector type by ID |
+| `GET` | `/v1/datasources` | List data sources (paginated) |
+| `POST` | `/v1/datasources/onboard` | Onboard a data source |
+| `GET` | `/v1/datasinks` | List data sinks (paginated) |
+| `POST` | `/v1/datasinks/onboard` | Onboard a data sink |
+
+**Headers:**
+- `email` (required for POST): User email for authentication
+
+#### Health Check
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/healthcheck` | Application health status |
+
+### Flockr Users APIs
+
+#### User Cohorts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/flockr/users/get-cohorts` | Get active cohorts for a user |
+| `POST` | `/flockr/users/map-cohorts` | Map user to cohort (append/remove) |
+| `POST` | `/flockr/users/map-cohorts/batch` | Batch map users to cohorts |
+| `POST` | `/flockr/users/assignments/bulk` | Bulk assign users to cohort from CSV |
+
+**Headers:**
+- `userId` (required for GET, POST /map-cohorts): User identifier
+- `x-project-key` (required): Project key for multi-tenant isolation
+
+#### Health Check
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/healthcheck` | Application health status including Aerospike connection |
+
+> **Note**: Full API documentation with request/response schemas is available via Swagger UI at `/swagger-ui/` when services are running.
+
 ## Configuration
 
 ### Environment Variables
 
 **Flockr Admin**
 - `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE`
-- `FLINK_HOST`, `FLINK_PORT`
-- `SPARK_MASTER_URL`
 
 **Flockr Users**
 - `AEROSPIKE_HOST`, `AEROSPIKE_PORT`, `AEROSPIKE_NAMESPACE`
@@ -281,7 +335,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Documentation
 
 - **Docker Guide**: [DOCKER.md](DOCKER.md)
-- **API Documentation**: Available via Swagger UI when services are running
+- **API Documentation**: See [API Documentation](#api-documentation) section above or access Swagger UI when services are running
 
 ---
 
