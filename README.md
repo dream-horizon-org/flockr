@@ -18,6 +18,7 @@
   - [Local Development Setup](#local-development-setup)
 - [Modules](#modules)
 - [Development](#development)
+- [API Documentation](#api-documentation)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
@@ -239,6 +240,71 @@ mvn fmt:check                                  # Check formatting
 
 This project follows [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html).
 
+## API Documentation
+
+### Flockr Admin APIs
+
+#### Audiences
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/v1/audiences` | List audiences with filters (name, creator, verification status) |
+| `POST` | `/v1/audiences` | Create a new audience |
+| `GET` | `/v1/audiences/{audienceId}` | Get audience details |
+| `POST` | `/v1/audiences/{audienceId}/rules` | Create rules for an audience |
+| `GET` | `/v1/audiences/{audienceId}/rules/{ruleId}` | Get rule details |
+| `GET` | `/v1/audiences/{audienceId}/owners` | Get all audience owners |
+| `POST` | `/v1/audiences/{audienceId}/owners` | Add or remove an audience owner |
+| `POST` | `/v1/audiences/{audienceId}/imports` | Import CSV data for a STATIC audience |
+
+**Headers:**
+- `X-Project-Key` (required): Encrypted project identifier
+- `email` (optional): Actor email/username (defaults to 'system')
+
+#### Data Connectors
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/v1/connectors/types` | List connector types (filter by SOURCE or SINK) |
+| `POST` | `/v1/connectors/types/onboard` | Onboard a new connector type |
+| `GET` | `/v1/connectors/types/{typeId}` | Get connector type by ID |
+| `GET` | `/v1/datasources` | List data sources (paginated) |
+| `POST` | `/v1/datasources/onboard` | Onboard a data source |
+| `GET` | `/v1/datasinks` | List data sinks (paginated) |
+| `POST` | `/v1/datasinks/onboard` | Onboard a data sink |
+
+**Headers:**
+- `email` (required for POST): User email for authentication
+
+#### Health Check
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/healthcheck` | Application health status |
+
+### Flockr Users APIs
+
+#### User Cohorts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/flockr/users/get-cohorts` | Get active cohorts for a user |
+| `POST` | `/flockr/users/map-cohorts` | Map user to cohort (append/remove) |
+| `POST` | `/flockr/users/map-cohorts/batch` | Batch map users to cohorts |
+| `POST` | `/flockr/users/assignments/bulk` | Bulk assign users to cohort from CSV |
+
+**Headers:**
+- `userId` (required for GET, POST /map-cohorts): User identifier
+- `x-project-key` (required): Project key for multi-tenant isolation
+
+#### Health Check
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/healthcheck` | Application health status including Aerospike connection |
+
+> **Note**: Full API documentation with request/response schemas is available via Swagger UI at `/swagger-ui/` when services are running.
+
 ## Configuration
 
 ### Environment Variables
@@ -270,7 +336,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Documentation
 
 - **Docker Guide**: [DOCKER.md](DOCKER.md)
-- **API Documentation**: Available via Swagger UI when services are running
+- **API Documentation**: See [API Documentation](#api-documentation) section above or access Swagger UI when services are running
 
 ---
 
