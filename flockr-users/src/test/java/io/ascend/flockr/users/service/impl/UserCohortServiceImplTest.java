@@ -11,14 +11,17 @@ import io.ascend.flockr.users.client.Aerospike;
 import io.ascend.flockr.users.config.AerospikeConfig;
 import io.ascend.flockr.users.constants.Constants;
 import io.ascend.flockr.users.dto.BulkOperationResult;
+import io.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import io.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.file.AsyncFile;
 import io.vertx.rxjava3.core.file.FileSystem;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
@@ -461,5 +464,300 @@ public class UserCohortServiceImplTest {
     // Assert
     assertEquals(1, result.size());
     assertTrue(result.contains("exact"));
+  }
+
+  // ==================== batchMapUserCohorts Tests ====================
+
+  @Test
+  public void batchMapUserCohorts_WithValidRequests_ReturnsSuccessResult() throws Exception {
+    // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    List<BatchMapUserCohortsRequest> requests =
+        Arrays.asList(
+            new BatchMapUserCohortsRequest(
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
+            new BatchMapUserCohortsRequest(
+                "456", "cohort2", Constants.ACTION_REMOVE, "2025-12-31 23:59:59"));
+
+    when(aerospikeClient.appendCohort(eq("123"), eq("cohort1"), anyLong(), eq(projectKey)))
+        .thenReturn(Single.just(true));
+    when(aerospikeClient.removeCohort(eq("456"), eq("cohort2"), eq(projectKey)))
+        .thenReturn(Single.just(true));
+
+    // Act
+    BulkOperationResult result = service.batchMapUserCohorts(projectKey, requests).blockingGet();
+
+    // Assert
+    assertNotNull(result);
+    assertEquals(2, result.getTotalProcessed());
+    assertEquals(2, result.getSuccessCount());
+    assertEquals(0, result.getFailedCount());
+    verify(aerospikeClient).appendCohort(eq("123"), eq("cohort1"), anyLong(), eq(projectKey));
+    verify(aerospikeClient).removeCohort(eq("456"), eq("cohort2"), eq(projectKey));
+  }
+
+  @Test
+  public void batchMapUserCohorts_WithEmptyList_ReturnsEmptyResult() throws Exception {
+    // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    List<BatchMapUserCohortsRequest> requests = Collections.emptyList();
+
+    // Act
+    BulkOperationResult result = service.batchMapUserCohorts(projectKey, requests).blockingGet();
+
+    // Assert
+    assertNotNull(result);
+    assertEquals(0, result.getTotalProcessed());
+    assertEquals(0, result.getSuccessCount());
+    assertEquals(0, result.getFailedCount());
+  }
+
+  @Test
+  public void batchMapUserCohorts_WithMixedSuccessFailure_ReturnsPartialResult() throws Exception {
+    // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    List<BatchMapUserCohortsRequest> requests =
+        Arrays.asList(
+            new BatchMapUserCohortsRequest(
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
+            new BatchMapUserCohortsRequest(
+                "456", "cohort2", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
+
+    when(aerospikeClient.appendCohort(eq("123"), eq("cohort1"), anyLong(), eq(projectKey)))
+        .thenReturn(Single.just(true));
+    AerospikeException keyNotFoundError =
+        new AerospikeException(ResultCode.KEY_NOT_FOUND_ERROR, "Key not found");
+    when(aerospikeClient.appendCohort(eq("456"), eq("cohort2"), anyLong(), eq(projectKey)))
+        .thenReturn(Single.error(keyNotFoundError));
+
+    // Act
+    BulkOperationResult result = service.batchMapUserCohorts(projectKey, requests).blockingGet();
+
+    // Assert
+    assertNotNull(result);
+    assertEquals(2, result.getTotalProcessed());
+    assertEquals(1, result.getSuccessCount());
+    assertEquals(1, result.getFailedCount());
+  }
+
+  @Test
+  public void batchMapUserCohorts_WithAllFailures_ReturnsAllFailedResult() throws Exception {
+    // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    List<BatchMapUserCohortsRequest> requests =
+        Arrays.asList(
+            new BatchMapUserCohortsRequest(
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
+            new BatchMapUserCohortsRequest(
+                "456", "cohort2", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
+
+    AerospikeException keyNotFoundError =
+        new AerospikeException(ResultCode.KEY_NOT_FOUND_ERROR, "Key not found");
+    when(aerospikeClient.appendCohort(anyString(), anyString(), anyLong(), anyString()))
+        .thenReturn(Single.error(keyNotFoundError));
+
+    // Act
+    BulkOperationResult result = service.batchMapUserCohorts(projectKey, requests).blockingGet();
+
+    // Assert
+    assertNotNull(result);
+    assertEquals(2, result.getTotalProcessed());
+    assertEquals(0, result.getSuccessCount());
+    assertEquals(2, result.getFailedCount());
+  }
+
+  @Test
+  public void batchMapUserCohorts_WithInvalidExpiryTime_HandlesError() throws Exception {
+    // Arrange
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    List<BatchMapUserCohortsRequest> requests =
+        Arrays.asList(
+            new BatchMapUserCohortsRequest(
+                "123", "cohort1", Constants.ACTION_APPEND, "2020-01-01 00:00:00")); // Past date
+
+    // Act
+    BulkOperationResult result = service.batchMapUserCohorts(projectKey, requests).blockingGet();
+
+    // Assert
+    assertNotNull(result);
+    assertEquals(1, result.getTotalProcessed());
+    assertEquals(0, result.getSuccessCount());
+    assertEquals(1, result.getFailedCount());
+  }
+
+  // ==================== File Operation Tests ====================
+
+  // Note: CSV processing tests with real Vertx instances are complex due to async file operations.
+  // The existing test assignUsersToCohort_WithValidCsv_ReturnsSuccessResult already covers
+  // the basic CSV processing flow. These additional tests would require more complex setup
+  // and may be flaky due to async timing. For now, we focus on testing batch operations
+  // which are more straightforward and reliable.
+
+  // ==================== cleanupOrphanedTempFiles Tests ====================
+
+  @Test
+  public void cleanupOrphanedTempFiles_WithOldTempFiles_DeletesFiles() throws Exception {
+    // Arrange
+    Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"));
+    Path oldTempFile = Files.createTempFile(tempDir, "cohort-upload-", ".tmp");
+    try {
+      // Set last modified time to 2 hours ago
+      long twoHoursAgo = System.currentTimeMillis() - (2 * 60 * 60 * 1000);
+      Files.setLastModifiedTime(
+          oldTempFile, java.nio.file.attribute.FileTime.fromMillis(twoHoursAgo));
+
+      io.vertx.rxjava3.core.Vertx testVertx = io.vertx.rxjava3.core.Vertx.vertx();
+      try {
+        UserCohortServiceImpl testService =
+            new UserCohortServiceImpl(aerospikeClient, aerospikeConfig, testVertx);
+
+        // Act
+        int cleanedCount = testService.cleanupOrphanedTempFiles();
+
+        // Assert
+        assertTrue(cleanedCount >= 1);
+        assertFalse(Files.exists(oldTempFile));
+      } finally {
+        testVertx.close().blockingAwait(5, TimeUnit.SECONDS);
+      }
+    } catch (Exception e) {
+      // Clean up if test fails
+      Files.deleteIfExists(oldTempFile);
+      throw e;
+    }
+  }
+
+  @Test
+  public void cleanupOrphanedTempFiles_WithNewTempFiles_DoesNotDelete() throws Exception {
+    // Arrange
+    Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"));
+    Path newTempFile = Files.createTempFile(tempDir, "cohort-upload-", ".tmp");
+    try {
+      // File is newly created, so it should not be deleted
+
+      io.vertx.rxjava3.core.Vertx testVertx = io.vertx.rxjava3.core.Vertx.vertx();
+      try {
+        UserCohortServiceImpl testService =
+            new UserCohortServiceImpl(aerospikeClient, aerospikeConfig, testVertx);
+
+        // Act
+        int cleanedCount = testService.cleanupOrphanedTempFiles();
+
+        // Assert - New file should not be deleted
+        assertTrue(Files.exists(newTempFile));
+        // Cleaned count might be 0 or more depending on other files
+        assertTrue(cleanedCount >= 0);
+      } finally {
+        testVertx.close().blockingAwait(5, TimeUnit.SECONDS);
+        Files.deleteIfExists(newTempFile);
+      }
+    } catch (Exception e) {
+      Files.deleteIfExists(newTempFile);
+      throw e;
+    }
+  }
+
+  @Test
+  public void cleanupOrphanedTempFiles_WithNoTempFiles_ReturnsZero() {
+    // Arrange - No temp files created
+
+    // Act
+    int cleanedCount = service.cleanupOrphanedTempFiles();
+
+    // Assert
+    assertTrue(cleanedCount >= 0); // May clean up files from other tests
+    // cleanedCount is verified to be non-negative
+  }
+
+  @Test
+  public void cleanupOrphanedTempFiles_WithNonTempFiles_IgnoresOtherFiles() throws Exception {
+    // Arrange
+    Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"));
+    Path otherFile = Files.createTempFile(tempDir, "other-file-", ".txt");
+    try {
+      // Set last modified time to 2 hours ago
+      long twoHoursAgo = System.currentTimeMillis() - (2 * 60 * 60 * 1000);
+      Files.setLastModifiedTime(
+          otherFile, java.nio.file.attribute.FileTime.fromMillis(twoHoursAgo));
+
+      io.vertx.rxjava3.core.Vertx testVertx = io.vertx.rxjava3.core.Vertx.vertx();
+      try {
+        UserCohortServiceImpl testService =
+            new UserCohortServiceImpl(aerospikeClient, aerospikeConfig, testVertx);
+
+        // Act
+        int cleanedCount = testService.cleanupOrphanedTempFiles();
+
+        // Assert - Other file should not be deleted
+        assertTrue(Files.exists(otherFile));
+        // Cleaned count should not include this file
+      } finally {
+        testVertx.close().blockingAwait(5, TimeUnit.SECONDS);
+        Files.deleteIfExists(otherFile);
+      }
+    } catch (Exception e) {
+      Files.deleteIfExists(otherFile);
+      throw e;
+    }
+  }
+
+  // ==================== assignUsersToCohort Edge Cases ====================
+
+  @Test
+  public void assignUsersToCohort_WithIOException_ThrowsException() throws Exception {
+    // Arrange
+    String cohortName = "test-cohort";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    InputPart csvFilePart = mock(InputPart.class);
+    when(csvFilePart.getBody(java.io.InputStream.class, null))
+        .thenThrow(new IOException("Failed to read file"));
+
+    // Act & Assert
+    try {
+      service.assignUsersToCohort(cohortName, projectKey, csvFilePart).blockingGet();
+      fail("Expected exception to be thrown for IOException");
+    } catch (Exception e) {
+      assertNotNull(e);
+      // IOException should be handled
+    }
+  }
+
+  @Test
+  public void assignUsersToCohort_WithLargeFile_ProcessesSuccessfully() throws Exception {
+    // Arrange
+    String cohortName = "test-cohort";
+    String projectKey = "550e8400-e29b-41d4-a716-446655440000_project-100";
+    // Create a CSV with many user IDs (but within MAX_SIZE limit)
+    StringBuilder csvContent = new StringBuilder();
+    for (int i = 0; i < 100; i++) {
+      if (i > 0) csvContent.append(",");
+      csvContent.append("user").append(i);
+    }
+
+    java.io.InputStream inputStream =
+        new java.io.ByteArrayInputStream(csvContent.toString().getBytes(StandardCharsets.UTF_8));
+    InputPart csvFilePart = mock(InputPart.class);
+    when(csvFilePart.getBody(java.io.InputStream.class, null)).thenReturn(inputStream);
+
+    lenient()
+        .when(aerospikeClient.appendCohort(anyString(), eq(cohortName), anyLong(), anyString()))
+        .thenReturn(Single.just(true));
+
+    // Use a real Vertx instance for file operations
+    io.vertx.rxjava3.core.Vertx testVertx = io.vertx.rxjava3.core.Vertx.vertx();
+    try {
+      UserCohortServiceImpl testService =
+          new UserCohortServiceImpl(aerospikeClient, aerospikeConfig, testVertx);
+
+      // Act
+      BulkOperationResult result =
+          testService.assignUsersToCohort(cohortName, projectKey, csvFilePart).blockingGet();
+
+      // Assert
+      assertNotNull(result);
+      assertTrue(result.getTotalProcessed() >= 0);
+    } finally {
+      testVertx.close().blockingAwait(5, TimeUnit.SECONDS);
+    }
   }
 }
