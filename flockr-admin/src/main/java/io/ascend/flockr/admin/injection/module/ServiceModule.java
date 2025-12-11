@@ -2,6 +2,7 @@ package io.ascend.flockr.admin.injection.module;
 
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import io.ascend.flockr.admin.client.flink.FlinkClient;
@@ -22,6 +23,10 @@ import io.ascend.flockr.admin.repository.*;
 import io.ascend.flockr.admin.repository.impl.*;
 import io.ascend.flockr.admin.service.*;
 import io.ascend.flockr.admin.service.impl.*;
+import io.ascend.flockr.admin.service.schedulers.AbstractHandler;
+import io.ascend.flockr.admin.service.schedulers.ExecuteRuleHandler;
+import io.ascend.flockr.admin.service.schedulers.ExecutionSync;
+import io.ascend.flockr.admin.service.schedulers.impl.PostgresExecutionSync;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.CircuitBreakerFactory;
 import io.ascend.flockr.admin.util.ConfigParser;
@@ -90,6 +95,8 @@ public class ServiceModule extends DefaultModule {
         JsonSchemaValidationUtil.class,
         AsyncJakartaValidationUtil.class,
         CircuitBreakerFactory.class); // ← Add static injection
+
+    bindSchedulers();
   }
 
   /**
@@ -170,7 +177,6 @@ public class ServiceModule extends DefaultModule {
             JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4))
                 .build());
 
-    // Bind Jakarta Validator for static injection into AsyncValidationUtil
     bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
   }
 
@@ -184,5 +190,20 @@ public class ServiceModule extends DefaultModule {
     bind(DataConnectorService.class).to(DataConnectorServiceImpl.class);
     bind(AudienceService.class).to(AudienceServiceImpl.class);
     bind(AudienceImportService.class).to(AudienceImportServiceImpl.class);
+  }
+
+  /**
+   * Binds scheduler-related components.
+   *
+   * <p>Binds the distributed execution synchronization implementation and all scheduled handlers.
+   */
+  private void bindSchedulers() {
+    bind(PostgresExecutionSync.class).in(Singleton.class);
+    bind(ExecutionSync.class).to(PostgresExecutionSync.class);
+
+    // Bind handlers using Multibinder for Set injection
+    Multibinder<AbstractHandler> handlerBinder =
+        Multibinder.newSetBinder(binder(), AbstractHandler.class);
+    handlerBinder.addBinding().to(ExecuteRuleHandler.class).in(Singleton.class);
   }
 }

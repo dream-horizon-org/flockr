@@ -118,3 +118,14 @@ CREATE INDEX idx_audience_owners_x_project_id ON audience_owners(x_project_id);
 CREATE INDEX idx_audience_owners_email ON audience_owners(owner_email);
 CREATE INDEX idx_audience_owners_status ON audience_owners(status) WHERE status = 'ACTIVE';
 CREATE INDEX idx_audience_owners_lookup ON audience_owners(audience_id, x_project_id, status);
+
+-- Distributed lease table for coordinating scheduled tasks across instances
+CREATE TABLE IF NOT EXISTS distributed_lease (
+    lease_key VARCHAR(255) PRIMARY KEY,
+    holder_id VARCHAR(255) NOT NULL,
+    acquired_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    CONSTRAINT valid_expiry CHECK (expires_at > acquired_at)
+);
+
+CREATE INDEX idx_lease_expires ON distributed_lease(expires_at);
