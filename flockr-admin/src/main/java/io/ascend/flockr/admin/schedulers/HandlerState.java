@@ -1,7 +1,7 @@
-package io.ascend.flockr.admin.service.schedulers;
+package io.ascend.flockr.admin.schedulers;
 
 public enum HandlerState {
   WAITING_TRIGGER,
   ACQUIRING_LOCK,
-  RUNNING,
+  RUNNING
 }

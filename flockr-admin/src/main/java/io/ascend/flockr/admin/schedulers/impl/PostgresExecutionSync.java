@@ -1,8 +1,8 @@
-package io.ascend.flockr.admin.service.schedulers.impl;
+package io.ascend.flockr.admin.schedulers.impl;
 
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
-import io.ascend.flockr.admin.service.schedulers.ExecutionSync;
+import io.ascend.flockr.admin.schedulers.ExecutionSync;
 import io.ascend.flockr.admin.util.CommonUtil;
 import io.reactivex.rxjava3.core.Maybe;
 import io.vertx.rxjava3.sqlclient.Tuple;
@@ -24,14 +24,18 @@ public class PostgresExecutionSync implements ExecutionSync {
 
   private static final String INSTANCE_ID = CommonUtil.getHostAddress();
 
+  /**
+   * SQL to atomically acquire or renew a lease. Uses make_interval() for proper interval handling
+   * with prepared statement parameters.
+   */
   private static final String ACQUIRE_LEASE_SQL =
       """
       INSERT INTO distributed_lease (lease_key, holder_id, acquired_at, expires_at)
-      VALUES ($1, $2, NOW(), NOW() + $3::interval)
+      VALUES ($1, $2, NOW(), NOW() + make_interval(secs => $3))
       ON CONFLICT (lease_key) DO UPDATE
       SET holder_id = EXCLUDED.holder_id,
           acquired_at = NOW(),
-          expires_at = NOW() + $3::interval
+          expires_at = NOW() + make_interval(secs => $3)
       WHERE distributed_lease.expires_at < NOW()
       RETURNING expires_at
       """;
@@ -40,21 +44,26 @@ public class PostgresExecutionSync implements ExecutionSync {
 
   @Override
   public Maybe<Boolean> acquire(String key, Duration ttl) {
-    String interval = ttl.toSeconds() + " seconds";
+    long seconds = ttl.toSeconds();
 
     return postgresWriterClient
         .getConnection()
         .flatMapMaybe(
             conn ->
                 conn.preparedQuery(ACQUIRE_LEASE_SQL)
-                    .rxExecute(Tuple.of(key, INSTANCE_ID, interval))
+                    .rxExecute(Tuple.of(key, INSTANCE_ID, seconds))
                     .flatMapMaybe(
                         rows -> {
                           if (rows.rowCount() == 0) {
-                            log.debug("Lease {} held by another instance", key);
+                            log.debug("Lease {} not available (TTL not expired)", key);
                             return Maybe.empty();
                           }
-                          log.debug("Acquired lease {}", key);
+                          var expiresAt = rows.iterator().next().getLocalDateTime("expires_at");
+                          log.debug(
+                              "Acquired lease {} with TTL={}s, expires_at={}",
+                              key,
+                              seconds,
+                              expiresAt);
                           return Maybe.just(true);
                         })
                     .doFinally(conn::close));

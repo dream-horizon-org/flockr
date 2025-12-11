@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.service.schedulers;
+package io.ascend.flockr.admin.schedulers;
 
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.config.ApplicationConfig;
@@ -6,7 +6,6 @@ import io.ascend.flockr.admin.repository.RuleRepository;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.core.Vertx;
 import java.time.Duration;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -16,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
  * @since 1.0
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = @Inject)
 public non-sealed class ExecuteRuleHandler extends AbstractHandler {
   private final RuleRepository ruleRepository;
 
@@ -24,12 +22,12 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
   public ExecuteRuleHandler(
       Vertx vertx,
       RuleRepository ruleRepository,
-      ApplicationConfig.VertxSchedulerConfig config,
+      ApplicationConfig config,
       ExecutionSync executionSync) {
 
     this.vertx = vertx;
     this.ruleRepository = ruleRepository;
-    this.config = config;
+    this.config = config.getExecuteRuleHandler();
     this.executionSync = executionSync;
     this.handlerState = HandlerState.WAITING_TRIGGER;
   }
@@ -40,7 +38,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
       return;
     }
 
-    Duration ttl = Duration.ofMillis(config.getMinExecutionDelay());
+    Duration ttl = Duration.ofSeconds(config.getMinExecutionDelay());
 
     executionSync
         .acquire(config.getSchedulerKey(), ttl)

@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.service.schedulers;
+package io.ascend.flockr.admin.schedulers;
 
 import io.reactivex.rxjava3.core.Maybe;
 import java.time.Duration;

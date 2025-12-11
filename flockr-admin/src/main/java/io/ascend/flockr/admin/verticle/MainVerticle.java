@@ -76,7 +76,7 @@ public class MainVerticle extends AbstractVerticle {
                 .setWorkerPoolSize(40)),
         new VerticleDeployment(
             () -> GuiceInjector.getInstance(SchedulerVerticle.class),
-            new DeploymentOptions().setInstances(1).setWorkerPoolSize(40)));
+            new DeploymentOptions().setInstances(2).setWorkerPoolSize(40)));
   }
 
   /**

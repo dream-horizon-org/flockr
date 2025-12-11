@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.service.schedulers;
+package io.ascend.flockr.admin.schedulers;
 
 import io.ascend.flockr.admin.config.ApplicationConfig;
 import io.vertx.core.Handler;
