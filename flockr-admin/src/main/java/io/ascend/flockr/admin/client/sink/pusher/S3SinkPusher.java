@@ -1,6 +1,5 @@
-package io.ascend.flockr.admin.client.sink.impl;
+package io.ascend.flockr.admin.client.sink.pusher;
 
-import io.ascend.flockr.admin.client.sink.SinkPusher;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
@@ -14,15 +13,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
@@ -35,16 +28,13 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 @Slf4j
 public class S3SinkPusher implements SinkPusher {
 
-  private static final String SINK_TYPE = "S3_FOLDER";
   private static final DateTimeFormatter FILE_DATE_FORMAT =
       DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS").withZone(ZoneId.of("UTC"));
 
-  // Cache S3 clients by region+credentials hash
-  private final Map<String, S3Client> clientCache = new ConcurrentHashMap<>();
+  private final S3Client s3Client;
 
-  @Override
-  public String getSinkType() {
-    return SINK_TYPE;
+  public S3SinkPusher(S3Client s3Client) {
+    this.s3Client = s3Client;
   }
 
   @Override
@@ -54,7 +44,6 @@ public class S3SinkPusher implements SinkPusher {
         () -> {
           S3FolderSinkConfig config =
               ConfigParser.parseSinkConfig(sink.getConfig(), S3FolderSinkConfig.class);
-          S3Client s3Client = getOrCreateClient(config);
 
           String bucket = config.getBucket();
           String folderPath = normalizeFolderPath(config.getFolderPath());
@@ -94,48 +83,6 @@ public class S3SinkPusher implements SinkPusher {
               objectKey,
               audienceId);
         });
-  }
-
-  private S3Client getOrCreateClient(S3FolderSinkConfig config) {
-    String cacheKey = buildCacheKey(config);
-    return clientCache.computeIfAbsent(
-        cacheKey,
-        key -> {
-          var builder = S3Client.builder();
-
-          // Set region if provided
-          if (config.getRegion() != null && !config.getRegion().isBlank()) {
-            builder.region(Region.of(config.getRegion()));
-          }
-
-          // Set credentials if provided, otherwise use default credential chain
-          if (config.getAccessKey() != null
-              && !config.getAccessKey().isBlank()
-              && config.getSecretKey() != null
-              && !config.getSecretKey().isBlank()) {
-            builder.credentialsProvider(
-                StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(config.getAccessKey(), config.getSecretKey())));
-            log.info(
-                "Creating S3 client with explicit credentials for region: {}", config.getRegion());
-          } else {
-            builder.credentialsProvider(DefaultCredentialsProvider.create());
-            log.info(
-                "Creating S3 client with default credentials for region: {}", config.getRegion());
-          }
-
-          return builder.build();
-        });
-  }
-
-  private String buildCacheKey(S3FolderSinkConfig config) {
-    // Cache key based on region and whether explicit credentials are used
-    String region = config.getRegion() != null ? config.getRegion() : "default";
-    String credType =
-        (config.getAccessKey() != null && !config.getAccessKey().isBlank())
-            ? "explicit"
-            : "default";
-    return region + ":" + credType;
   }
 
   private String normalizeFolderPath(String folderPath) {
@@ -207,13 +154,13 @@ public class S3SinkPusher implements SinkPusher {
     };
   }
 
-  /** Closes all cached S3 clients. Call this on application shutdown. */
+  @Override
   public void close() {
-    clientCache.forEach(
-        (key, client) -> {
-          log.info("Closing S3 client for: {}", key);
-          client.close();
-        });
-    clientCache.clear();
+    try {
+      log.info("Closing S3 client");
+      s3Client.close();
+    } catch (Exception e) {
+      log.error("Error closing S3 client", e);
+    }
   }
 }

@@ -1,7 +1,6 @@
-package io.ascend.flockr.admin.client.sink.impl;
+package io.ascend.flockr.admin.client.sink.pusher;
 
 import com.google.inject.Inject;
-import io.ascend.flockr.admin.client.sink.SinkPusher;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
@@ -33,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class WebhookSinkPusher implements SinkPusher {
 
-  private static final String SINK_TYPE = "WEBHOOK";
   private static final String PROJECT_KEY_HEADER = "x-project-key";
   private static final DateTimeFormatter EXPIRE_DATE_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC"));
@@ -43,11 +41,6 @@ public class WebhookSinkPusher implements SinkPusher {
   @Inject
   public WebhookSinkPusher(WebClient webClient) {
     this.webClient = webClient;
-  }
-
-  @Override
-  public String getSinkType() {
-    return SINK_TYPE;
   }
 
   @Override
@@ -229,5 +222,11 @@ public class WebhookSinkPusher implements SinkPusher {
     }
 
     return payload;
+  }
+
+  @Override
+  public void close() {
+    // No-op: WebClient lifecycle is managed separately
+    log.debug("WebhookSinkPusher close called (no-op)");
   }
 }
