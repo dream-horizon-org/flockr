@@ -1,6 +1,7 @@
 package io.ascend.flockr.admin.domain.rule;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -56,6 +57,9 @@ public class RuleMeta<T extends SourceInfo> {
 
   /** The rule configuration containing execution details specific to the rule type. */
   private RuleConfiguration<T> configuration;
+
+  /** List of sink IDs where the rule output should be sent. */
+  private List<Long> sinkIds;
 
   /** The username of the user who created this rule. */
   private String createdBy;

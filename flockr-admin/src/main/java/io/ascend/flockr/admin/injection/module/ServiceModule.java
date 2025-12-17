@@ -16,6 +16,8 @@ import io.ascend.flockr.admin.client.sink.SinkPusherRegistry;
 import io.ascend.flockr.admin.client.sink.impl.KafkaSinkPusher;
 import io.ascend.flockr.admin.client.sink.impl.S3SinkPusher;
 import io.ascend.flockr.admin.client.sink.impl.WebhookSinkPusher;
+import io.ascend.flockr.admin.client.spark.SparkClient;
+import io.ascend.flockr.admin.client.spark.impl.SparkClientImpl;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.client.webclient.impl.WebClientImpl;
 import io.ascend.flockr.admin.config.*;
@@ -27,6 +29,9 @@ import io.ascend.flockr.admin.schedulers.ExecutionSync;
 import io.ascend.flockr.admin.schedulers.impl.PostgresExecutionSync;
 import io.ascend.flockr.admin.service.*;
 import io.ascend.flockr.admin.service.impl.*;
+import io.ascend.flockr.admin.service.job.BatchJobService;
+import io.ascend.flockr.admin.service.job.JobServiceRegistry;
+import io.ascend.flockr.admin.service.job.StreamJobService;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.CircuitBreakerFactory;
 import io.ascend.flockr.admin.util.ConfigParser;
@@ -112,6 +117,7 @@ public class ServiceModule extends DefaultModule {
     bind(HttpServerConfig.class).toProvider(HttpServerConfig.provider()).asEagerSingleton();
     bind(PostgresConfig.class).toProvider(PostgresConfig.provider()).asEagerSingleton();
     bind(WebClientConfig.class).toProvider(WebClientConfig.provider()).asEagerSingleton();
+    bind(SparkConfig.class).toProvider(SparkConfig.provider()).asEagerSingleton();
   }
 
   /**
@@ -135,6 +141,9 @@ public class ServiceModule extends DefaultModule {
     bind(KafkaSinkPusher.class).in(Singleton.class);
     bind(S3SinkPusher.class).in(Singleton.class);
     bind(WebhookSinkPusher.class).in(Singleton.class);
+    //    spark client bindings
+    bind(SparkClientImpl.class).in(Singleton.class);
+    bind(SparkClient.class).to(SparkClientImpl.class);
   }
 
   /**
@@ -164,6 +173,7 @@ public class ServiceModule extends DefaultModule {
     bind(AudienceRepository.class).to(AudienceRepositoryImpl.class);
     bind(AudienceOwnerRepository.class).to(AudienceOwnerRepositoryImpl.class);
     bind(RuleRepository.class).to(RuleRepositoryImpl.class);
+    bind(RuleExecutionRepository.class).to(RuleExecutionRepositoryImpl.class);
   }
 
   /**
@@ -190,6 +200,10 @@ public class ServiceModule extends DefaultModule {
     bind(DataConnectorService.class).to(DataConnectorServiceImpl.class);
     bind(AudienceService.class).to(AudienceServiceImpl.class);
     bind(AudienceImportService.class).to(AudienceImportServiceImpl.class);
+    // Job execution services (Strategy pattern)
+    bind(BatchJobService.class).in(Singleton.class);
+    bind(StreamJobService.class).in(Singleton.class);
+    bind(JobServiceRegistry.class).in(Singleton.class);
   }
 
   /**

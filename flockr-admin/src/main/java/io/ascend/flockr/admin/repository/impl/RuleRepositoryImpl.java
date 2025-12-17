@@ -4,9 +4,11 @@ import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.domain.rule.RuleMeta;
+import io.ascend.flockr.admin.domain.rule.RuleStatus;
 import io.ascend.flockr.admin.domain.rule.SourceInfo;
 import io.ascend.flockr.admin.repository.RuleRepository;
 import io.ascend.flockr.admin.util.RuleHelpers;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.sqlclient.Tuple;
@@ -57,6 +59,24 @@ public class RuleRepositoryImpl implements RuleRepository {
           + "EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at "
           + "FROM rules WHERE audience_id = $1 AND x_project_id = $2 ORDER BY created_at DESC";
 
+  private static final String SQL_FIND_SCHEDULED_READY =
+      "SELECT id, audience_id, x_project_id, name, description, "
+          + "EXTRACT(EPOCH FROM start_time)::BIGINT as start_time, "
+          + "EXTRACT(EPOCH FROM end_time)::BIGINT as end_time, "
+          + "rule_action, rule_type, status, configuration, "
+          + "created_by, EXTRACT(EPOCH FROM created_at)::BIGINT as created_at, "
+          + "EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at "
+          + "FROM rules "
+          + "WHERE status = 'SCHEDULED' "
+          + "AND start_time <= NOW() "
+          + "AND end_time > NOW()";
+
+  private static final String SQL_UPDATE_STATUS =
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2";
+
+  private static final String SQL_UPDATE_STATUS_IF_CURRENT =
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
+
   @Override
   public Single<Boolean> createRules(List<RuleMeta<SourceInfo>> ruleMetas) {
     List<Tuple> batchParams = new ArrayList<>(ruleMetas.size());
@@ -96,5 +116,36 @@ public class RuleRepositoryImpl implements RuleRepository {
       String xProjectId, Long audienceId) {
     return postgresReaderClient.fetchAll(
         SQL_GET_RULES_BY_AUDIENCE, Tuple.of(audienceId, xProjectId), RuleHelpers::mapRuleRow);
+  }
+
+  @Override
+  public Single<List<RuleMeta<SourceInfo>>> findScheduledRulesReadyForExecution() {
+    return postgresReaderClient.fetchAll(
+        SQL_FIND_SCHEDULED_READY, Tuple.tuple(), RuleHelpers::mapRuleRow);
+  }
+
+  @Override
+  public Completable updateStatus(Long ruleId, RuleStatus status) {
+    return postgresWriterClient
+        .getConnection()
+        .flatMapCompletable(
+            conn ->
+                conn.preparedQuery(SQL_UPDATE_STATUS)
+                    .rxExecute(Tuple.of(status.name(), ruleId))
+                    .ignoreElement()
+                    .doFinally(conn::close));
+  }
+
+  @Override
+  public Single<Boolean> updateStatusIfCurrent(
+      Long ruleId, RuleStatus currentStatus, RuleStatus newStatus) {
+    return postgresWriterClient
+        .getConnection()
+        .flatMap(
+            conn ->
+                conn.preparedQuery(SQL_UPDATE_STATUS_IF_CURRENT)
+                    .rxExecute(Tuple.of(newStatus.name(), ruleId, currentStatus.name()))
+                    .map(rows -> rows.rowCount() > 0)
+                    .doFinally(conn::close));
   }
 }
