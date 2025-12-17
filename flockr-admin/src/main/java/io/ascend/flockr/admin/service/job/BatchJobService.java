@@ -16,13 +16,14 @@ import io.ascend.flockr.admin.domain.rule.RuleExecution;
 import io.ascend.flockr.admin.domain.rule.RuleMeta;
 import io.ascend.flockr.admin.domain.rule.RuleStatus;
 import io.ascend.flockr.admin.domain.rule.SourceInfo;
+import io.ascend.flockr.admin.domain.rule.executionmetadata.BatchExecutionMetadata;
+import io.ascend.flockr.admin.domain.rule.executionmetadata.ExecutionMetadataCodec;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.ascend.flockr.admin.repository.RuleExecutionRepository;
 import io.ascend.flockr.admin.repository.RuleRepository;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import io.vertx.core.json.JsonObject;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -115,22 +116,20 @@ public class BatchJobService implements AsyncJobService {
   private RuleExecution buildExecution(RuleMeta<SourceInfo> rule, String triggeredBy) {
     List<Long> sinkIds = rule.getSinkIds() != null ? rule.getSinkIds() : List.of();
 
-    JsonObject metadata =
-        new JsonObject()
-            .put("ruleId", rule.getRuleId())
-            .put("audienceId", rule.getAudienceId())
-            .put("ruleName", rule.getName())
-            .put("ruleType", rule.getRuleType().name())
-            .put("ruleAction", rule.getRuleAction().name())
-            .put("triggeredBy", triggeredBy)
-            .put("triggeredAt", Instant.now().toString());
+    // Create typed metadata with submit config
+    BatchExecutionMetadata metadata =
+        ExecutionMetadataCodec.createBatchMetadata(
+            sparkConfig.getDriverMemory(),
+            sparkConfig.getExecutorMemory(),
+            sparkConfig.getExecutorCores(),
+            sparkConfig.getExecutorInstances());
 
     return RuleExecution.builder()
         .ruleId(rule.getRuleId())
         .sinkIds(sinkIds)
         .executionType(JobType.BATCH)
         .status(JobStatus.SUBMITTED)
-        .metadata(metadata)
+        .metadata(ExecutionMetadataCodec.toJson(metadata))
         .triggeredBy(triggeredBy)
         .build();
   }

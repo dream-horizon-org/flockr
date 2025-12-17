@@ -3,7 +3,7 @@ package io.ascend.flockr.admin.service.job;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.ascend.flockr.admin.domain.rule.RuleType;
-import java.util.Map;
+import java.util.EnumMap;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -23,16 +23,14 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class JobServiceRegistry {
 
-  private final Map<RuleType, AsyncJobService> services;
+  private final EnumMap<RuleType, AsyncJobService> services;
 
   @Inject
   public JobServiceRegistry(BatchJobService batchJobService, StreamJobService streamJobService) {
-    this.services =
-        Map.of(
-            RuleType.BATCH, batchJobService,
-            RuleType.STREAM, streamJobService);
-    log.info(
-        "JobServiceRegistry initialized with {} services: {}", services.size(), services.keySet());
+    this.services = new EnumMap<>(RuleType.class);
+    services.put(RuleType.BATCH, batchJobService);
+    services.put(RuleType.STREAM, streamJobService);
+    log.info("JobServiceRegistry initialized with {} services", services.size());
   }
 
   /**

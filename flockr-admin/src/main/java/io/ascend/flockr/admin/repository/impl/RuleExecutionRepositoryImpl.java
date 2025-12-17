@@ -34,7 +34,7 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
   private final PostgresReaderClient postgresReaderClient;
 
   private static final String SQL_CREATE =
-      "INSERT INTO rule_jobs (rule_id, sink_ids, job_type, job_status, job_metadata, triggered_by, retries) "
+      "INSERT INTO rule_execution (rule_id, sink_ids, job_type, job_status, job_metadata, triggered_by, retries) "
           + "VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING job_id";
 
   private static final String SQL_UPDATE_STATUS_AND_REF =
