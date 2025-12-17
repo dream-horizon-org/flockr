@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.client.spark.dto.request;
+package io.ascend.flockr.admin.client.spark.io.request;
 
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;

@@ -1,8 +1,8 @@
-package io.ascend.flockr.admin.schedulers.impl;
+package io.ascend.flockr.admin.repository.impl;
 
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
-import io.ascend.flockr.admin.schedulers.ExecutionSync;
+import io.ascend.flockr.admin.repository.ExecutionSync;
 import io.ascend.flockr.admin.util.CommonUtil;
 import io.reactivex.rxjava3.core.Maybe;
 import io.vertx.rxjava3.sqlclient.Tuple;

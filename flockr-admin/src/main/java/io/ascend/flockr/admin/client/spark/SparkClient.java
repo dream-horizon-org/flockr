@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.client.spark;
 
-import io.ascend.flockr.admin.client.spark.dto.response.SparkJobStatusResponse;
-import io.ascend.flockr.admin.client.spark.dto.response.SparkJobSubmissionResponse;
+import io.ascend.flockr.admin.client.spark.io.response.SparkJobStatusResponse;
+import io.ascend.flockr.admin.client.spark.io.response.SparkJobSubmissionResponse;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
@@ -26,7 +26,7 @@ public interface SparkClient {
    *   <li>Query string (SQL query for batch processing)
    *   <li>DataSourceDetails (enriched data source configuration)
    *   <li>List of DestinationDetails (sink configurations)
-   *   <li>Cohort name (for cohort-based filtering)
+   *   <li>audience name (rule corresponding to the audience)
    * </ul>
    *
    * <p><strong>Response:</strong> Returns SparkJobSubmissionResponse containing submissionId. This
@@ -36,7 +36,7 @@ public interface SparkClient {
    * @param requestBody JsonObject containing the job request payload
    * @return Single containing SparkJobSubmissionResponse with submissionId
    */
-  Single<SparkJobSubmissionResponse> submitHistoricBatchJob(JsonObject requestBody);
+  Single<SparkJobSubmissionResponse> submit(JsonObject requestBody);
 
   /**
    * Get the status of a Spark job.

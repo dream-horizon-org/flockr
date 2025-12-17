@@ -12,8 +12,12 @@ public enum RuleStatus {
   /** Rule has been created and is scheduled for execution. */
   SCHEDULED,
 
+  SUBMITTING,
+
   /** Rule is currently being executed. */
   RUNNING,
+
+  RETRYING,
 
   /** Rule execution failed due to an error. */
   FAILED,

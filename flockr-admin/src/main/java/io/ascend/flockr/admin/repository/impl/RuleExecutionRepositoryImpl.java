@@ -6,10 +6,12 @@ import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.domain.rule.JobStatus;
 import io.ascend.flockr.admin.domain.rule.JobType;
 import io.ascend.flockr.admin.domain.rule.RuleExecution;
+import io.ascend.flockr.admin.domain.rule.RuleStatus;
 import io.ascend.flockr.admin.repository.RuleExecutionRepository;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Row;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.time.Instant;
@@ -58,6 +60,17 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
       "SELECT job_id, rule_id, sink_ids, job_type, job_status, job_metadata, job_ref_id, "
           + "retries, error_message, triggered_by, created_at, updated_at, started_at, completed_at "
           + "FROM rule_jobs WHERE rule_id = $1 ORDER BY created_at DESC LIMIT 1";
+
+  private static final String SQL_UPDATE_RULE_STATUS_IF_CURRENT =
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
+
+  private static final String SQL_UPDATE_EXECUTION_DETAILS =
+      "UPDATE rule_jobs SET job_name = $1, job_ref_id = $2, job_status = $3, "
+          + "job_metadata = $4, started_at = NOW(), updated_at = NOW() "
+          + "WHERE job_id = $5";
+
+  private static final String SQL_UPDATE_RULE_STATUS =
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2";
 
   @Override
   public Single<Long> create(RuleExecution ruleExecution) {
@@ -151,6 +164,7 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
     List<Long> sinkIds = sinkIdsArray != null ? Arrays.asList(sinkIdsArray) : List.of();
 
     return RuleExecution.builder()
+        .jobName(row.getString("job_name"))
         .executionId(row.getLong("job_id"))
         .ruleId(row.getLong("rule_id"))
         .sinkIds(sinkIds)
@@ -163,12 +177,148 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
         .triggeredBy(row.getString("triggered_by"))
         .createdAt(toInstant(row.getLocalDateTime("created_at")))
         .updatedAt(toInstant(row.getLocalDateTime("updated_at")))
-        .startedAt(toInstant(row.getLocalDateTime("started_at")))
-        .completedAt(toInstant(row.getLocalDateTime("completed_at")))
         .build();
   }
 
   private Instant toInstant(LocalDateTime ldt) {
     return ldt != null ? ldt.toInstant(ZoneOffset.UTC) : null;
+  }
+
+  @Override
+  public Single<Long> createAndUpdateRuleStatus(
+      RuleExecution ruleExecution, Long ruleId, RuleStatus newStatus, RuleStatus currentStatus) {
+    Long[] sinkIdsArray =
+        ruleExecution.getSinkIds() != null
+            ? ruleExecution.getSinkIds().toArray(new Long[0])
+            : new Long[0];
+
+    Tuple createParams =
+        Tuple.tuple()
+            .addLong(ruleExecution.getRuleId())
+            .addArrayOfLong(sinkIdsArray)
+            .addString(ruleExecution.getExecutionType().name())
+            .addString(ruleExecution.getStatus().name())
+            .addJsonObject(ruleExecution.getMetadata())
+            .addString(ruleExecution.getTriggeredBy())
+            .addInteger(ruleExecution.getRetries());
+
+    return postgresWriterClient
+        .executeWithTransaction(
+            conn ->
+                conn.preparedQuery(SQL_CREATE)
+                    .rxExecute(createParams)
+                    .map(rows -> rows.iterator().next().getLong("job_id"))
+                    .flatMap(
+                        executionId ->
+                            conn.preparedQuery(SQL_UPDATE_RULE_STATUS_IF_CURRENT)
+                                .rxExecute(Tuple.of(newStatus, ruleId, currentStatus))
+                                .map(updateResult -> executionId))
+                    .toMaybe())
+        .switchIfEmpty(
+            Maybe.error(
+                new IllegalStateException(
+                    "Failed to create execution and update rule status in transaction")))
+        .toSingle();
+  }
+
+  @Override
+  public Single<Long> createPendingExecutionAndUpdateRuleStatus(
+      RuleExecution ruleExecution, Long ruleId, RuleStatus currentStatus, RuleStatus newStatus) {
+
+    Long[] sinkIdsArray =
+        ruleExecution.getSinkIds() != null
+            ? ruleExecution.getSinkIds().toArray(new Long[0])
+            : new Long[0];
+
+    Tuple createParams =
+        Tuple.tuple()
+            .addLong(ruleExecution.getRuleId())
+            .addArrayOfLong(sinkIdsArray)
+            .addString(ruleExecution.getExecutionType().name())
+            .addString(ruleExecution.getStatus().name())
+            .addJsonObject(ruleExecution.getMetadata())
+            .addString(ruleExecution.getTriggeredBy())
+            .addInteger(ruleExecution.getRetries());
+
+    return postgresWriterClient
+        .executeWithTransaction(
+            conn ->
+                // First: Create execution log
+                conn.preparedQuery(SQL_CREATE)
+                    .rxExecute(createParams)
+                    .map(rows -> rows.iterator().next().getLong("job_id"))
+                    .flatMap(
+                        executionId ->
+                            // Second: Update rule status (with optimistic lock)
+                            conn.preparedQuery(SQL_UPDATE_RULE_STATUS_IF_CURRENT)
+                                .rxExecute(Tuple.of(newStatus.name(), ruleId, currentStatus.name()))
+                                .map(
+                                    updateResult -> {
+                                      if (updateResult.rowCount() == 0) {
+                                        throw new IllegalStateException(
+                                            "Rule "
+                                                + ruleId
+                                                + " status was not "
+                                                + currentStatus
+                                                + ", possible concurrent modification");
+                                      }
+                                      return executionId;
+                                    }))
+                    .toMaybe())
+        .switchIfEmpty(
+            Maybe.error(
+                new IllegalStateException(
+                    "Failed to create execution and update rule status atomically")))
+        .toSingle();
+  }
+
+  @Override
+  public Single<Long> updateExecutionDetailsAndRuleStatus(
+      Long executionId,
+      String jobName,
+      String externalJobId,
+      JobStatus jobStatus,
+      JsonObject metadata,
+      Long ruleId,
+      RuleStatus newRuleStatus) {
+
+    Tuple executionParams =
+        Tuple.tuple()
+            .addString(jobName)
+            .addString(externalJobId)
+            .addString(jobStatus.name())
+            .addJsonObject(metadata)
+            .addLong(executionId);
+
+    Tuple ruleParams = Tuple.tuple().addString(newRuleStatus.name()).addLong(ruleId);
+
+    return postgresWriterClient
+        .executeWithTransaction(
+            conn ->
+                conn.preparedQuery(SQL_UPDATE_EXECUTION_DETAILS)
+                    .rxExecute(executionParams)
+                    .map(
+                        executionResult -> {
+                          if (executionResult.rowCount() == 0) {
+                            log.warn("Execution {} not found for update", executionId);
+                            throw new IllegalStateException(
+                                "Execution " + executionId + " not found");
+                          }
+                          return executionResult;
+                        })
+                    .flatMap(
+                        executionResult ->
+                            conn.preparedQuery(SQL_UPDATE_RULE_STATUS)
+                                .rxExecute(ruleParams)
+                                .map(ruleResult -> executionId))
+                    .toMaybe())
+        .doOnError(
+            e ->
+                log.error(
+                    "Failed to update execution {} and rule {} status in transaction",
+                    executionId,
+                    ruleId,
+                    e))
+        .toSingle();
   }
 }

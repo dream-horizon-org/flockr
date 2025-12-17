@@ -9,6 +9,7 @@ package io.ascend.flockr.admin.domain.rule;
  * @since 1.0
  */
 public enum JobStatus {
+  SUBMITTING,
   /** Job created, pending submission to Spark/Flink. */
   SUBMITTED,
 

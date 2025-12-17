@@ -6,7 +6,7 @@ import com.google.inject.multibindings.Multibinder;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import io.ascend.flockr.admin.client.flink.FlinkClient;
-import io.ascend.flockr.admin.client.flink.impl.FlinkClientImpl;
+import io.ascend.flockr.admin.client.flink.FlinkClientImpl;
 import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.client.postgres.impl.PostgresReaderClientImpl;
@@ -17,21 +17,19 @@ import io.ascend.flockr.admin.client.sink.impl.KafkaSinkPusher;
 import io.ascend.flockr.admin.client.sink.impl.S3SinkPusher;
 import io.ascend.flockr.admin.client.sink.impl.WebhookSinkPusher;
 import io.ascend.flockr.admin.client.spark.SparkClient;
-import io.ascend.flockr.admin.client.spark.impl.SparkClientImpl;
+import io.ascend.flockr.admin.client.spark.SparkClientImpl;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.client.webclient.impl.WebClientImpl;
 import io.ascend.flockr.admin.config.*;
+import io.ascend.flockr.admin.handlers.AbstractHandler;
+import io.ascend.flockr.admin.handlers.ExecuteRuleHandler;
 import io.ascend.flockr.admin.repository.*;
+import io.ascend.flockr.admin.repository.ExecutionSync;
 import io.ascend.flockr.admin.repository.impl.*;
-import io.ascend.flockr.admin.schedulers.AbstractHandler;
-import io.ascend.flockr.admin.schedulers.ExecuteRuleHandler;
-import io.ascend.flockr.admin.schedulers.ExecutionSync;
-import io.ascend.flockr.admin.schedulers.impl.PostgresExecutionSync;
+import io.ascend.flockr.admin.repository.impl.PostgresExecutionSync;
 import io.ascend.flockr.admin.service.*;
+import io.ascend.flockr.admin.service.JobServiceRegistry;
 import io.ascend.flockr.admin.service.impl.*;
-import io.ascend.flockr.admin.service.job.BatchJobService;
-import io.ascend.flockr.admin.service.job.JobServiceRegistry;
-import io.ascend.flockr.admin.service.job.StreamJobService;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.CircuitBreakerFactory;
 import io.ascend.flockr.admin.util.ConfigParser;
@@ -200,9 +198,7 @@ public class ServiceModule extends DefaultModule {
     bind(DataConnectorService.class).to(DataConnectorServiceImpl.class);
     bind(AudienceService.class).to(AudienceServiceImpl.class);
     bind(AudienceImportService.class).to(AudienceImportServiceImpl.class);
-    // Job execution services (Strategy pattern)
-    bind(BatchJobService.class).in(Singleton.class);
-    bind(StreamJobService.class).in(Singleton.class);
+    bind(BatchRuleExecutionService.class).in(Singleton.class);
     bind(JobServiceRegistry.class).in(Singleton.class);
   }
 

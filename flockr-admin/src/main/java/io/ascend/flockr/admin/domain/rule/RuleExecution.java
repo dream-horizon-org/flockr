@@ -24,8 +24,15 @@ import lombok.NoArgsConstructor;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RuleExecution {
+
+  /** Human-readable job name for tracking and monitoring. */
+  private String jobName;
+
   /** Unique identifier for the execution. */
   private Long executionId;
+
+  /** External job reference ID (Spark submissionId or Flink jobId). */
+  private String externalJobId;
 
   /** The rule ID this execution belongs to. */
   private Long ruleId;
@@ -42,10 +49,7 @@ public class RuleExecution {
   /** Additional metadata about the execution (JSON). */
   private JsonObject metadata;
 
-  /** External job reference ID (Spark submissionId or Flink jobId). */
-  private String externalJobId;
-
-  /** Number of retry attempts. */
+  /** Number of retry attempts, defaults to 0. */
   @Builder.Default private Integer retries = 0;
 
   /** Error message if execution failed. */
@@ -59,10 +63,4 @@ public class RuleExecution {
 
   /** When the execution was last updated. */
   private Instant updatedAt;
-
-  /** When the execution started running. */
-  private Instant startedAt;
-
-  /** When the execution completed. */
-  private Instant completedAt;
 }

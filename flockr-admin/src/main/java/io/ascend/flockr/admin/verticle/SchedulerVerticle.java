@@ -1,8 +1,8 @@
 package io.ascend.flockr.admin.verticle;
 
 import com.google.inject.Inject;
-import io.ascend.flockr.admin.schedulers.AbstractHandler;
-import io.ascend.flockr.admin.schedulers.HandlerState;
+import io.ascend.flockr.admin.handlers.AbstractHandler;
+import io.ascend.flockr.admin.handlers.HandlerState;
 import io.reactivex.rxjava3.core.Completable;
 import io.vertx.rxjava3.core.AbstractVerticle;
 import java.util.ArrayList;

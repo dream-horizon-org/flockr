@@ -1,9 +1,6 @@
 package io.ascend.flockr.admin.repository;
 
-import io.ascend.flockr.admin.domain.rule.RuleMeta;
-import io.ascend.flockr.admin.domain.rule.RuleStatus;
-import io.ascend.flockr.admin.domain.rule.SourceInfo;
-import io.reactivex.rxjava3.core.Completable;
+import io.ascend.flockr.admin.domain.rule.*;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
@@ -16,7 +13,8 @@ import java.util.List;
  *   <li>Creating rules in batch
  *   <li>Retrieving individual rules by ID
  *   <li>Retrieving all rules associated with an audience
- *   <li>Finding scheduled rules ready for execution
+ *   <li>Finding scheduled rules ready for execution (domain-specific)
+ *   <li>Finding rules by status (generic queries)
  *   <li>Updating rule status
  * </ul>
  *
@@ -52,7 +50,8 @@ public interface RuleRepository {
   Single<List<RuleMeta<SourceInfo>>> getRulesByAudienceId(String xProjectId, Long audienceId);
 
   /**
-   * Finds all rules that are scheduled and ready for execution. A rule is ready when:
+   * Finds all rules that are scheduled and ready for execution with their associated sink IDs. A
+   * rule is ready when:
    *
    * <ul>
    *   <li>status = SCHEDULED
@@ -60,28 +59,23 @@ public interface RuleRepository {
    *   <li>end_time > current time
    * </ul>
    *
-   * @return Single emitting list of rules ready for execution
+   * <p>This method joins with the audiences table to fetch the sink IDs associated with each rule's
+   * audience. The sink details can then be enriched separately using batch fetch operations.
+   *
+   * <p><b>This is a domain-specific method</b> that encapsulates business logic for finding "ready
+   * to execute" rules.
+   *
+   * @return Single emitting list of rules with populated sink IDs ready for execution
    */
-  Single<List<RuleMeta<SourceInfo>>> findScheduledRulesReadyForExecution();
+  Single<List<RuleMetaVerbose<SourceInfo, SinkInfo>>> findScheduledRulesReadyWithSinkIds();
 
   /**
-   * Updates the status of a rule.
+   * Updates the status of a rule if it matches the current status.
    *
-   * @param ruleId the rule ID
-   * @param status the new status
-   * @return Completable that completes when update is done
+   * @param ruleId the unique rule identifier
+   * @param newStatus the new status to set
+   * @param currentStatus the expected current status
+   * @return a Single emitting true if the status was updated, false otherwise
    */
-  Completable updateStatus(Long ruleId, RuleStatus status);
-
-  /**
-   * Updates rule status with optimistic locking using current status. Only updates if the current
-   * status matches the expected value.
-   *
-   * @param ruleId the rule ID
-   * @param currentStatus expected current status
-   * @param newStatus the new status
-   * @return Single<Boolean> true if updated, false if status didn't match
-   */
-  Single<Boolean> updateStatusIfCurrent(
-      Long ruleId, RuleStatus currentStatus, RuleStatus newStatus);
+  Single<Boolean> updateRuleStatus(Long ruleId, RuleStatus newStatus, RuleStatus currentStatus);
 }

@@ -1,10 +1,8 @@
-package io.ascend.flockr.admin.client.flink.impl;
+package io.ascend.flockr.admin.client.flink;
 
 import com.google.inject.Inject;
-import io.ascend.flockr.admin.client.flink.FlinkClient;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.config.FlinkConfig;
-import io.ascend.flockr.admin.exception.FlinkClientException;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.http.HttpMethod;

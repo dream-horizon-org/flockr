@@ -1,8 +1,9 @@
-package io.ascend.flockr.admin.service.job;
+package io.ascend.flockr.admin.service;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.ascend.flockr.admin.domain.rule.RuleType;
+import io.ascend.flockr.admin.service.impl.BatchRuleExecutionService;
 import java.util.EnumMap;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,13 +24,12 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class JobServiceRegistry {
 
-  private final EnumMap<RuleType, AsyncJobService> services;
+  private final EnumMap<RuleType, RuleExecutionService> services;
 
   @Inject
-  public JobServiceRegistry(BatchJobService batchJobService, StreamJobService streamJobService) {
+  public JobServiceRegistry(BatchRuleExecutionService batchJobService) {
     this.services = new EnumMap<>(RuleType.class);
     services.put(RuleType.BATCH, batchJobService);
-    services.put(RuleType.STREAM, streamJobService);
     log.info("JobServiceRegistry initialized with {} services", services.size());
   }
 
@@ -40,8 +40,8 @@ public class JobServiceRegistry {
    * @return the AsyncJobService implementation for that type
    * @throws IllegalArgumentException if no service is registered for the rule type
    */
-  public AsyncJobService get(RuleType ruleType) {
-    AsyncJobService service = services.get(ruleType);
+  public RuleExecutionService get(RuleType ruleType) {
+    RuleExecutionService service = services.get(ruleType);
     if (service == null) {
       throw new IllegalArgumentException("No job service registered for rule type: " + ruleType);
     }

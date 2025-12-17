@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.exception;
+package io.ascend.flockr.admin.client.flink;
 
 import lombok.Getter;
 

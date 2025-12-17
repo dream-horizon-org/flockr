@@ -152,7 +152,7 @@ public class AudienceServiceImpl implements AudienceService {
                 // Build enriched configuration by transforming SourceInfo to
                 // SourceInfoEnriched
                 RuleConfiguration<SourceInfoEnriched> enrichedConfig =
-                    buildEnrichedConfiguration(
+                    RuleHelpers.buildEnrichedConfiguration(
                         sourceInfoRuleMeta.getConfiguration(),
                         sourceIdToDetails,
                         sourceInfoRuleMeta.getRuleType());
@@ -379,7 +379,7 @@ public class AudienceServiceImpl implements AudienceService {
 
               // Build enriched configuration by transforming SourceInfo to SourceInfoEnriched
               RuleConfiguration<SourceInfoEnriched> enrichedConfig =
-                  buildEnrichedConfiguration(
+                  RuleHelpers.buildEnrichedConfiguration(
                       ruleMeta.getConfiguration(), sourceIdToDetails, ruleMeta.getRuleType());
 
               // Build RuleMeta<SourceInfoEnriched>
@@ -431,189 +431,6 @@ public class AudienceServiceImpl implements AudienceService {
         .doOnSuccess(sources -> log.debug("Successfully fetched {} data sources", sources.size()))
         .doOnError(
             error -> log.error("Failed to fetch data sources in batch: {}", error.getMessage()));
-  }
-
-  /**
-   * Builds an enriched rule configuration by merging {@link DataSourceDetails} into a basic
-   * configuration.
-   *
-   * <p>Depending on the provided {@link RuleType}, this method delegates to either {@link
-   * #buildEnrichedBatchConfiguration(BatchConfiguration, Map)} or {@link
-   * #buildEnrichedStreamConfiguration(StreamConfiguration, Map)}.
-   *
-   * @param basicConfig the basic configuration containing {@link SourceInfo} references
-   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
-   *     enrichment
-   * @param ruleType the type of rule (e.g. {@link RuleType#BATCH} or {@link RuleType#STREAM})
-   * @return a {@link RuleConfiguration} where source information is represented as {@link
-   *     SourceInfoEnriched}
-   */
-  private RuleConfiguration<SourceInfoEnriched> buildEnrichedConfiguration(
-      RuleConfiguration<SourceInfo> basicConfig,
-      Map<Long, DataSourceDetails> sourceDetailsMap,
-      RuleType ruleType) {
-
-    if (ruleType == RuleType.BATCH) {
-      return buildEnrichedBatchConfiguration(
-          (BatchConfiguration<SourceInfo>) basicConfig, sourceDetailsMap);
-    } else {
-      return buildEnrichedStreamConfiguration(
-          (StreamConfiguration<SourceInfo>) basicConfig, sourceDetailsMap);
-    }
-  }
-
-  /**
-   * Builds an enriched batch configuration from a basic configuration.
-   *
-   * <p>The source information in the basic configuration is replaced with {@link
-   * SourceInfoEnriched} using the provided {@link DataSourceDetails}.
-   *
-   * @param basicConfig the original batch configuration containing {@link SourceInfo}
-   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
-   *     enrichment
-   * @return a {@link BatchConfiguration} with enriched source information
-   */
-  private BatchConfiguration<SourceInfoEnriched> buildEnrichedBatchConfiguration(
-      BatchConfiguration<SourceInfo> basicConfig, Map<Long, DataSourceDetails> sourceDetailsMap) {
-
-    SourceInfo basicSource = basicConfig.getSource();
-    SourceInfoEnriched enrichedSource =
-        SourceInfoEnriched.builder()
-            .id(basicSource.getId())
-            .details(sourceDetailsMap.get(basicSource.getId()))
-            .build();
-
-    return BatchConfiguration.<SourceInfoEnriched>builder()
-        .cronExpression(basicConfig.getCronExpression())
-        .query(basicConfig.getQuery())
-        .source(enrichedSource)
-        .build();
-  }
-
-  /**
-   * Builds an enriched stream configuration from a basic configuration.
-   *
-   * <p>Pattern definitions are transformed so that each step and event uses {@link
-   * SourceInfoEnriched} instead of {@link SourceInfo}.
-   *
-   * @param basicConfig the original stream configuration containing {@link SourceInfo}
-   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
-   *     enrichment
-   * @return a {@link StreamConfiguration} with enriched pattern definitions
-   */
-  private StreamConfiguration<SourceInfoEnriched> buildEnrichedStreamConfiguration(
-      StreamConfiguration<SourceInfo> basicConfig, Map<Long, DataSourceDetails> sourceDetailsMap) {
-
-    StreamConfiguration.PatternDefinition<SourceInfo> basicPattern = basicConfig.getPattern();
-    StreamConfiguration.PatternDefinition<SourceInfoEnriched> enrichedPattern =
-        buildEnrichedPatternDefinition(basicPattern, sourceDetailsMap);
-
-    return StreamConfiguration.<SourceInfoEnriched>builder().pattern(enrichedPattern).build();
-  }
-
-  /**
-   * Builds an enriched pattern definition for a stream configuration.
-   *
-   * <p>Each pattern step is transformed to use {@link SourceInfoEnriched} while preserving the
-   * grouping, filters and constraints from the basic definition.
-   *
-   * @param basicPattern the original pattern definition containing {@link SourceInfo}
-   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
-   *     enrichment
-   * @return a pattern definition with enriched pattern steps
-   */
-  private StreamConfiguration.PatternDefinition<SourceInfoEnriched> buildEnrichedPatternDefinition(
-      StreamConfiguration.PatternDefinition<SourceInfo> basicPattern,
-      Map<Long, DataSourceDetails> sourceDetailsMap) {
-
-    List<StreamConfiguration.PatternStep<SourceInfoEnriched>> enrichedSteps = new ArrayList<>();
-
-    if (basicPattern.getPattern() != null) {
-      for (StreamConfiguration.PatternStep<SourceInfo> basicStep : basicPattern.getPattern()) {
-        enrichedSteps.add(buildEnrichedPatternStep(basicStep, sourceDetailsMap));
-      }
-    }
-
-    StreamConfiguration.PatternDefinition<SourceInfoEnriched> enrichedPattern =
-        new StreamConfiguration.PatternDefinition<>();
-    enrichedPattern.setGroupBy(basicPattern.getGroupBy());
-    enrichedPattern.setPattern(enrichedSteps);
-    enrichedPattern.setCohortFilter(basicPattern.getCohortFilter());
-    enrichedPattern.setConstraint(basicPattern.getConstraint());
-
-    return enrichedPattern;
-  }
-
-  /**
-   * Builds an enriched pattern step from a basic pattern step.
-   *
-   * <p>Event definitions inside the step are transformed to use {@link SourceInfoEnriched} while
-   * preserving ordering and contiguity semantics.
-   *
-   * @param basicStep the original pattern step containing {@link SourceInfo}
-   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
-   *     enrichment
-   * @return a pattern step with enriched event data
-   */
-  private StreamConfiguration.PatternStep<SourceInfoEnriched> buildEnrichedPatternStep(
-      StreamConfiguration.PatternStep<SourceInfo> basicStep,
-      Map<Long, DataSourceDetails> sourceDetailsMap) {
-
-    StreamConfiguration.StepData<SourceInfoEnriched> enrichedData = null;
-
-    if (basicStep.getData() != null) {
-      List<StreamConfiguration.EventDefinition<SourceInfoEnriched>> enrichedEvents =
-          new ArrayList<>();
-
-      if (basicStep.getData().getEvent() != null) {
-        for (StreamConfiguration.EventDefinition<SourceInfo> basicEvent :
-            basicStep.getData().getEvent()) {
-          enrichedEvents.add(buildEnrichedEventDefinition(basicEvent, sourceDetailsMap));
-        }
-      }
-
-      enrichedData = new StreamConfiguration.StepData<>();
-      enrichedData.setQuantifier(basicStep.getData().getQuantifier());
-      enrichedData.setEvent(enrichedEvents);
-    }
-
-    StreamConfiguration.PatternStep<SourceInfoEnriched> enrichedStep =
-        new StreamConfiguration.PatternStep<>();
-    enrichedStep.setOrder(basicStep.getOrder());
-    enrichedStep.setData(enrichedData);
-    enrichedStep.setContiguity(basicStep.getContiguity());
-
-    return enrichedStep;
-  }
-
-  /**
-   * Builds an enriched event definition from a basic event definition.
-   *
-   * <p>The source information is enriched using the provided {@link DataSourceDetails}, while the
-   * event name and condition are preserved.
-   *
-   * @param basicEvent the original event definition containing {@link SourceInfo}
-   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
-   *     enrichment
-   * @return an event definition with enriched source information
-   */
-  private StreamConfiguration.EventDefinition<SourceInfoEnriched> buildEnrichedEventDefinition(
-      StreamConfiguration.EventDefinition<SourceInfo> basicEvent,
-      Map<Long, DataSourceDetails> sourceDetailsMap) {
-
-    SourceInfoEnriched enrichedSource =
-        SourceInfoEnriched.builder()
-            .id(basicEvent.getSourceInfo().getId())
-            .details(sourceDetailsMap.get(basicEvent.getSourceInfo().getId()))
-            .build();
-
-    StreamConfiguration.EventDefinition<SourceInfoEnriched> enrichedEvent =
-        new StreamConfiguration.EventDefinition<>();
-    enrichedEvent.setSourceInfo(enrichedSource);
-    enrichedEvent.setEventName(basicEvent.getEventName());
-    enrichedEvent.setCondition(basicEvent.getCondition());
-
-    return enrichedEvent;
   }
 
   /**

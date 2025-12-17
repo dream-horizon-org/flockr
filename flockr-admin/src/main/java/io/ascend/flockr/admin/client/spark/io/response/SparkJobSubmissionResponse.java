@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.client.spark.dto.response;
+package io.ascend.flockr.admin.client.spark.io.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

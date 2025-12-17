@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.config;
 
 import com.typesafe.config.Optional;
-import io.ascend.flockr.admin.client.spark.dto.request.SparkJobConfig;
+import io.ascend.flockr.admin.client.spark.io.request.SparkJobConfig;
 import io.ascend.flockr.admin.config.provider.ConfigProvider;
 import lombok.Data;
 import lombok.NoArgsConstructor;

@@ -1,15 +1,10 @@
-package io.ascend.flockr.admin.client.spark.impl;
+package io.ascend.flockr.admin.client.spark;
 
 import com.google.inject.Inject;
-import io.ascend.flockr.admin.client.spark.SparkClient;
-import io.ascend.flockr.admin.client.spark.dto.response.SparkJobStatusResponse;
-import io.ascend.flockr.admin.client.spark.dto.response.SparkJobSubmissionResponse;
+import io.ascend.flockr.admin.client.spark.io.response.SparkJobStatusResponse;
+import io.ascend.flockr.admin.client.spark.io.response.SparkJobSubmissionResponse;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.config.SparkConfig;
-import io.ascend.flockr.admin.exception.spark.SparkApiException;
-import io.ascend.flockr.admin.exception.spark.SparkConnectionException;
-import io.ascend.flockr.admin.exception.spark.SparkJobNotFoundException;
-import io.ascend.flockr.admin.exception.spark.SparkJobSubmissionException;
 import io.netty.handler.codec.http.HttpMethod;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
@@ -48,7 +43,7 @@ public class SparkClientImpl implements SparkClient {
   }
 
   @Override
-  public Single<SparkJobSubmissionResponse> submitHistoricBatchJob(JsonObject requestBody) {
+  public Single<SparkJobSubmissionResponse> submit(JsonObject requestBody) {
     log.info("Submitting historicBatchJob request {}", requestBody.toString());
     return executeRequest(
             HttpMethod.POST, "/v1/submissions/create", requestBody, "Failed to submit job")
@@ -64,7 +59,7 @@ public class SparkClientImpl implements SparkClient {
               log.error("Failed to submit job", error);
             })
         .onErrorResumeNext(
-            error -> Single.error(new SparkJobSubmissionException("Job submission failed", error)));
+            error -> Single.error(SparkException.submissionError("Job submission failed", error)));
   }
 
   @Override
@@ -193,13 +188,13 @@ public class SparkClientImpl implements SparkClient {
       // Return specific exceptions based on status code
       if (statusCode == 404) {
         return Single.error(
-            new SparkJobNotFoundException(extractApplicationIdFromError(responseBody)));
+            SparkException.jobNotFound(extractApplicationIdFromError(responseBody)));
       } else if (statusCode >= 500) {
         return Single.error(
-            new SparkConnectionException(
+            SparkException.connectionError(
                 String.format("%s. Spark cluster may be unavailable", errorMessage)));
       } else {
-        return Single.error(new SparkApiException(errorMessage, statusCode, responseBody));
+        return Single.error(SparkException.apiError(errorMessage, statusCode, responseBody));
       }
     }
   }

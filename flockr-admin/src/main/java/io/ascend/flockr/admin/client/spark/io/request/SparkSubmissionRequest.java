@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.client.spark.dto.request;
+package io.ascend.flockr.admin.client.spark.io.request;
 
 import java.util.List;
 import java.util.Map;
