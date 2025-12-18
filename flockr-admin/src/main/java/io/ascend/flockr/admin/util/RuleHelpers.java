@@ -45,6 +45,16 @@ public final class RuleHelpers {
     }
   }
 
+  /**
+   * Maps a database row to a RuleMeta object.
+   *
+   * <p>This method extracts rule metadata from a database row and constructs a RuleMeta instance
+   * with basic source information. The configuration JSON is deserialized into a RuleConfiguration
+   * object.
+   *
+   * @param row the database row containing rule data
+   * @return a RuleMeta object with basic source information
+   */
   public static RuleMeta<SourceInfo> mapRuleRow(Row row) {
     RuleConfiguration<SourceInfo> configuration =
         RuleHelpers.deserializeRuleConfiguration(row.getJsonObject(RuleConstants.CONFIGURATION));
@@ -85,8 +95,6 @@ public final class RuleHelpers {
    */
   public static RuleMetaVerbose<SourceInfo, SinkInfo> mapRuleRowWithSinkIds(Row row) {
     RuleMeta<SourceInfo> ruleMeta = mapRuleRow(row);
-
-    // Extract sink IDs from the BIGINT array column and convert to SinkInfo list
     List<SinkInfo> sinkList = new ArrayList<>();
     Long[] sinkArray = row.getArrayOfLongs("sink_ids");
     if (sinkArray != null) {
@@ -95,7 +103,6 @@ public final class RuleHelpers {
       }
     }
 
-    // Create RuleMetaVerbose and copy all fields from RuleMeta
     RuleMetaVerbose<SourceInfo, SinkInfo> ruleMetaVerbose = new RuleMetaVerbose<>();
     ruleMetaVerbose.setXProjectId(ruleMeta.getXProjectId());
     ruleMetaVerbose.setRuleId(ruleMeta.getRuleId());

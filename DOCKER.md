@@ -90,12 +90,26 @@ cd flockr
 
 The default configuration in `env.docker` works out of the box.
 
+**Generate Encryption Keys (Required for credential security):**
+
+```bash
+# Generate keys and save to env.docker
+make generate-keys-file
+
+# Or manually
+./docker/generate-encryption-keys.sh --output-file env.docker
+```
+
 Key environment variables in `env.docker`:
 ```bash
 POSTGRES_USER=flockr_user           # Database username
 POSTGRES_PASSWORD=flockr_password   # Database password
+ENCRYPTION_KEY=<generated>          # Frontend encryption key
+BACKEND_STORAGE_ENCRYPTION_KEY=<generated>  # Backend storage encryption key
 JAVA_OPTS=-Xms512m -Xmx1024m       # JVM settings
 ```
+
+> **Note**: See [ENCRYPTION.md](ENCRYPTION.md) for details on the double-layer credential encryption system.
 
 ### 3. Build and Start
 
@@ -154,13 +168,14 @@ services:
 ### Using Make (If installed)
 
 ```bash
-make up          # Start services
-make status      # Check status
-make logs        # View all logs
-make logs-app    # View app logs only
-make down        # Stop services
-make clean       # Clean up everything
-make help        # See all commands
+make generate-keys  # Generate encryption keys
+make up             # Start services
+make status         # Check status
+make logs           # View all logs
+make logs-app       # View app logs only
+make down           # Stop services
+make clean          # Clean up everything
+make help           # See all commands
 ```
 
 ### Using Docker Compose Directly
@@ -527,6 +542,7 @@ All services communicate via `flockr-network` bridge network.
 ## Additional Resources
 
 - **Main README**: [README.md](README.md)
+- **Encryption Guide**: [ENCRYPTION.md](ENCRYPTION.md) - Double-layer credential encryption
 - **API Documentation**: http://localhost:8250/swagger-ui/
 - **Docker Docs**: https://docs.docker.com/
 - **Compose Docs**: https://docs.docker.com/compose/

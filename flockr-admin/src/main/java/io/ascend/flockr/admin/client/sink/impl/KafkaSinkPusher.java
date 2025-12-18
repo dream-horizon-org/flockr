@@ -5,7 +5,7 @@ import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.KafkaSinkConfig;
-import io.ascend.flockr.admin.util.ConfigParser;
+import io.ascend.flockr.admin.util.ConfigurationUtil;
 import io.reactivex.rxjava3.core.Completable;
 import java.util.HashMap;
 import java.util.List;
@@ -43,7 +43,7 @@ public class KafkaSinkPusher implements SinkPusher {
     return Completable.fromAction(
         () -> {
           KafkaSinkConfig config =
-              ConfigParser.parseSinkConfig(sink.getConfig(), KafkaSinkConfig.class);
+              ConfigurationUtil.parseSinkConfig(sink.getConfig(), KafkaSinkConfig.class);
           KafkaProducer<String, String> producer =
               getOrCreateProducer(config.getBootstrapServersUrl());
 

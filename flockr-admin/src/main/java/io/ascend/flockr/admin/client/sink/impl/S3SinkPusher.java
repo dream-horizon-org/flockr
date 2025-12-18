@@ -5,7 +5,7 @@ import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.S3FolderSinkConfig;
-import io.ascend.flockr.admin.util.ConfigParser;
+import io.ascend.flockr.admin.util.ConfigurationUtil;
 import io.reactivex.rxjava3.core.Completable;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -53,7 +53,7 @@ public class S3SinkPusher implements SinkPusher {
     return Completable.fromAction(
         () -> {
           S3FolderSinkConfig config =
-              ConfigParser.parseSinkConfig(sink.getConfig(), S3FolderSinkConfig.class);
+              ConfigurationUtil.parseSinkConfig(sink.getConfig(), S3FolderSinkConfig.class);
           S3Client s3Client = getOrCreateClient(config);
 
           String bucket = config.getBucket();

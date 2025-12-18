@@ -155,7 +155,17 @@ psql -d flockr -f flockr-admin/src/main/resources/db/postgres/02_seed.sql  # opt
 docker run -d --name aerospike -p 3000:3000 aerospike/aerospike-server:6.4.0.0
 ```
 
-**2. Set Environment Variables**
+**2. Generate Encryption Keys**
+
+```bash
+# Generate encryption keys for credential protection
+./docker/generate-encryption-keys.sh
+
+# Optional: Save directly to .env file
+./docker/generate-encryption-keys.sh --output-file .env
+```
+
+**3. Set Environment Variables**
 
 ```bash
 # PostgreSQL
@@ -164,9 +174,13 @@ export POSTGRES_USER=your_user POSTGRES_PASSWORD=your_password
 
 # Aerospike
 export AEROSPIKE_HOST=localhost AEROSPIKE_PORT=3000 AEROSPIKE_NAMESPACE=test
+
+# Encryption Keys (generated in step 2)
+export ENCRYPTION_KEY="your_generated_key"
+export BACKEND_STORAGE_ENCRYPTION_KEY="your_generated_key"
 ```
 
-**3. Build & Run**
+**4. Build & Run**
 
 ```bash
 mvn clean install -DskipTests
@@ -335,6 +349,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Documentation
 
 - **Docker Guide**: [DOCKER.md](DOCKER.md)
+- **Encryption Guide**: [ENCRYPTION.md](ENCRYPTION.md) - Double-layer credential encryption system
 - **API Documentation**: See [API Documentation](#api-documentation) section above or access Swagger UI when services are running
 
 ---

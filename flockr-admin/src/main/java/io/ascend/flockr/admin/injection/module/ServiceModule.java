@@ -32,8 +32,9 @@ import io.ascend.flockr.admin.service.JobServiceRegistry;
 import io.ascend.flockr.admin.service.impl.*;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.CircuitBreakerFactory;
-import io.ascend.flockr.admin.util.ConfigParser;
-import io.ascend.flockr.admin.util.json.JsonSchemaValidationUtil;
+import io.ascend.flockr.admin.util.ConfigurationUtil;
+import io.ascend.flockr.admin.util.EncryptionUtils;
+import io.ascend.flockr.admin.util.JsonUtil;
 import io.vertx.rxjava3.core.Vertx;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -94,10 +95,11 @@ public class ServiceModule extends DefaultModule {
     bindServices();
     /* Static Binding */
     requestStaticInjection(
-        ConfigParser.class,
-        JsonSchemaValidationUtil.class,
+        ConfigurationUtil.class,
+        JsonUtil.class,
         AsyncJakartaValidationUtil.class,
-        CircuitBreakerFactory.class); // ← Add static injection
+        CircuitBreakerFactory.class,
+        EncryptionUtils.class);
 
     bindSchedulers();
   }
@@ -116,6 +118,7 @@ public class ServiceModule extends DefaultModule {
     bind(PostgresConfig.class).toProvider(PostgresConfig.provider()).asEagerSingleton();
     bind(WebClientConfig.class).toProvider(WebClientConfig.provider()).asEagerSingleton();
     bind(SparkConfig.class).toProvider(SparkConfig.provider()).asEagerSingleton();
+    bind(EncryptionConfig.class).asEagerSingleton();
   }
 
   /**

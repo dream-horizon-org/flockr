@@ -7,7 +7,7 @@ import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.WebhookSinkConfig;
-import io.ascend.flockr.admin.util.ConfigParser;
+import io.ascend.flockr.admin.util.ConfigurationUtil;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.vertx.core.json.JsonArray;
@@ -54,7 +54,7 @@ public class WebhookSinkPusher implements SinkPusher {
   public Completable pushBatch(
       List<AudienceRecord> records, DataSinkDetails sink, AudienceMeta audience) {
     WebhookSinkConfig config =
-        ConfigParser.parseSinkConfig(sink.getConfig(), WebhookSinkConfig.class);
+        ConfigurationUtil.parseSinkConfig(sink.getConfig(), WebhookSinkConfig.class);
 
     Long audienceId = audience.getAudienceId();
     String xProjectId = audience.getXProjectId();

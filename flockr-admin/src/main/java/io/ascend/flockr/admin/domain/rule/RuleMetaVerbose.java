@@ -8,7 +8,6 @@ import lombok.*;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RuleMetaVerbose<T extends SourceInfo, V extends SinkInfo> extends RuleMeta<T> {
   private String audienceName;

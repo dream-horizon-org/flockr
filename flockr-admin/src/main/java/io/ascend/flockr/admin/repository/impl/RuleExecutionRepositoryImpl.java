@@ -40,32 +40,32 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
           + "VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING job_id";
 
   private static final String SQL_UPDATE_STATUS_AND_REF =
-      "UPDATE rule_jobs SET job_status = $1, job_ref_id = $2, started_at = $3, updated_at = NOW() "
+      "UPDATE rule_execution SET job_status = $1, job_ref_id = $2, started_at = $3, updated_at = NOW() "
           + "WHERE job_id = $4";
 
   private static final String SQL_MARK_FAILED =
-      "UPDATE rule_jobs SET job_status = 'FAILED', error_message = $1, updated_at = NOW() "
+      "UPDATE rule_execution SET job_status = 'FAILED', error_message = $1, updated_at = NOW() "
           + "WHERE job_id = $2";
 
   private static final String SQL_MARK_COMPLETED =
-      "UPDATE rule_jobs SET job_status = 'COMPLETED', completed_at = NOW(), updated_at = NOW() "
+      "UPDATE rule_execution SET job_status = 'COMPLETED', completed_at = NOW(), updated_at = NOW() "
           + "WHERE job_id = $1";
 
   private static final String SQL_FIND_BY_ID =
       "SELECT job_id, rule_id, sink_ids, job_type, job_status, job_metadata, job_ref_id, "
           + "retries, error_message, triggered_by, created_at, updated_at, started_at, completed_at "
-          + "FROM rule_jobs WHERE job_id = $1";
+          + "FROM rule_execution WHERE job_id = $1";
 
   private static final String SQL_FIND_LATEST_BY_RULE =
       "SELECT job_id, rule_id, sink_ids, job_type, job_status, job_metadata, job_ref_id, "
           + "retries, error_message, triggered_by, created_at, updated_at, started_at, completed_at "
-          + "FROM rule_jobs WHERE rule_id = $1 ORDER BY created_at DESC LIMIT 1";
+          + "FROM rule_execution WHERE rule_id = $1 ORDER BY created_at DESC LIMIT 1";
 
   private static final String SQL_UPDATE_RULE_STATUS_IF_CURRENT =
       "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
 
   private static final String SQL_UPDATE_EXECUTION_DETAILS =
-      "UPDATE rule_jobs SET job_name = $1, job_ref_id = $2, job_status = $3, "
+      "UPDATE rule_execution SET job_name = $1, job_ref_id = $2, job_status = $3, "
           + "job_metadata = $4, started_at = NOW(), updated_at = NOW() "
           + "WHERE job_id = $5";
 
