@@ -5,6 +5,30 @@ search_path to flockr,
 public;
 -- Seed supported connector types
 
+-- SOURCE: AWS Athena
+insert
+	into
+	data_connector_types (kind,
+	type,
+	display_name,
+	config_schema,
+	is_active)
+values
+  ('SOURCE',
+'ATHENA',
+'AWS Athena',
+   '{"type": "object", "properties": {"accessKey": {"type": "string", "description": "AWS Access Key ID"}, "secretKey": {"type": "string", "description": "AWS Secret Access Key"}, "queryOutputLocation": {"type": "string", "description": "S3 path for query results (e.g., s3://bucket-name/path/)"}, "workgroup": {"type": "string", "description": "Athena workgroup name", "default": "primary"}, "region": {"type": "string", "description": "AWS region (e.g., us-east-1)", "default": "us-east-1"}}, "required": ["accessKey", "secretKey", "queryOutputLocation"]}',
+   true)
+on
+CONFLICT (kind,
+type) DO
+update
+set
+	display_name = EXCLUDED.display_name,
+	config_schema = EXCLUDED.config_schema,
+	is_active = EXCLUDED.is_active;
+
+-- SINK: Apache Kafka
 insert
 	into
 	data_connector_types (kind,
@@ -27,6 +51,7 @@ set
 	config_schema = EXCLUDED.config_schema,
 	is_active = EXCLUDED.is_active;
 
+-- SINK: AWS S3 Folder
 insert
 	into
 	data_connector_types (kind,
@@ -49,6 +74,7 @@ set
 	config_schema = EXCLUDED.config_schema,
 	is_active = EXCLUDED.is_active;
 
+-- SINK: Webhook/HTTP API
 insert
 	into
 	data_connector_types (kind,
@@ -71,7 +97,32 @@ set
 	config_schema = EXCLUDED.config_schema,
 	is_active = EXCLUDED.is_active;
 
--- Insert sample data sinks (configs match KafkaSinkConfig and S3FolderSinkConfig POJOs)
+-- Insert sample data sources
+insert
+	into
+	data_sources (name,
+	type_id,
+	config,
+	status,
+	created_by)
+values
+(
+  'Production Athena - User Events',
+  (
+select
+	id
+from
+	data_connector_types
+where
+	kind = 'SOURCE'
+	and type = 'ATHENA'
+limit 1),
+  '{"connectorType": "ATHENA", "accessKey": "AKIAIOSFODNN7EXAMPLE", "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "queryOutputLocation": "s3://flockr-athena-results/output/", "workgroup": "primary", "region": "us-east-1"}',
+  'ACTIVE',
+  'system'
+);
+
+-- Insert sample data sinks
 insert
 	into
 	data_sinks (name,

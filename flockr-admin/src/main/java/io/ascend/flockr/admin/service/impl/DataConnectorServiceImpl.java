@@ -16,6 +16,7 @@ import io.ascend.flockr.admin.util.EncryptionUtils;
 import io.ascend.flockr.admin.util.JsonUtil;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
+import io.vertx.rxjava3.RxHelper;
 import java.util.List;
 import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataConnectorServiceImpl implements DataConnectorService {
 
+  private final io.vertx.rxjava3.core.Vertx vertx;
   private final DataConnectorRepository repository;
 
   /**
@@ -68,6 +70,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
       OnboardDataSourceRequest request, String createdBy) {
     return repository
         .getConnectorTypeById(request.getTypeId())
+        .subscribeOn(RxHelper.scheduler(vertx.getDelegate()))
         .onErrorResumeNext(
             error -> {
               if (error instanceof NoSuchElementException) {
@@ -90,8 +93,6 @@ public class DataConnectorServiceImpl implements DataConnectorService {
               }
               validateConfigAgainstSchema(request.getConfig(), type);
               request.getConfig().put("connectorType", type.getType());
-              // Process credentials: Decrypt Layer 1 (frontend) -> Encrypt Layer 2 (backend
-              // storage)
               JsonObject configForStorage = EncryptionUtils.processForStorage(request.getConfig());
               return repository
                   .createDataSource(

@@ -13,6 +13,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -94,7 +95,8 @@ import lombok.extern.slf4j.Slf4j;
  * @since 1.0
  */
 @Slf4j
-public final class EncryptionUtils {
+@UtilityClass
+public class EncryptionUtils {
 
   // ==================== Constants ====================
 
@@ -127,15 +129,6 @@ public final class EncryptionUtils {
   }
 
   @Inject private static EncryptionConfig encryptionConfig;
-
-  /**
-   * Private constructor to prevent instantiation.
-   *
-   * @throws UnsupportedOperationException always thrown when constructor is invoked
-   */
-  private EncryptionUtils() {
-    throw new UnsupportedOperationException("Utility class cannot be instantiated");
-  }
 
   // ==================== Low-Level Encryption Methods ====================
 
@@ -324,8 +317,7 @@ public final class EncryptionUtils {
 
       if (value == null) {
         processed.putNull(key);
-      } else if (isSensitiveField(key) && value instanceof String) {
-        String stringValue = (String) value;
+      } else if (isSensitiveField(key) && value instanceof String stringValue) {
         try {
           // Decrypt Layer 2 (backend storage) to plaintext
           String decrypted =
@@ -443,12 +435,11 @@ public final class EncryptionUtils {
     if (value == null || value.isEmpty()) {
       return value;
     }
-
     // Check if the value looks encrypted (has IV:DATA format)
     if (isEncrypted(value)) {
       return decrypt(value, key);
     }
-
+    log.warn("Value '{}' is not encrypted, returning as-is", value);
     // Not encrypted, return as-is (backward compatibility for legacy data)
     return value;
   }

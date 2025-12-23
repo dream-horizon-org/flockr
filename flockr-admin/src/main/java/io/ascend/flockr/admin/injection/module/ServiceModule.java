@@ -30,10 +30,7 @@ import io.ascend.flockr.admin.repository.impl.*;
 import io.ascend.flockr.admin.repository.impl.PostgresExecutionSync;
 import io.ascend.flockr.admin.service.*;
 import io.ascend.flockr.admin.service.impl.*;
-import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
-import io.ascend.flockr.admin.util.CircuitBreakerFactory;
-import io.ascend.flockr.admin.util.ConfigurationUtil;
-import io.ascend.flockr.admin.util.JsonUtil;
+import io.ascend.flockr.admin.util.*;
 import io.vertx.rxjava3.core.Vertx;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -94,6 +91,7 @@ public class ServiceModule extends DefaultModule {
     bindServices();
     /* Static Binding */
     requestStaticInjection(
+        EncryptionUtils.class,
         ConfigurationUtil.class,
         JsonUtil.class,
         AsyncJakartaValidationUtil.class,
