@@ -93,7 +93,7 @@ public final class RuleHelpers {
    * @return a RuleMetaVerbose object with rule metadata and sink list populated with basic SinkInfo
    *     (containing only IDs)
    */
-  public static RuleMetaVerbose<SourceInfo, SinkInfo> mapRuleRowWithSinkIds(Row row) {
+  public static ExecutableRule<SourceInfo, SinkInfo> mapRuleRowWithSinkIds(Row row) {
     RuleMeta<SourceInfo> ruleMeta = mapRuleRow(row);
     List<SinkInfo> sinkList = new ArrayList<>();
     Long[] sinkArray = row.getArrayOfLongs("sink_ids");
@@ -103,25 +103,26 @@ public final class RuleHelpers {
       }
     }
 
-    RuleMetaVerbose<SourceInfo, SinkInfo> ruleMetaVerbose = new RuleMetaVerbose<>();
-    ruleMetaVerbose.setXProjectId(ruleMeta.getXProjectId());
-    ruleMetaVerbose.setRuleId(ruleMeta.getRuleId());
-    ruleMetaVerbose.setAudienceId(ruleMeta.getAudienceId());
-    ruleMetaVerbose.setName(ruleMeta.getName());
-    ruleMetaVerbose.setDescription(ruleMeta.getDescription());
-    ruleMetaVerbose.setStartTime(ruleMeta.getStartTime());
-    ruleMetaVerbose.setEndTime(ruleMeta.getEndTime());
-    ruleMetaVerbose.setRuleAction(ruleMeta.getRuleAction());
-    ruleMetaVerbose.setRuleType(ruleMeta.getRuleType());
-    ruleMetaVerbose.setStatus(ruleMeta.getStatus());
-    ruleMetaVerbose.setConfiguration(ruleMeta.getConfiguration());
-    ruleMetaVerbose.setCreatedBy(ruleMeta.getCreatedBy());
-    ruleMetaVerbose.setCreatedAt(ruleMeta.getCreatedAt());
-    ruleMetaVerbose.setUpdatedAt(ruleMeta.getUpdatedAt());
-    ruleMetaVerbose.setAudienceName(row.getString("audience_name"));
-    ruleMetaVerbose.setSinkList(sinkList);
+    ExecutableRule<SourceInfo, SinkInfo> executableRule = new ExecutableRule<>();
+    executableRule.setXProjectId(ruleMeta.getXProjectId());
+    executableRule.setRuleId(ruleMeta.getRuleId());
+    executableRule.setAudienceId(ruleMeta.getAudienceId());
+    executableRule.setName(ruleMeta.getName());
+    executableRule.setDescription(ruleMeta.getDescription());
+    executableRule.setStartTime(ruleMeta.getStartTime());
+    executableRule.setEndTime(ruleMeta.getEndTime());
+    executableRule.setRuleAction(ruleMeta.getRuleAction());
+    executableRule.setRuleType(ruleMeta.getRuleType());
+    executableRule.setStatus(ruleMeta.getStatus());
+    executableRule.setConfiguration(ruleMeta.getConfiguration());
+    executableRule.setCreatedBy(ruleMeta.getCreatedBy());
+    executableRule.setCreatedAt(ruleMeta.getCreatedAt());
+    executableRule.setUpdatedAt(ruleMeta.getUpdatedAt());
+    executableRule.setAudienceName(row.getString("audience_name"));
+    executableRule.setExpireAt(row.getLong("expire_date"));
+    executableRule.setSinkList(sinkList);
 
-    return ruleMetaVerbose;
+    return executableRule;
   }
 
   /**
@@ -175,11 +176,11 @@ public final class RuleHelpers {
    * @return a SourceAndSinkIds object containing lists of unique source IDs and sink IDs
    */
   public static SourceAndSinkIds extractSourceAndSinkIdsFromRules(
-      List<RuleMetaVerbose<SourceInfo, SinkInfo>> ruleMetaList) {
+      List<ExecutableRule<SourceInfo, SinkInfo>> ruleMetaList) {
     Set<Long> uniqueSourceIds = new HashSet<>();
     Set<Long> uniqueSinkIds = new HashSet<>();
 
-    for (RuleMetaVerbose<SourceInfo, SinkInfo> ruleMeta : ruleMetaList) {
+    for (ExecutableRule<SourceInfo, SinkInfo> ruleMeta : ruleMetaList) {
       // Extract source IDs from rule configuration
       uniqueSourceIds.addAll(extractSourceIdFromRuleMeta(ruleMeta));
 

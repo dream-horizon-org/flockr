@@ -9,7 +9,8 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class RuleMetaVerbose<T extends SourceInfo, V extends SinkInfo> extends RuleMeta<T> {
+public class ExecutableRule<T extends SourceInfo, V extends SinkInfo> extends RuleMeta<T> {
   private String audienceName;
+  private Long expireAt;
   private List<V> sinkList;
 }

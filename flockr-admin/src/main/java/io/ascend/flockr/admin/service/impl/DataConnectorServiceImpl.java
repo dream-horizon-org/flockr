@@ -12,7 +12,8 @@ import io.ascend.flockr.admin.io.request.OnboardDataSourceRequest;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.ascend.flockr.admin.service.DataConnectorService;
-import io.ascend.flockr.admin.util.json.JsonSchemaValidationUtil;
+import io.ascend.flockr.admin.util.EncryptionUtils;
+import io.ascend.flockr.admin.util.JsonUtil;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
@@ -75,7 +76,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
               }
               return Single.error(error);
             })
-        .map(
+        .flatMap(
             type -> {
               if (!"SOURCE".equalsIgnoreCase(type.getKind())) {
                 throw ErrorEnum.INVALID_ARGUMENT
@@ -89,24 +90,27 @@ public class DataConnectorServiceImpl implements DataConnectorService {
               }
               validateConfigAgainstSchema(request.getConfig(), type);
               request.getConfig().put("connectorType", type.getType());
-              return type;
-            })
-        .flatMap(
-            type ->
-                repository
-                    .createDataSource(
-                        request.getName(), request.getTypeId(), createdBy, request.getConfig())
-                    .map(
-                        id ->
-                            DataSourceDetails.builder()
-                                .id(id)
-                                .name(request.getName())
-                                .typeId(request.getTypeId())
-                                .type(type.getType())
-                                .config(request.getConfig())
-                                .status("ACTIVE")
-                                .createdBy(createdBy)
-                                .build()));
+              // Process credentials: Decrypt Layer 1 (frontend) -> Encrypt Layer 2 (backend
+              // storage)
+              JsonObject configForStorage = EncryptionUtils.processForStorage(request.getConfig());
+              return repository
+                  .createDataSource(
+                      request.getName(), request.getTypeId(), createdBy, configForStorage)
+                  .map(
+                      id -> {
+                        JsonObject plaintextConfig =
+                            EncryptionUtils.processFromStorage(configForStorage);
+                        return DataSourceDetails.builder()
+                            .id(id)
+                            .name(request.getName())
+                            .typeId(request.getTypeId())
+                            .type(type.getType())
+                            .config(plaintextConfig)
+                            .status("ACTIVE")
+                            .createdBy(createdBy)
+                            .build();
+                      });
+            });
   }
 
   /**
@@ -127,7 +131,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
               }
               return Single.error(error);
             })
-        .map(
+        .flatMap(
             type -> {
               if (!"SINK".equalsIgnoreCase(type.getKind())) {
                 throw ErrorEnum.INVALID_ARGUMENT.toException(
@@ -135,24 +139,31 @@ public class DataConnectorServiceImpl implements DataConnectorService {
               }
               validateConfigAgainstSchema(request.getConfig(), type);
               request.getConfig().put("connectorType", type.getType());
-              return type;
-            })
-        .flatMap(
-            type ->
-                repository
-                    .createDataSink(
-                        request.getName(), request.getTypeId(), createdBy, request.getConfig())
-                    .map(
-                        id ->
-                            DataSinkDetails.builder()
-                                .id(id)
-                                .name(request.getName())
-                                .typeId(request.getTypeId())
-                                .type(type.getType())
-                                .config(request.getConfig())
-                                .status("ACTIVE")
-                                .createdBy(createdBy)
-                                .build()));
+
+              // Process credentials: Decrypt Layer 1 (frontend) -> Encrypt Layer 2 (backend
+              // storage)
+              JsonObject configForStorage = EncryptionUtils.processForStorage(request.getConfig());
+
+              return repository
+                  .createDataSink(
+                      request.getName(), request.getTypeId(), createdBy, configForStorage)
+                  .map(
+                      id -> {
+                        // Return plaintext config in response (for immediate use)
+                        JsonObject plaintextConfig =
+                            EncryptionUtils.processFromStorage(configForStorage);
+
+                        return DataSinkDetails.builder()
+                            .id(id)
+                            .name(request.getName())
+                            .typeId(request.getTypeId())
+                            .type(type.getType())
+                            .config(plaintextConfig)
+                            .status("ACTIVE")
+                            .createdBy(createdBy)
+                            .build();
+                      });
+            });
   }
 
   /**
@@ -253,7 +264,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
           "Validating config against schema for connector type: {} (ID: {})",
           connectorType.getType(),
           connectorType.getId());
-      JsonSchemaValidationUtil.validate(config, schema);
+      JsonUtil.validateAgainstSchema(config, schema);
     } else {
       log.warn(
           "No schema found for connector type ID: {}, skipping schema validation",

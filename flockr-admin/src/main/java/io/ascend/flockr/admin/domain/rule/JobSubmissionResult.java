@@ -1,7 +1,6 @@
 package io.ascend.flockr.admin.domain.rule;
 
-import io.ascend.flockr.admin.domain.rule.executionmetadata.ExecutionMetadata;
-import java.util.List;
+import io.vertx.core.json.JsonObject;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -37,9 +36,6 @@ public class JobSubmissionResult {
   /** The rule ID that was executed. */
   private Long ruleId;
 
-  /** List of sink IDs where output will be sent. */
-  private List<Long> sinkIds;
-
   /** Type of job (BATCH or STREAM). */
   private JobType jobType;
 
@@ -64,18 +60,26 @@ public class JobSubmissionResult {
   private JobStatus initialStatus;
 
   /**
-   * Engine-specific execution metadata.
+   * Engine-specific execution metadata as a flexible JSON object.
    *
-   * <p>This is a sealed interface that can be:
+   * <p>This allows each execution engine to define its own metadata structure without coupling the
+   * domain model to specific engine implementations.
+   *
+   * <p><b>Common fields by engine type:</b>
    *
    * <ul>
-   *   <li>{@link io.ascend.flockr.admin.domain.rule.executionmetadata.BatchExecutionMetadata} - for
-   *       Spark jobs (contains applicationId, workerId, Spark version, etc.)
-   *   <li>{@link io.ascend.flockr.admin.domain.rule.executionmetadata.StreamExecutionMetadata} -
-   *       for Flink jobs (contains jarId, parallelism, checkpoint paths, etc.)
+   *   <li><b>BATCH (Spark):</b> type, driverMemory, executorMemory, executorCores,
+   *       executorInstances, applicationId, workerId, serverSparkVersion, sinkIds, attemptNumber
+   *   <li><b>STREAM (Flink):</b> type, jarId, entryClass, parallelism, resumedFromSavepoint,
+   *       latestCheckpointPath, clusterId, flinkVersion, totalTasks, runningTasks, sinkIds,
+   *       restartCount
    * </ul>
    *
    * <p>This metadata will be serialized to JSONB in the database for debugging and monitoring.
+   *
+   * <p><b>Design Note:</b> Using JsonObject instead of typed classes decouples the domain model
+   * from execution engine specifics, allowing engines to evolve their metadata without code
+   * changes.
    */
-  private ExecutionMetadata metadata;
+  private JsonObject metadata;
 }

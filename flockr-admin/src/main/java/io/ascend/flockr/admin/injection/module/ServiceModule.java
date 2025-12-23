@@ -16,6 +16,8 @@ import io.ascend.flockr.admin.client.sink.factory.KafkaSinkPusherFactory;
 import io.ascend.flockr.admin.client.sink.factory.S3SinkPusherFactory;
 import io.ascend.flockr.admin.client.sink.factory.SinkPusherFactory;
 import io.ascend.flockr.admin.client.sink.factory.WebhookSinkPusherFactory;
+import io.ascend.flockr.admin.client.spark.SparkClient;
+import io.ascend.flockr.admin.client.spark.SparkClientImpl;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.client.webclient.impl.WebClientImpl;
 import io.ascend.flockr.admin.config.*;
@@ -31,7 +33,6 @@ import io.ascend.flockr.admin.service.impl.*;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.CircuitBreakerFactory;
 import io.ascend.flockr.admin.util.ConfigurationUtil;
-import io.ascend.flockr.admin.util.EncryptionUtils;
 import io.ascend.flockr.admin.util.JsonUtil;
 import io.vertx.rxjava3.core.Vertx;
 import jakarta.validation.Validation;
@@ -93,8 +94,8 @@ public class ServiceModule extends DefaultModule {
     bindServices();
     /* Static Binding */
     requestStaticInjection(
-        ConfigParser.class,
-        JsonSchemaValidationUtil.class,
+        ConfigurationUtil.class,
+        JsonUtil.class,
         AsyncJakartaValidationUtil.class,
         CircuitBreakerFactory.class); // ← Add static injection
 
@@ -140,8 +141,8 @@ public class ServiceModule extends DefaultModule {
     bind(S3SinkPusherFactory.class).in(Singleton.class);
     bind(WebhookSinkPusherFactory.class).in(Singleton.class);
 
-      bind(SparkClientImpl.class).in(Singleton.class);
-      bind(SparkClient.class).to(SparkClientImpl.class);
+    bind(SparkClientImpl.class).in(Singleton.class);
+    bind(SparkClient.class).to(SparkClientImpl.class);
   }
 
   /**

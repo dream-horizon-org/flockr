@@ -7,6 +7,7 @@ import io.ascend.flockr.admin.domain.dataconnectors.DataConnectorType;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
+import io.ascend.flockr.admin.util.EncryptionUtils;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
@@ -143,6 +144,17 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
     int offset = page * pageSize;
     return postgresReaderClient
         .fetchAll(SQL_LIST_SOURCES, Tuple.of(pageSize, offset), DataSourceDetails::mapSourceRow)
+        .map(
+            sources ->
+                sources.stream()
+                    .peek(
+                        source -> {
+                          // Decrypt credentials from storage (Layer 2 -> plaintext)
+                          JsonObject decryptedConfig =
+                              EncryptionUtils.processFromStorage(source.getConfig());
+                          source.setConfig(decryptedConfig);
+                        })
+                    .toList())
         .doOnError(
             error ->
                 log.error(
@@ -159,6 +171,17 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
     int offset = page * pageSize;
     return postgresReaderClient
         .fetchAll(SQL_LIST_SINKS, Tuple.of(pageSize, offset), DataSinkDetails::mapSinkRow)
+        .map(
+            sinks ->
+                sinks.stream()
+                    .peek(
+                        sink -> {
+                          // Decrypt credentials from storage (Layer 2 -> plaintext)
+                          JsonObject decryptedConfig =
+                              EncryptionUtils.processFromStorage(sink.getConfig());
+                          sink.setConfig(decryptedConfig);
+                        })
+                    .toList())
         .doOnError(
             error ->
                 log.error(
@@ -182,6 +205,17 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
     return postgresReaderClient
         .fetchAll(query, DataSourceDetails::mapSourceRow)
+        .map(
+            sources ->
+                sources.stream()
+                    .peek(
+                        source -> {
+                          // Decrypt credentials from storage (Layer 2 -> plaintext)
+                          JsonObject decryptedConfig =
+                              EncryptionUtils.processFromStorage(source.getConfig());
+                          source.setConfig(decryptedConfig);
+                        })
+                    .toList())
         .doOnError(
             error ->
                 log.error(
@@ -209,6 +243,17 @@ public class DataConnectorRepositoryImpl implements DataConnectorRepository {
 
     return postgresReaderClient
         .fetchAll(query, DataSinkDetails::mapSinkRow)
+        .map(
+            sinks ->
+                sinks.stream()
+                    .peek(
+                        sink -> {
+                          // Decrypt credentials from storage (Layer 2 -> plaintext)
+                          JsonObject decryptedConfig =
+                              EncryptionUtils.processFromStorage(sink.getConfig());
+                          sink.setConfig(decryptedConfig);
+                        })
+                    .toList())
         .doOnError(
             error ->
                 log.error("Error getting data sinks by ids: {}. Query: {}", sinkIds, query, error));

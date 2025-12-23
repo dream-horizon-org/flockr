@@ -68,7 +68,8 @@ public class RuleRepositoryImpl implements RuleRepository {
           + "EXTRACT(EPOCH FROM r.created_at)::BIGINT as created_at, "
           + "EXTRACT(EPOCH FROM r.updated_at)::BIGINT as updated_at, "
           + "a.name as audience_name, "
-          + "a.sinks as sink_ids "
+          + "a.sinks as sink_ids, "
+          + "EXTRACT(EPOCH FROM a.expire_date)::BIGINT AS expire_date "
           + "FROM rules r "
           + "INNER JOIN audiences a ON r.audience_id = a.id "
           + "WHERE r.status = 'SCHEDULED' "
@@ -120,7 +121,7 @@ public class RuleRepositoryImpl implements RuleRepository {
   }
 
   @Override
-  public Single<List<RuleMetaVerbose<SourceInfo, SinkInfo>>> findScheduledRulesReadyWithSinkIds() {
+  public Single<List<ExecutableRule<SourceInfo, SinkInfo>>> findScheduledRulesReadyWithSinkIds() {
     return postgresReaderClient.fetchAll(
         SQL_FIND_SCHEDULED_READY_WITH_SINK_IDS, Tuple.tuple(), RuleHelpers::mapRuleRowWithSinkIds);
   }

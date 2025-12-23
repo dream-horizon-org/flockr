@@ -4,7 +4,7 @@ import io.ascend.flockr.admin.client.sink.pusher.KafkaSinkPusher;
 import io.ascend.flockr.admin.client.sink.pusher.SinkPusher;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.KafkaSinkConfig;
-import io.ascend.flockr.admin.util.ConfigParser;
+import io.ascend.flockr.admin.util.ConfigurationUtil;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +26,8 @@ public class KafkaSinkPusherFactory implements SinkPusherFactory {
 
   @Override
   public SinkPusher create(DataSinkDetails sink) {
-    KafkaSinkConfig config = ConfigParser.parseSinkConfig(sink.getConfig(), KafkaSinkConfig.class);
+    KafkaSinkConfig config =
+        ConfigurationUtil.parseSinkConfig(sink.getConfig(), KafkaSinkConfig.class);
     return getOrCreatePusher(config.getBootstrapServersUrl());
   }
 

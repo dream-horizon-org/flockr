@@ -52,9 +52,6 @@ public class RuleExecution {
   /** Number of retry attempts, defaults to 0. */
   @Builder.Default private Integer retries = 0;
 
-  /** Error message if execution failed. */
-  private String errorMessage;
-
   /** Who/what triggered this execution. */
   private String triggeredBy;
 

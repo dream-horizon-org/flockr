@@ -67,7 +67,7 @@ public interface RuleRepository {
    *
    * @return Single emitting list of rules with populated sink IDs ready for execution
    */
-  Single<List<RuleMetaVerbose<SourceInfo, SinkInfo>>> findScheduledRulesReadyWithSinkIds();
+  Single<List<ExecutableRule<SourceInfo, SinkInfo>>> findScheduledRulesReadyWithSinkIds();
 
   /**
    * Updates the status of a rule if it matches the current status.

@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.service;
 
+import io.ascend.flockr.admin.domain.rule.ExecutableRule;
 import io.ascend.flockr.admin.domain.rule.JobSubmissionResult;
-import io.ascend.flockr.admin.domain.rule.RuleMetaVerbose;
 import io.ascend.flockr.admin.domain.rule.SinkInfoEnriched;
 import io.ascend.flockr.admin.domain.rule.SourceInfoEnriched;
 import io.reactivex.rxjava3.core.Single;
@@ -63,17 +63,16 @@ public interface RuleExecutionService {
    *   <li>Returns submission details for database logging
    * </ul>
    *
-   * @param ruleMetaVerbose the enriched rule containing sources and sinks
-   * @param submittedBy identifier of who/what triggered the execution (e.g., "scheduler",
-   *     "user@example.com")
+   * @param executableRule the enriched rule containing sources and sinks
+   * @param executionId the execution ID for tracking
    * @return Single emitting {@link JobSubmissionResult} containing:
    *     <ul>
    *       <li>External job ID (submissionId/jobId)
    *       <li>Initial status (SUBMITTED/RUNNING)
-   *       <li>Engine-specific metadata (BatchExecutionMetadata/StreamExecutionMetadata)
-   *       <li>Rule ID and sink IDs
+   *       <li>Engine-specific metadata as JsonObject (flexible, engine-agnostic)
+   *       <li>Rule ID with sink IDs embedded in metadata
    *     </ul>
    */
   Single<JobSubmissionResult> execute(
-      RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> ruleMetaVerbose);
+      ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule, Long executionId);
 }

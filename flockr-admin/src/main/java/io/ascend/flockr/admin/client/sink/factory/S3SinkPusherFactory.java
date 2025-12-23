@@ -4,7 +4,7 @@ import io.ascend.flockr.admin.client.sink.pusher.S3SinkPusher;
 import io.ascend.flockr.admin.client.sink.pusher.SinkPusher;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.config.S3FolderSinkConfig;
-import io.ascend.flockr.admin.util.ConfigParser;
+import io.ascend.flockr.admin.util.ConfigurationUtil;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ public class S3SinkPusherFactory implements SinkPusherFactory {
   @Override
   public SinkPusher create(DataSinkDetails sink) {
     S3FolderSinkConfig config =
-        ConfigParser.parseSinkConfig(sink.getConfig(), S3FolderSinkConfig.class);
+        ConfigurationUtil.parseSinkConfig(sink.getConfig(), S3FolderSinkConfig.class);
     return getOrCreatePusher(config);
   }
 

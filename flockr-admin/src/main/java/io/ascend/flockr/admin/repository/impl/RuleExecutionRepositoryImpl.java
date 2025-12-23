@@ -47,20 +47,6 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
       "UPDATE rule_execution SET job_status = 'FAILED', error_message = $1, updated_at = NOW() "
           + "WHERE job_id = $2";
 
-  private static final String SQL_MARK_COMPLETED =
-      "UPDATE rule_execution SET job_status = 'COMPLETED', completed_at = NOW(), updated_at = NOW() "
-          + "WHERE job_id = $1";
-
-  private static final String SQL_FIND_BY_ID =
-      "SELECT job_id, rule_id, sink_ids, job_type, job_status, job_metadata, job_ref_id, "
-          + "retries, error_message, triggered_by, created_at, updated_at, started_at, completed_at "
-          + "FROM rule_execution WHERE job_id = $1";
-
-  private static final String SQL_FIND_LATEST_BY_RULE =
-      "SELECT job_id, rule_id, sink_ids, job_type, job_status, job_metadata, job_ref_id, "
-          + "retries, error_message, triggered_by, created_at, updated_at, started_at, completed_at "
-          + "FROM rule_execution WHERE rule_id = $1 ORDER BY created_at DESC LIMIT 1";
-
   private static final String SQL_UPDATE_RULE_STATUS_IF_CURRENT =
       "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
 
@@ -79,33 +65,6 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
           + "WHERE job_status = 'SUBMITTING' "
           + "AND created_at < NOW() - INTERVAL '%d minutes' "
           + "ORDER BY created_at ASC";
-
-  @Override
-  public Single<Long> create(RuleExecution ruleExecution) {
-    Long[] sinkIdsArray =
-        ruleExecution.getSinkIds() != null
-            ? ruleExecution.getSinkIds().toArray(new Long[0])
-            : new Long[0];
-
-    Tuple params =
-        Tuple.tuple()
-            .addLong(ruleExecution.getRuleId())
-            .addArrayOfLong(sinkIdsArray)
-            .addString(ruleExecution.getExecutionType().name())
-            .addString(ruleExecution.getStatus().name())
-            .addJsonObject(ruleExecution.getMetadata())
-            .addString(ruleExecution.getTriggeredBy())
-            .addInteger(ruleExecution.getRetries());
-
-    return postgresWriterClient
-        .getConnection()
-        .flatMap(
-            conn ->
-                conn.preparedQuery(SQL_CREATE)
-                    .rxExecute(params)
-                    .map(rows -> rows.iterator().next().getLong("job_id"))
-                    .doFinally(conn::close));
-  }
 
   @Override
   public Completable updateStatusAndExternalJobId(
@@ -133,32 +92,6 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
                     .rxExecute(Tuple.of(errorMessage, executionId))
                     .ignoreElement()
                     .doFinally(conn::close));
-  }
-
-  @Override
-  public Completable markCompleted(Long executionId) {
-    return postgresWriterClient
-        .getConnection()
-        .flatMapCompletable(
-            conn ->
-                conn.preparedQuery(SQL_MARK_COMPLETED)
-                    .rxExecute(Tuple.of(executionId))
-                    .ignoreElement()
-                    .doFinally(conn::close));
-  }
-
-  @Override
-  public Maybe<RuleExecution> findById(Long executionId) {
-    return postgresReaderClient
-        .fetchOne(SQL_FIND_BY_ID, Tuple.of(executionId), this::mapRow)
-        .flatMapMaybe(execution -> execution != null ? Maybe.just(execution) : Maybe.empty());
-  }
-
-  @Override
-  public Maybe<RuleExecution> findLatestByRuleId(Long ruleId) {
-    return postgresReaderClient
-        .fetchOne(SQL_FIND_LATEST_BY_RULE, Tuple.of(ruleId), this::mapRow)
-        .flatMapMaybe(execution -> execution != null ? Maybe.just(execution) : Maybe.empty());
   }
 
   /**
@@ -190,43 +123,6 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
 
   private Instant toInstant(LocalDateTime ldt) {
     return ldt != null ? ldt.toInstant(ZoneOffset.UTC) : null;
-  }
-
-  @Override
-  public Single<Long> createAndUpdateRuleStatus(
-      RuleExecution ruleExecution, Long ruleId, RuleStatus newStatus, RuleStatus currentStatus) {
-    Long[] sinkIdsArray =
-        ruleExecution.getSinkIds() != null
-            ? ruleExecution.getSinkIds().toArray(new Long[0])
-            : new Long[0];
-
-    Tuple createParams =
-        Tuple.tuple()
-            .addLong(ruleExecution.getRuleId())
-            .addArrayOfLong(sinkIdsArray)
-            .addString(ruleExecution.getExecutionType().name())
-            .addString(ruleExecution.getStatus().name())
-            .addJsonObject(ruleExecution.getMetadata())
-            .addString(ruleExecution.getTriggeredBy())
-            .addInteger(ruleExecution.getRetries());
-
-    return postgresWriterClient
-        .executeWithTransaction(
-            conn ->
-                conn.preparedQuery(SQL_CREATE)
-                    .rxExecute(createParams)
-                    .map(rows -> rows.iterator().next().getLong("job_id"))
-                    .flatMap(
-                        executionId ->
-                            conn.preparedQuery(SQL_UPDATE_RULE_STATUS_IF_CURRENT)
-                                .rxExecute(Tuple.of(newStatus, ruleId, currentStatus))
-                                .map(updateResult -> executionId))
-                    .toMaybe())
-        .switchIfEmpty(
-            Maybe.error(
-                new IllegalStateException(
-                    "Failed to create execution and update rule status in transaction")))
-        .toSingle();
   }
 
   @Override

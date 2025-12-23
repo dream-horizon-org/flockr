@@ -170,7 +170,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    */
   private Single<Integer> executeScheduledRules() {
     // Fetch all scheduled rules ready for execution
-    Single<List<RuleMetaVerbose<SourceInfo, SinkInfo>>> rulesSingle =
+    Single<List<ExecutableRule<SourceInfo, SinkInfo>>> rulesSingle =
         ruleRepository.findScheduledRulesReadyWithSinkIds().cache();
 
     // Extract all unique source and sink IDs from the fetched rules
@@ -221,7 +221,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    * @return Single emitting the count of successfully triggered rules
    */
   private Single<Integer> executeEnrichedRules(
-      List<RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched>> executableRules) {
+      List<ExecutableRule<SourceInfoEnriched, SinkInfoEnriched>> executableRules) {
 
     if (executableRules.isEmpty()) {
       log.info("No enriched rules to execute");
@@ -253,25 +253,25 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    *   <li>Ability to reconcile stuck submissions
    * </ul>
    *
-   * @param ruleMetaVerbose the enriched rule to submit
+   * @param executableRule the enriched rule to submit
    * @return Single emitting 1 on success, 0 on failure
    */
   private Single<Integer> prepareSubmitPhase(
-      RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> ruleMetaVerbose) {
+      ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule) {
 
-    RuleExecution pendingExecution = buildPendingExecution(ruleMetaVerbose);
+    RuleExecution pendingExecution = buildPendingExecution(executableRule);
 
     return ruleExecutionRepository
         .createPendingExecutionAndUpdateRuleStatus(
             pendingExecution,
-            ruleMetaVerbose.getRuleId(),
+            executableRule.getRuleId(),
             RuleStatus.SCHEDULED,
             RuleStatus.SUBMITTING)
-        .flatMap(executionId -> submitRuleToJobService(ruleMetaVerbose, executionId))
+        .flatMap(executionId -> submitRuleToJobService(executableRule, executionId))
         .onErrorResumeNext(
             error -> {
               log.error(
-                  "Failed to create execution for rule {}", ruleMetaVerbose.getRuleId(), error);
+                  "Failed to create execution for rule {}", executableRule.getRuleId(), error);
               return Single.just(0);
             });
   }
@@ -279,15 +279,15 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
   /**
    * Builds a pending execution record for the given rule.
    *
-   * @param ruleMetaVerbose the enriched rule metadata
+   * @param executableRule the enriched rule metadata
    * @return a {@link RuleExecution} in SUBMITTING status
    */
   private RuleExecution buildPendingExecution(
-      RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> ruleMetaVerbose) {
+      ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule) {
     return RuleExecution.builder()
-        .ruleId(ruleMetaVerbose.getRuleId())
-        .sinkIds(ruleMetaVerbose.getSinkList().stream().map(SinkInfoEnriched::getId).toList())
-        .executionType(JobType.valueOf(ruleMetaVerbose.getRuleType().name()))
+        .ruleId(executableRule.getRuleId())
+        .sinkIds(executableRule.getSinkList().stream().map(SinkInfoEnriched::getId).toList())
+        .executionType(JobType.valueOf(executableRule.getRuleType().name()))
         .status(JobStatus.SUBMITTING)
         .retries(0)
         .triggeredBy(TRIGGER_SOURCE)
@@ -310,26 +310,26 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    * reconciliation by a separate process. Timeout handling is delegated to the job service
    * implementation.
    *
-   * @param ruleMetaVerbose the enriched rule metadata
+   * @param executableRule the enriched rule metadata
    * @param executionId the execution record ID
    * @return Single emitting 1 on success, 0 on failure
    */
   private Single<Integer> submitRuleToJobService(
-      RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> ruleMetaVerbose, Long executionId) {
+      ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule, Long executionId) {
 
     return jobServiceRegistry
-        .get(ruleMetaVerbose.getRuleType())
-        .execute(ruleMetaVerbose)
+        .get(executableRule.getRuleType())
+        .execute(executableRule, executionId)
         .flatMap(
             jobSubmissionResult ->
-                updateExecutionWithJobDetails(ruleMetaVerbose, executionId, jobSubmissionResult))
+                updateExecutionWithJobDetails(executableRule, executionId, jobSubmissionResult))
         .onErrorResumeNext(
             error -> {
               // Any error from job service or DB update
               // Leave in SUBMITTING for reconciliation
               log.error(
                   "Failed to submit/update job for rule {}, execution {}. Reconciliation will handle.",
-                  ruleMetaVerbose.getRuleId(),
+                  executableRule.getRuleId(),
                   executionId,
                   error);
               return Single.just(0);
@@ -339,13 +339,13 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
   /**
    * Updates the execution record with job submission details and maps status.
    *
-   * @param ruleMetaVerbose the enriched rule metadata
+   * @param executableRule the enriched rule metadata
    * @param executionId the execution record ID
    * @param jobSubmissionResult the result from the job service
    * @return Single emitting 1 on success
    */
   private Single<Integer> updateExecutionWithJobDetails(
-      RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> ruleMetaVerbose,
+      ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule,
       Long executionId,
       JobSubmissionResult jobSubmissionResult) {
 
@@ -363,13 +363,13 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
               jobSubmissionResult.getExternalJobId(),
               jobSubmissionResult.getInitialStatus(),
               new JsonObject(metadataJson),
-              ruleMetaVerbose.getRuleId(),
+              executableRule.getRuleId(),
               newRuleStatus)
           .map(v -> 1);
     } catch (Exception e) {
       log.error(
           "Failed to serialize metadata for rule {}, execution {}",
-          ruleMetaVerbose.getRuleId(),
+          executableRule.getRuleId(),
           executionId,
           e);
       return Single.error(e);
@@ -392,20 +392,19 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    * <p><b>Error Handling:</b> Rules with missing sources or sinks are logged and skipped rather
    * than failing the entire batch.
    *
-   * @param rules the list of rules to enrich
+   * @param executableRuleList the list of rules to enrich
    * @param sources the list of all relevant data source details
    * @param sinks the list of all relevant data sink details
    * @return list of successfully enriched rules
    */
-  private List<RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched>>
-      enrichRulesWithSourcesAndSinks(
-          List<RuleMetaVerbose<SourceInfo, SinkInfo>> rules,
-          List<DataSourceDetails> sources,
-          List<DataSinkDetails> sinks) {
+  private List<ExecutableRule<SourceInfoEnriched, SinkInfoEnriched>> enrichRulesWithSourcesAndSinks(
+      List<ExecutableRule<SourceInfo, SinkInfo>> executableRuleList,
+      List<DataSourceDetails> sources,
+      List<DataSinkDetails> sinks) {
 
     log.debug(
         "Enriching {} rules with {} sources and {} sinks",
-        rules.size(),
+        executableRuleList.size(),
         sources.size(),
         sinks.size());
 
@@ -413,21 +412,24 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
     Map<Long, DataSourceDetails> sourceIdToDetails = buildSourceLookupMap(sources);
     Map<Long, DataSinkDetails> sinkIdToDetails = buildSinkLookupMap(sinks);
 
-    List<RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched>> enrichedRules = new ArrayList<>();
+    List<ExecutableRule<SourceInfoEnriched, SinkInfoEnriched>> executableRules = new ArrayList<>();
 
-    for (RuleMetaVerbose<SourceInfo, SinkInfo> rule : rules) {
+    for (ExecutableRule<SourceInfo, SinkInfo> rule : executableRuleList) {
       try {
-        RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> enrichedRule =
+        ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> enrichedRule =
             enrichSingleRule(rule, sourceIdToDetails, sinkIdToDetails);
-        enrichedRules.add(enrichedRule);
+        executableRules.add(enrichedRule);
       } catch (Exception e) {
         log.error(
             "Failed to enrich rule id={}, name={}. Skipping.", rule.getRuleId(), rule.getName(), e);
       }
     }
 
-    log.info("Successfully enriched {} out of {} rules", enrichedRules.size(), rules.size());
-    return enrichedRules;
+    log.info(
+        "Successfully enriched {} out of {} rules",
+        executableRules.size(),
+        executableRuleList.size());
+    return executableRules;
   }
 
   /**
@@ -461,48 +463,49 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
   /**
    * Enriches a single rule with source and sink details.
    *
-   * @param rule the rule to enrich
+   * @param executableRule the rule to enrich
    * @param sourceIdToDetails lookup map for source details
    * @param sinkIdToDetails lookup map for sink details
    * @return the enriched rule
    * @throws IllegalStateException if required sources or sinks are missing
    */
-  private RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> enrichSingleRule(
-      RuleMetaVerbose<SourceInfo, SinkInfo> rule,
+  private ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> enrichSingleRule(
+      ExecutableRule<SourceInfo, SinkInfo> executableRule,
       Map<Long, DataSourceDetails> sourceIdToDetails,
       Map<Long, DataSinkDetails> sinkIdToDetails) {
 
     // Validate and enrich sources
-    validateRequiredSourcesExist(rule, sourceIdToDetails);
+    validateRequiredSourcesExist(executableRule, sourceIdToDetails);
     RuleConfiguration<SourceInfoEnriched> enrichedConfig =
         RuleHelpers.buildEnrichedConfiguration(
-            rule.getConfiguration(), sourceIdToDetails, rule.getRuleType());
+            executableRule.getConfiguration(), sourceIdToDetails, executableRule.getRuleType());
 
     // Enrich sinks
-    List<SinkInfoEnriched> enrichedSinks = enrichSinks(rule, sinkIdToDetails);
+    List<SinkInfoEnriched> enrichedSinks = enrichSinks(executableRule, sinkIdToDetails);
 
     // Build and return enriched rule
-    return buildEnrichedRuleMetaVerbose(rule, enrichedConfig, enrichedSinks);
+    return buildEnrichedRuleMetaVerbose(executableRule, enrichedConfig, enrichedSinks);
   }
 
   /**
    * Validates that all required sources exist in the lookup map.
    *
-   * @param rule the rule being validated
+   * @param executableRule the rule being validated
    * @param sourceIdToDetails the source lookup map
    * @throws IllegalStateException if any required source is missing
    */
   private void validateRequiredSourcesExist(
-      RuleMetaVerbose<SourceInfo, SinkInfo> rule, Map<Long, DataSourceDetails> sourceIdToDetails) {
+      ExecutableRule<SourceInfo, SinkInfo> executableRule,
+      Map<Long, DataSourceDetails> sourceIdToDetails) {
 
-    List<Long> requiredSourceIds = RuleHelpers.extractSourceIdFromRuleMeta(rule);
+    List<Long> requiredSourceIds = RuleHelpers.extractSourceIdFromRuleMeta(executableRule);
     for (Long sourceId : requiredSourceIds) {
       if (!sourceIdToDetails.containsKey(sourceId)) {
         log.error(
             "Missing source details for sourceId={} in rule id={}, name={}. Skipping rule.",
             sourceId,
-            rule.getRuleId(),
-            rule.getName());
+            executableRule.getRuleId(),
+            executableRule.getName());
         throw new IllegalStateException("Missing source ID: " + sourceId);
       }
     }
@@ -511,24 +514,25 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
   /**
    * Enriches the sink list for a rule with full sink details.
    *
-   * @param rule the rule whose sinks to enrich
+   * @param executableRule the rule whose sinks to enrich
    * @param sinkIdToDetails the sink lookup map
    * @return list of enriched sink information
    * @throws IllegalStateException if any required sink is missing
    */
   private List<SinkInfoEnriched> enrichSinks(
-      RuleMetaVerbose<SourceInfo, SinkInfo> rule, Map<Long, DataSinkDetails> sinkIdToDetails) {
+      ExecutableRule<SourceInfo, SinkInfo> executableRule,
+      Map<Long, DataSinkDetails> sinkIdToDetails) {
 
     List<SinkInfoEnriched> enrichedSinks = new ArrayList<>();
-    if (rule.getSinkList() != null) {
-      for (SinkInfo sinkInfo : rule.getSinkList()) {
+    if (executableRule.getSinkList() != null) {
+      for (SinkInfo sinkInfo : executableRule.getSinkList()) {
         DataSinkDetails sinkDetails = sinkIdToDetails.get(sinkInfo.getId());
         if (sinkDetails == null) {
           log.error(
               "Missing sink details for sinkId={} in rule id={}, name={}. Skipping rule.",
               sinkInfo.getId(),
-              rule.getRuleId(),
-              rule.getName());
+              executableRule.getRuleId(),
+              executableRule.getName());
           throw new IllegalStateException("Missing sink ID: " + sinkInfo.getId());
         }
         SinkInfoEnriched enrichedSink =
@@ -552,41 +556,41 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    * @param enrichedSinks the list of sinks with full details
    * @return a new rule metadata object with enriched source and sink information
    */
-  private static RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> buildEnrichedRuleMetaVerbose(
-      RuleMetaVerbose<SourceInfo, SinkInfo> rule,
+  private static ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> buildEnrichedRuleMetaVerbose(
+      ExecutableRule<SourceInfo, SinkInfo> rule,
       RuleConfiguration<SourceInfoEnriched> enrichedConfig,
       List<SinkInfoEnriched> enrichedSinks) {
 
-    RuleMetaVerbose<SourceInfoEnriched, SinkInfoEnriched> enrichedRule = new RuleMetaVerbose<>();
+    ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule = new ExecutableRule<>();
 
     // Copy identity and metadata fields
-    enrichedRule.setXProjectId(rule.getXProjectId());
-    enrichedRule.setRuleId(rule.getRuleId());
-    enrichedRule.setAudienceId(rule.getAudienceId());
-    enrichedRule.setName(rule.getName());
-    enrichedRule.setDescription(rule.getDescription());
+    executableRule.setXProjectId(rule.getXProjectId());
+    executableRule.setRuleId(rule.getRuleId());
+    executableRule.setAudienceId(rule.getAudienceId());
+    executableRule.setName(rule.getName());
+    executableRule.setDescription(rule.getDescription());
 
     // Copy scheduling information
-    enrichedRule.setStartTime(rule.getStartTime());
-    enrichedRule.setEndTime(rule.getEndTime());
+    executableRule.setStartTime(rule.getStartTime());
+    executableRule.setEndTime(rule.getEndTime());
 
     // Copy rule behavior configuration
-    enrichedRule.setRuleAction(rule.getRuleAction());
-    enrichedRule.setRuleType(rule.getRuleType());
-    enrichedRule.setStatus(rule.getStatus());
+    executableRule.setRuleAction(rule.getRuleAction());
+    executableRule.setRuleType(rule.getRuleType());
+    executableRule.setStatus(rule.getStatus());
 
     // Set enriched configuration and sinks
-    enrichedRule.setConfiguration(enrichedConfig);
-    enrichedRule.setSinkList(enrichedSinks);
+    executableRule.setConfiguration(enrichedConfig);
+    executableRule.setSinkList(enrichedSinks);
 
     // Copy audit fields
-    enrichedRule.setCreatedBy(rule.getCreatedBy());
-    enrichedRule.setCreatedAt(rule.getCreatedAt());
-    enrichedRule.setUpdatedAt(rule.getUpdatedAt());
+    executableRule.setCreatedBy(rule.getCreatedBy());
+    executableRule.setCreatedAt(rule.getCreatedAt());
+    executableRule.setUpdatedAt(rule.getUpdatedAt());
 
     // Copy denormalized fields
-    enrichedRule.setAudienceName(rule.getAudienceName());
+    executableRule.setAudienceName(rule.getAudienceName());
 
-    return enrichedRule;
+    return executableRule;
   }
 }
