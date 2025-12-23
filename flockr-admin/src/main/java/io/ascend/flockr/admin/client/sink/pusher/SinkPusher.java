@@ -1,4 +1,4 @@
-package io.ascend.flockr.admin.client.sink;
+package io.ascend.flockr.admin.client.sink.pusher;
 
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
@@ -12,14 +12,7 @@ import java.util.List;
  * <p>Each sink type (KAFKA, S3_FOLDER, etc.) has its own implementation that handles the specific
  * protocol and configuration.
  */
-public interface SinkPusher {
-
-  /**
-   * Returns the sink type this pusher handles.
-   *
-   * @return the sink type identifier (e.g., "KAFKA", "S3_FOLDER")
-   */
-  String getSinkType();
+public interface SinkPusher extends AutoCloseable {
 
   /**
    * Pushes a batch of audience records to the sink.

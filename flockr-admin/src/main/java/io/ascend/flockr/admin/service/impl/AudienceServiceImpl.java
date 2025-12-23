@@ -56,6 +56,7 @@ public class AudienceServiceImpl implements AudienceService {
   private static final String DEFAULT_ACTOR = "system";
   private static final int DEFAULT_PAGE = 0;
   private static final int DEFAULT_LIMIT = 10;
+  private static final String SINK_STATUS_ACTIVE = "ACTIVE";
 
   /**
    * Creates a new audience using the data provided in the request.
@@ -63,11 +64,16 @@ public class AudienceServiceImpl implements AudienceService {
    * <p>Encrypted project identifier is applied before the audience metadata is persisted via the
    * {@link AudienceRepository}.
    *
+   * <p>This method validates that all specified sink IDs exist and are active before creating the
+   * audience. If any sink is not found or inactive, an appropriate error is returned.
+   *
    * @param xProjectId the encrypted project identifier from the request header
    * @param request the request payload containing audience metadata and configuration
    * @param actor the email/username of the user performing the action (defaults to 'system' if
    *     null)
    * @return a {@link Single} emitting the generated audience identifier
+   * @throws ResourceNotFoundException if one or more sink IDs do not exist
+   * @throws com.dream11.rest.exception.RestException if one or more sinks are not active
    */
   @Override
   public Single<Long> createAudience(
@@ -75,19 +81,85 @@ public class AudienceServiceImpl implements AudienceService {
 
     String createdBy = (actor != null && !actor.isBlank()) ? actor : DEFAULT_ACTOR;
 
-    AudienceMeta audienceMeta =
-        AudienceMeta.builder()
-            .xProjectId(xProjectId)
-            .name(request.getName())
-            .description(request.getDescription())
-            .customAudienceConfig(request.getCustomAudienceConfig())
-            .type(request.getType())
-            .expireDate(request.getExpireDate())
-            .sinks(request.getSinkIds())
-            .createdBy(createdBy)
-            .build();
+    // Validate that all sinks exist and are active before creating the audience
+    return validateSinksExistAndActive(request.getSinkIds())
+        .flatMap(
+            validatedSinks -> {
+              AudienceMeta audienceMeta =
+                  AudienceMeta.builder()
+                      .xProjectId(xProjectId)
+                      .name(request.getName())
+                      .description(request.getDescription())
+                      .customAudienceConfig(request.getCustomAudienceConfig())
+                      .type(request.getType())
+                      .expireDate(request.getExpireDate())
+                      .sinks(request.getSinkIds())
+                      .createdBy(createdBy)
+                      .build();
 
-    return audienceRepository.createAudience(audienceMeta);
+              return audienceRepository.createAudience(audienceMeta);
+            });
+  }
+
+  /**
+   * Validates that all specified sink IDs exist and are active.
+   *
+   * <p>This method performs two validations:
+   *
+   * <ul>
+   *   <li>All requested sink IDs must exist in the database
+   *   <li>All found sinks must have "ACTIVE" status
+   * </ul>
+   *
+   * @param sinkIds the list of sink IDs to validate
+   * @return a {@link Single} emitting the list of validated {@link DataSinkDetails} if all checks
+   *     pass
+   * @throws ResourceNotFoundException if one or more sink IDs do not exist
+   * @throws com.dream11.rest.exception.RestException if one or more sinks are not active
+   */
+  private Single<List<DataSinkDetails>> validateSinksExistAndActive(List<Long> sinkIds) {
+    log.debug("Validating {} sinks for audience creation", sinkIds.size());
+
+    return dataConnectorRepository
+        .getDataSinksByIds(sinkIds)
+        .flatMap(
+            fetchedSinks -> {
+              // Check if all requested sinks were found
+              if (fetchedSinks.size() != sinkIds.size()) {
+                Set<Long> foundIds =
+                    fetchedSinks.stream()
+                        .map(DataSinkDetails::getId)
+                        .collect(java.util.stream.Collectors.toSet());
+                List<Long> missingIds =
+                    sinkIds.stream().filter(id -> !foundIds.contains(id)).toList();
+                log.warn("Sink validation failed: missing sink IDs {}", missingIds);
+                return Single.error(
+                    ErrorEnum.DATA_SINK_NOT_FOUND.toException(
+                        "The following sink IDs do not exist: " + missingIds));
+              }
+
+              // Check if all sinks are active
+              List<DataSinkDetails> inactiveSinks =
+                  fetchedSinks.stream()
+                      .filter(sink -> !SINK_STATUS_ACTIVE.equalsIgnoreCase(sink.getStatus()))
+                      .toList();
+
+              if (!inactiveSinks.isEmpty()) {
+                List<Long> inactiveSinkIds =
+                    inactiveSinks.stream().map(DataSinkDetails::getId).toList();
+                log.warn("Sink validation failed: inactive sink IDs {}", inactiveSinkIds);
+                return Single.error(
+                    ErrorEnum.SINK_NOT_ACTIVE.toException(
+                        "The following sinks are not active: " + inactiveSinkIds));
+              }
+
+              log.debug("All {} sinks validated successfully", sinkIds.size());
+              return Single.just(fetchedSinks);
+            })
+        .doOnError(
+            error ->
+                log.error(
+                    "Failed to validate sinks for audience creation: {}", error.getMessage()));
   }
 
   /**

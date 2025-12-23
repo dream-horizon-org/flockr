@@ -11,13 +11,11 @@ import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.client.postgres.impl.PostgresReaderClientImpl;
 import io.ascend.flockr.admin.client.postgres.impl.PostgresWriterClientImpl;
-import io.ascend.flockr.admin.client.sink.SinkPusher;
 import io.ascend.flockr.admin.client.sink.SinkPusherRegistry;
-import io.ascend.flockr.admin.client.sink.impl.KafkaSinkPusher;
-import io.ascend.flockr.admin.client.sink.impl.S3SinkPusher;
-import io.ascend.flockr.admin.client.sink.impl.WebhookSinkPusher;
-import io.ascend.flockr.admin.client.spark.SparkClient;
-import io.ascend.flockr.admin.client.spark.SparkClientImpl;
+import io.ascend.flockr.admin.client.sink.factory.KafkaSinkPusherFactory;
+import io.ascend.flockr.admin.client.sink.factory.S3SinkPusherFactory;
+import io.ascend.flockr.admin.client.sink.factory.SinkPusherFactory;
+import io.ascend.flockr.admin.client.sink.factory.WebhookSinkPusherFactory;
 import io.ascend.flockr.admin.client.webclient.WebClient;
 import io.ascend.flockr.admin.client.webclient.impl.WebClientImpl;
 import io.ascend.flockr.admin.config.*;
@@ -29,7 +27,6 @@ import io.ascend.flockr.admin.repository.ExecutionSync;
 import io.ascend.flockr.admin.repository.impl.*;
 import io.ascend.flockr.admin.repository.impl.PostgresExecutionSync;
 import io.ascend.flockr.admin.service.*;
-import io.ascend.flockr.admin.service.JobServiceRegistry;
 import io.ascend.flockr.admin.service.impl.*;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.CircuitBreakerFactory;
@@ -96,11 +93,10 @@ public class ServiceModule extends DefaultModule {
     bindServices();
     /* Static Binding */
     requestStaticInjection(
-        ConfigurationUtil.class,
-        JsonUtil.class,
+        ConfigParser.class,
+        JsonSchemaValidationUtil.class,
         AsyncJakartaValidationUtil.class,
-        CircuitBreakerFactory.class,
-        EncryptionUtils.class);
+        CircuitBreakerFactory.class); // ← Add static injection
 
     bindSchedulers();
   }
@@ -125,7 +121,7 @@ public class ServiceModule extends DefaultModule {
   /**
    * Binds client implementations as singletons.
    *
-   * <p>Binds WebClient, FlinkClient, PostgreSQL reader/writer clients, and sink pushers.
+   * <p>Binds WebClient, FlinkClient, PostgreSQL reader/writer clients, and sink pusher factories.
    */
   private void bindClients() {
     //    web client bindings
@@ -139,29 +135,31 @@ public class ServiceModule extends DefaultModule {
     bind(PostgresWriterClientImpl.class).in(Singleton.class);
     bind(PostgresReaderClient.class).to(PostgresReaderClientImpl.class);
     bind(PostgresWriterClient.class).to(PostgresWriterClientImpl.class);
-    //    sink pusher bindings
-    bind(KafkaSinkPusher.class).in(Singleton.class);
-    bind(S3SinkPusher.class).in(Singleton.class);
-    bind(WebhookSinkPusher.class).in(Singleton.class);
-    //    spark client bindings
-    bind(SparkClientImpl.class).in(Singleton.class);
-    bind(SparkClient.class).to(SparkClientImpl.class);
+    //    sink pusher factory bindings
+    bind(KafkaSinkPusherFactory.class).in(Singleton.class);
+    bind(S3SinkPusherFactory.class).in(Singleton.class);
+    bind(WebhookSinkPusherFactory.class).in(Singleton.class);
+
+      bind(SparkClientImpl.class).in(Singleton.class);
+      bind(SparkClient.class).to(SparkClientImpl.class);
   }
 
   /**
-   * Provides the SinkPusherRegistry with all available sink pushers.
+   * Provides the SinkPusherRegistry with all available sink pusher factories.
    *
-   * @param kafkaPusher the Kafka sink pusher
-   * @param s3Pusher the S3 sink pusher
-   * @param webhookPusher the Webhook sink pusher
+   * @param kafkaFactory the Kafka sink pusher factory
+   * @param s3Factory the S3 sink pusher factory
+   * @param webhookFactory the Webhook sink pusher factory
    * @return the configured SinkPusherRegistry
    */
   @Provides
   @Singleton
   SinkPusherRegistry provideSinkPusherRegistry(
-      KafkaSinkPusher kafkaPusher, S3SinkPusher s3Pusher, WebhookSinkPusher webhookPusher) {
-    Set<SinkPusher> pushers = Set.of(kafkaPusher, s3Pusher, webhookPusher);
-    return new SinkPusherRegistry(pushers);
+      KafkaSinkPusherFactory kafkaFactory,
+      S3SinkPusherFactory s3Factory,
+      WebhookSinkPusherFactory webhookFactory) {
+    Set<SinkPusherFactory> factories = Set.of(kafkaFactory, s3Factory, webhookFactory);
+    return new SinkPusherRegistry(factories);
   }
 
   /**
