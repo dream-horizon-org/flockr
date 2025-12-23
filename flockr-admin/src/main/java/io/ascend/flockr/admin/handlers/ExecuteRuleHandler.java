@@ -54,7 +54,7 @@ import lombok.extern.slf4j.Slf4j;
 public non-sealed class ExecuteRuleHandler extends AbstractHandler {
 
   /** Identifier for the trigger source in execution records */
-  private static final String TRIGGER_SOURCE = "executeRuleHandler";
+  private static final String TRIGGER_SOURCE = "system:execute_rule_handler";
 
   private final ObjectMapper objectMapper;
   private final JobServiceRegistry jobServiceRegistry;
@@ -286,11 +286,9 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
       ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule) {
     return RuleExecution.builder()
         .ruleId(executableRule.getRuleId())
-        .sinkIds(executableRule.getSinkList().stream().map(SinkInfoEnriched::getId).toList())
         .executionType(JobType.valueOf(executableRule.getRuleType().name()))
         .status(JobStatus.SUBMITTING)
-        .retries(0)
-        .triggeredBy(TRIGGER_SOURCE)
+        .createdBy(TRIGGER_SOURCE)
         .build();
   }
 
@@ -409,8 +407,15 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
         sinks.size());
 
     // Build lookup maps for O(1) access
-    Map<Long, DataSourceDetails> sourceIdToDetails = buildSourceLookupMap(sources);
-    Map<Long, DataSinkDetails> sinkIdToDetails = buildSinkLookupMap(sinks);
+    Map<Long, DataSourceDetails> sourceIdToDetails = new HashMap<>();
+    for (DataSourceDetails source : sources) {
+      sourceIdToDetails.put(source.getId(), source);
+    }
+
+    Map<Long, DataSinkDetails> sinkIdToDetails = new HashMap<>();
+    for (DataSinkDetails sink : sinks) {
+      sinkIdToDetails.put(sink.getId(), sink);
+    }
 
     List<ExecutableRule<SourceInfoEnriched, SinkInfoEnriched>> executableRules = new ArrayList<>();
 
@@ -430,34 +435,6 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
         executableRules.size(),
         executableRuleList.size());
     return executableRules;
-  }
-
-  /**
-   * Builds a lookup map from source ID to source details.
-   *
-   * @param sources the list of data source details
-   * @return map of source ID to source details
-   */
-  private Map<Long, DataSourceDetails> buildSourceLookupMap(List<DataSourceDetails> sources) {
-    Map<Long, DataSourceDetails> sourceIdToDetails = new HashMap<>();
-    for (DataSourceDetails source : sources) {
-      sourceIdToDetails.put(source.getId(), source);
-    }
-    return sourceIdToDetails;
-  }
-
-  /**
-   * Builds a lookup map from sink ID to sink details.
-   *
-   * @param sinks the list of data sink details
-   * @return map of sink ID to sink details
-   */
-  private Map<Long, DataSinkDetails> buildSinkLookupMap(List<DataSinkDetails> sinks) {
-    Map<Long, DataSinkDetails> sinkIdToDetails = new HashMap<>();
-    for (DataSinkDetails sink : sinks) {
-      sinkIdToDetails.put(sink.getId(), sink);
-    }
-    return sinkIdToDetails;
   }
 
   /**

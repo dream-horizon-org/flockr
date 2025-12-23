@@ -95,6 +95,31 @@ CREATE INDEX idx_rules_audience_id ON rules(audience_id);
 CREATE INDEX idx_rules_x_project_id ON rules(x_project_id);
 CREATE INDEX idx_rules_audience_x_project ON rules(audience_id, x_project_id);
 
+-- Rule execution tracking table
+CREATE TABLE IF NOT EXISTS rule_execution (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(255),
+    rule_id BIGINT NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('BATCH', 'STREAM')),
+    status VARCHAR(50) NOT NULL CHECK (status IN ('SUBMITTING', 'SUBMITTED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED')),
+    metadata JSONB,
+    external_job_id VARCHAR(255),
+    created_by VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    CONSTRAINT fk_rule_execution_rule FOREIGN KEY (rule_id) REFERENCES rules(id)
+);
+
+-- Indexes for rule execution queries
+CREATE INDEX idx_rule_execution_rule_id ON rule_execution(rule_id);
+CREATE INDEX idx_rule_execution_status ON rule_execution(status);
+CREATE INDEX idx_rule_execution_external_job_id ON rule_execution(external_job_id);
+CREATE INDEX idx_rule_execution_created_at ON rule_execution(created_at);
+CREATE INDEX idx_rule_execution_stale_submitting ON rule_execution(status, created_at) 
+    WHERE status = 'SUBMITTING';
+
+
 
 CREATE TABLE audience_owners (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

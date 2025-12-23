@@ -17,7 +17,6 @@ import io.vertx.rxjava3.sqlclient.Tuple;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,48 +35,41 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
   private final PostgresReaderClient postgresReaderClient;
 
   private static final String SQL_CREATE =
-      "INSERT INTO rule_execution (rule_id, sink_ids, job_type, job_status, job_metadata, triggered_by, retries) "
-          + "VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING job_id";
+      "INSERT INTO rule_execution (rule_id, type, status, metadata, created_by) "
+          + "VALUES ($1, $2, $3, $4, $5) RETURNING id";
 
   private static final String SQL_UPDATE_STATUS_AND_REF =
-      "UPDATE rule_execution SET job_status = $1, job_ref_id = $2, started_at = $3, updated_at = NOW() "
-          + "WHERE job_id = $4";
-
-  private static final String SQL_MARK_FAILED =
-      "UPDATE rule_execution SET job_status = 'FAILED', error_message = $1, updated_at = NOW() "
-          + "WHERE job_id = $2";
-
-  private static final String SQL_UPDATE_RULE_STATUS_IF_CURRENT =
-      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
+      "UPDATE rule_execution SET status = $1, external_job_id = $2, updated_at = NOW() "
+          + "WHERE id = $3";
 
   private static final String SQL_UPDATE_EXECUTION_DETAILS =
-      "UPDATE rule_execution SET job_name = $1, job_ref_id = $2, job_status = $3, "
-          + "job_metadata = $4, started_at = NOW(), updated_at = NOW() "
-          + "WHERE job_id = $5";
+      "UPDATE rule_execution SET name = $1, external_job_id = $2, status = $3, "
+          + "metadata = $4, updated_at = NOW() "
+          + "WHERE id = $5";
 
   private static final String SQL_UPDATE_RULE_STATUS =
       "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2";
 
+  private static final String SQL_UPDATE_RULE_STATUS_IF_CURRENT =
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
+
   private static final String SQL_FIND_STALE_SUBMITTING =
-      "SELECT job_id, job_name, rule_id, sink_ids, job_type, job_status, job_metadata, job_ref_id, "
-          + "retries, error_message, triggered_by, created_at, updated_at, started_at, completed_at "
+      "SELECT id, name, rule_id, type, status, metadata, external_job_id, "
+          + "created_by, created_at, updated_at "
           + "FROM rule_execution "
-          + "WHERE job_status = 'SUBMITTING' "
+          + "WHERE status = 'SUBMITTING' "
           + "AND created_at < NOW() - INTERVAL '%d minutes' "
           + "ORDER BY created_at ASC";
 
   @Override
   public Completable updateStatusAndExternalJobId(
       Long executionId, JobStatus status, String externalJobId, Instant startedAt) {
-    LocalDateTime startedAtLocal =
-        startedAt != null ? LocalDateTime.ofInstant(startedAt, ZoneOffset.UTC) : null;
-
     return postgresWriterClient
         .getConnection()
         .flatMapCompletable(
             conn ->
                 conn.preparedQuery(SQL_UPDATE_STATUS_AND_REF)
-                    .rxExecute(Tuple.of(status.name(), externalJobId, startedAtLocal, executionId))
+                    .rxExecute(Tuple.of(status.name(), externalJobId, executionId))
                     .ignoreElement()
                     .doFinally(conn::close));
   }
@@ -88,8 +80,8 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
         .getConnection()
         .flatMapCompletable(
             conn ->
-                conn.preparedQuery(SQL_MARK_FAILED)
-                    .rxExecute(Tuple.of(errorMessage, executionId))
+                conn.preparedQuery(SQL_UPDATE_STATUS_AND_REF)
+                    .rxExecute(Tuple.of(JobStatus.FAILED.name(), null, executionId))
                     .ignoreElement()
                     .doFinally(conn::close));
   }
@@ -101,21 +93,15 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
    * @return RuleExecution entity
    */
   private RuleExecution mapRow(Row row) {
-    Long[] sinkIdsArray = row.getArrayOfLongs("sink_ids");
-    List<Long> sinkIds = sinkIdsArray != null ? Arrays.asList(sinkIdsArray) : List.of();
-
     return RuleExecution.builder()
-        .jobName(row.getString("job_name"))
-        .executionId(row.getLong("job_id"))
+        .executionId(row.getLong("id"))
+        .jobName(row.getString("name"))
         .ruleId(row.getLong("rule_id"))
-        .sinkIds(sinkIds)
-        .executionType(JobType.valueOf(row.getString("job_type")))
-        .status(JobStatus.valueOf(row.getString("job_status")))
-        .metadata(row.getJsonObject("job_metadata"))
-        .externalJobId(row.getString("job_ref_id"))
-        .retries(row.getInteger("retries"))
-        .errorMessage(row.getString("error_message"))
-        .triggeredBy(row.getString("triggered_by"))
+        .executionType(JobType.valueOf(row.getString("type")))
+        .status(JobStatus.valueOf(row.getString("status")))
+        .metadata(row.getJsonObject("metadata"))
+        .externalJobId(row.getString("external_job_id"))
+        .createdBy(row.getString("created_by"))
         .createdAt(toInstant(row.getLocalDateTime("created_at")))
         .updatedAt(toInstant(row.getLocalDateTime("updated_at")))
         .build();
@@ -129,20 +115,13 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
   public Single<Long> createPendingExecutionAndUpdateRuleStatus(
       RuleExecution ruleExecution, Long ruleId, RuleStatus currentStatus, RuleStatus newStatus) {
 
-    Long[] sinkIdsArray =
-        ruleExecution.getSinkIds() != null
-            ? ruleExecution.getSinkIds().toArray(new Long[0])
-            : new Long[0];
-
     Tuple createParams =
         Tuple.tuple()
             .addLong(ruleExecution.getRuleId())
-            .addArrayOfLong(sinkIdsArray)
             .addString(ruleExecution.getExecutionType().name())
             .addString(ruleExecution.getStatus().name())
             .addJsonObject(ruleExecution.getMetadata())
-            .addString(ruleExecution.getTriggeredBy())
-            .addInteger(ruleExecution.getRetries());
+            .addString(ruleExecution.getCreatedBy());
 
     return postgresWriterClient
         .executeWithTransaction(
@@ -150,7 +129,7 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
                 // First: Create execution log
                 conn.preparedQuery(SQL_CREATE)
                     .rxExecute(createParams)
-                    .map(rows -> rows.iterator().next().getLong("job_id"))
+                    .map(rows -> rows.iterator().next().getLong("id"))
                     .flatMap(
                         executionId ->
                             // Second: Update rule status (with optimistic lock)

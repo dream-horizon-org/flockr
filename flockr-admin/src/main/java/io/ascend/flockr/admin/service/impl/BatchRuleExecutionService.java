@@ -107,13 +107,11 @@ public class BatchRuleExecutionService implements RuleExecutionService {
       io.ascend.flockr.admin.client.spark.io.response.SparkJobSubmissionResponse sparkResponse,
       SparkSubmissionRequest request) {
 
-    // Extract sink IDs from the rule
     java.util.List<Long> sinkIds =
         executableRule.getSinkList() != null
             ? executableRule.getSinkList().stream().map(SinkInfo::getId).toList()
             : java.util.List.of();
 
-    // Build batch execution metadata as flexible JSON
     JsonObject metadata =
         new JsonObject()
             .put("type", "BATCH")
@@ -129,7 +127,6 @@ public class BatchRuleExecutionService implements RuleExecutionService {
             .put("sinkIds", new JsonArray(sinkIds))
             .put("attemptNumber", 1);
 
-    // Build job submission result
     return JobSubmissionResult.builder()
         .jobName(request.getSparkProperties().get("spark.app.name"))
         .ruleId(executableRule.getRuleId())
