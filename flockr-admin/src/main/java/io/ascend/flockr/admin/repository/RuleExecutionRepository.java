@@ -8,6 +8,7 @@ import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Repository for managing rule executions.
@@ -113,4 +114,15 @@ public interface RuleExecutionRepository {
       JsonObject metadata,
       Long ruleId,
       RuleStatus newRuleStatus);
+
+  /**
+   * Finds executions stuck in SUBMITTING status for longer than the threshold.
+   *
+   * <p>Used by reconciliation process to find jobs that may have been submitted but whose response
+   * was lost or the process crashed before updating the database.
+   *
+   * @param thresholdMinutes minimum age in minutes for an execution to be considered stale
+   * @return Single containing list of stale executions needing reconciliation
+   */
+  Single<List<RuleExecution>> findStaleSubmittingExecutions(int thresholdMinutes);
 }

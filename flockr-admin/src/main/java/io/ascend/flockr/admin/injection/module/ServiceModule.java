@@ -23,6 +23,7 @@ import io.ascend.flockr.admin.client.webclient.impl.WebClientImpl;
 import io.ascend.flockr.admin.config.*;
 import io.ascend.flockr.admin.handlers.AbstractHandler;
 import io.ascend.flockr.admin.handlers.ExecuteRuleHandler;
+import io.ascend.flockr.admin.handlers.ReconcileJobHandler;
 import io.ascend.flockr.admin.repository.*;
 import io.ascend.flockr.admin.repository.ExecutionSync;
 import io.ascend.flockr.admin.repository.impl.*;
@@ -218,5 +219,6 @@ public class ServiceModule extends DefaultModule {
     Multibinder<AbstractHandler> handlerBinder =
         Multibinder.newSetBinder(binder(), AbstractHandler.class);
     handlerBinder.addBinding().to(ExecuteRuleHandler.class).in(Singleton.class);
+    handlerBinder.addBinding().to(ReconcileJobHandler.class).in(Singleton.class);
   }
 }

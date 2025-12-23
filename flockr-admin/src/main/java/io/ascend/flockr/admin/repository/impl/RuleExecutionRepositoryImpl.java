@@ -72,6 +72,14 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
   private static final String SQL_UPDATE_RULE_STATUS =
       "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2";
 
+  private static final String SQL_FIND_STALE_SUBMITTING =
+      "SELECT job_id, job_name, rule_id, sink_ids, job_type, job_status, job_metadata, job_ref_id, "
+          + "retries, error_message, triggered_by, created_at, updated_at, started_at, completed_at "
+          + "FROM rule_execution "
+          + "WHERE job_status = 'SUBMITTING' "
+          + "AND created_at < NOW() - INTERVAL '%d minutes' "
+          + "ORDER BY created_at ASC";
+
   @Override
   public Single<Long> create(RuleExecution ruleExecution) {
     Long[] sinkIdsArray =
@@ -320,5 +328,16 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
                     ruleId,
                     e))
         .toSingle();
+  }
+
+  @Override
+  public Single<List<RuleExecution>> findStaleSubmittingExecutions(int thresholdMinutes) {
+    String sql = String.format(SQL_FIND_STALE_SUBMITTING, thresholdMinutes);
+    log.debug("Finding stale SUBMITTING executions older than {} minutes", thresholdMinutes);
+
+    return postgresReaderClient
+        .fetchAll(sql, this::mapRow)
+        .doOnSuccess(
+            executions -> log.info("Found {} stale SUBMITTING executions", executions.size()));
   }
 }

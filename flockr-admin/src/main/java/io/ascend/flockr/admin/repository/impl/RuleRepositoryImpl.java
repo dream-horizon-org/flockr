@@ -12,6 +12,7 @@ import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of {@link RuleRepository} using PostgreSQL as the data store.
@@ -30,6 +31,7 @@ import lombok.RequiredArgsConstructor;
  * @author Prithu Sharma
  * @since 1.0
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class RuleRepositoryImpl implements RuleRepository {
   private final PostgresReaderClient postgresReaderClient;

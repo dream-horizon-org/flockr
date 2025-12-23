@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class SparkConfig {
-  // HTTP Client defaults
+  // HTTP Client defaults (Spark Master REST API)
   private static final String DEFAULT_HOST = "localhost";
   private static final Integer DEFAULT_PORT = 6066;
   private static final Integer DEFAULT_CONNECTION_TIMEOUT = 30000;
@@ -35,7 +35,7 @@ public class SparkConfig {
   private static final Integer DEFAULT_EXECUTOR_INSTANCES = 2;
   private static final String DEFAULT_DRIVER_MEMORY = "1g";
 
-  // HTTP Client configuration
+  // Spark Master HTTP Client configuration
   @Optional private String host = DEFAULT_HOST;
   @Optional private int port = DEFAULT_PORT;
   @Optional private int connectTimeout = DEFAULT_CONNECTION_TIMEOUT;

@@ -1,6 +1,7 @@
 package io.ascend.flockr.admin.client.spark;
 
 import com.google.inject.Inject;
+import io.ascend.flockr.admin.client.spark.io.response.SparkApplicationInfo;
 import io.ascend.flockr.admin.client.spark.io.response.SparkJobStatusResponse;
 import io.ascend.flockr.admin.client.spark.io.response.SparkJobSubmissionResponse;
 import io.ascend.flockr.admin.client.webclient.WebClient;
@@ -8,10 +9,17 @@ import io.ascend.flockr.admin.config.SparkConfig;
 import io.netty.handler.codec.http.HttpMethod;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.ext.web.client.HttpRequest;
 import io.vertx.rxjava3.ext.web.client.HttpResponse;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -22,6 +30,10 @@ public class SparkClientImpl implements SparkClient {
   private static final String SUBMISSION_ID_FIELD = "submissionId";
   private static final String APPLICATION_ID_FIELD = "applicationId";
   private static final String STATUS_FIELD = "status";
+
+  /** Date format required by Spark History Server API */
+  private static final DateTimeFormatter HISTORY_DATE_FORMAT =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'GMT'").withZone(ZoneOffset.UTC);
 
   private final WebClient webClient;
   private final SparkConfig sparkConfig;
@@ -54,10 +66,7 @@ public class SparkClientImpl implements SparkClient {
               log.info("Job submitted successfully. SubmissionId: {}", submissionId);
               return SparkJobSubmissionResponse.builder().submissionId(submissionId).build();
             })
-        .doOnError(
-            error -> {
-              log.error("Failed to submit job", error);
-            })
+        .doOnError(error -> log.error("Failed to submit job", error))
         .onErrorResumeNext(
             error -> Single.error(SparkException.submissionError("Job submission failed", error)));
   }
@@ -82,17 +91,14 @@ public class SparkClientImpl implements SparkClient {
                   .build();
             })
         .doOnSuccess(
-            status -> {
-              log.debug(
-                  "Submission {} status: {}, ApplicationId: {}",
-                  submissionId,
-                  status.getStatus(),
-                  status.getApplicationId());
-            })
+            status ->
+                log.debug(
+                    "Submission {} status: {}, ApplicationId: {}",
+                    submissionId,
+                    status.getStatus(),
+                    status.getApplicationId()))
         .doOnError(
-            error -> {
-              log.error("Failed to get job status for submission {}", submissionId, error);
-            });
+            error -> log.error("Failed to get job status for submission {}", submissionId, error));
   }
 
   @Override
@@ -101,13 +107,9 @@ public class SparkClientImpl implements SparkClient {
     return executeRequest(
             HttpMethod.POST, "/v1/submissions/kill/" + submissionId, null, "Failed to cancel job")
         .doOnSuccess(
-            response -> {
-              log.info("Job with submissionId {} cancelled successfully", submissionId);
-            })
+            response -> log.info("Job with submissionId {} cancelled successfully", submissionId))
         .doOnError(
-            error -> {
-              log.error("Failed to cancel job with submissionId {}", submissionId, error);
-            })
+            error -> log.error("Failed to cancel job with submissionId {}", submissionId, error))
         .ignoreElement();
   }
 
@@ -121,37 +123,86 @@ public class SparkClientImpl implements SparkClient {
             "Failed to get application logs for applicationId: " + applicationId)
         .map(HttpResponse::bodyAsString)
         .doOnSuccess(
-            logs -> {
-              log.debug(
-                  "Application {} logs retrieved. Length: {}",
-                  applicationId,
-                  logs != null ? logs.length() : 0);
-            })
+            logs ->
+                log.debug(
+                    "Application {} logs retrieved. Length: {}",
+                    applicationId,
+                    logs != null ? logs.length() : 0))
         .doOnError(
-            error -> {
-              log.error(
-                  "Failed to get application logs for applicationId {}", applicationId, error);
-            });
+            error ->
+                log.error(
+                    "Failed to get application logs for applicationId {}", applicationId, error));
   }
 
-  /**
-   * Execute HTTP request to Spark REST API.
-   *
-   * <p>Follows the same pattern as FlinkClientImpl.executeRequest()
-   */
+  // ==================== History Server Methods ====================
+
+  @Override
+  public Single<List<SparkApplicationInfo>> listApplications(
+      String status, Instant minDate, Instant maxDate, Integer limit) {
+
+    StringBuilder pathBuilder = new StringBuilder("/api/v1/applications");
+    List<String> params = new ArrayList<>();
+
+    if (status != null) {
+      params.add("status=" + status);
+    }
+    if (minDate != null) {
+      params.add("minDate=" + HISTORY_DATE_FORMAT.format(minDate));
+    }
+    if (maxDate != null) {
+      params.add("maxDate=" + HISTORY_DATE_FORMAT.format(maxDate));
+    }
+    if (limit != null) {
+      params.add("limit=" + limit);
+    }
+
+    if (!params.isEmpty()) {
+      pathBuilder.append("?").append(String.join("&", params));
+    }
+
+    String path = pathBuilder.toString();
+    log.debug("Listing applications from history server: {}", path);
+
+    return executeHistoryServerRequest(path)
+        .map(this::parseApplicationList)
+        .doOnSuccess(apps -> log.debug("Found {} applications from history server", apps.size()))
+        .doOnError(e -> log.error("Failed to list applications from history server", e));
+  }
+
+  @Override
+  public Single<List<SparkApplicationInfo>> findApplicationsByNamePattern(
+      String namePattern, Instant minDate, Instant maxDate) {
+
+    // Convert glob pattern to regex
+    String regex = "^" + namePattern.replace(".", "\\.").replace("*", ".*").replace("?", ".") + "$";
+    Pattern pattern = Pattern.compile(regex);
+
+    log.debug("Finding applications matching pattern: {} (regex: {})", namePattern, regex);
+
+    return listApplications(null, minDate, maxDate, 500)
+        .map(
+            apps ->
+                apps.stream()
+                    .filter(
+                        app -> app.getName() != null && pattern.matcher(app.getName()).matches())
+                    .toList())
+        .doOnSuccess(
+            matches ->
+                log.debug(
+                    "Found {} applications matching pattern {}", matches.size(), namePattern));
+  }
+
+  // ==================== Private Helper Methods ====================
+
+  /** Execute HTTP request to Spark Master REST API. */
   private Single<HttpResponse<Buffer>> executeRequest(
       HttpMethod method, String path, JsonObject body, String errorMessage) {
 
     HttpRequest<Buffer> request;
 
-    // Prepare request based on HTTP method
     if (method == HttpMethod.GET) {
       request = webClient.prepareHttpGETRequest(sparkConfig.getHost(), sparkConfig.getPort(), path);
-    } else if (method == HttpMethod.POST) {
-      request =
-          webClient.prepareHttpPOSTRequest(sparkConfig.getHost(), sparkConfig.getPort(), path);
     } else {
-      // For other methods, use POST as fallback
       request =
           webClient.prepareHttpPOSTRequest(sparkConfig.getHost(), sparkConfig.getPort(), path);
     }
@@ -168,40 +219,97 @@ public class SparkClientImpl implements SparkClient {
     }
   }
 
-  /**
-   * Validate HTTP response and handle errors.
-   *
-   * <p>Follows the same pattern as FlinkClientImpl.validateResponse()
-   */
+  /** Execute GET request for listing applications (same endpoint as job submission). */
+  private Single<HttpResponse<Buffer>> executeHistoryServerRequest(String path) {
+    HttpRequest<Buffer> request =
+        webClient.prepareHttpGETRequest(sparkConfig.getHost(), sparkConfig.getPort(), path);
+    request.timeout(sparkConfig.getRequestTimeout());
+
+    return request
+        .rxSend()
+        .flatMap(
+            response -> {
+              if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                return Single.just(response);
+              }
+              log.error(
+                  "History server error: status={}, body={}",
+                  response.statusCode(),
+                  response.bodyAsString());
+              return Single.error(
+                  SparkException.apiError(
+                      "History server request failed",
+                      response.statusCode(),
+                      response.bodyAsString()));
+            });
+  }
+
+  /** Parse the JSON response from History Server into SparkApplicationInfo list. */
+  private List<SparkApplicationInfo> parseApplicationList(HttpResponse<Buffer> response) {
+    JsonArray appsArray = response.bodyAsJsonArray();
+    List<SparkApplicationInfo> result = new ArrayList<>();
+
+    for (int i = 0; i < appsArray.size(); i++) {
+      JsonObject appJson = appsArray.getJsonObject(i);
+
+      // Handle nested attempts array (Spark 2.x+ format)
+      JsonArray attempts = appJson.getJsonArray("attempts");
+      String state = "UNKNOWN";
+      Long startTimeMs = null;
+      Long endTimeMs = null;
+      Long duration = null;
+
+      if (attempts != null && !attempts.isEmpty()) {
+        JsonObject latestAttempt = attempts.getJsonObject(0);
+        boolean completed = latestAttempt.getBoolean("completed", false);
+        state = completed ? "FINISHED" : "RUNNING";
+        startTimeMs = latestAttempt.getLong("startTime");
+        endTimeMs = latestAttempt.getLong("endTime");
+        duration = latestAttempt.getLong("duration");
+      }
+
+      result.add(
+          SparkApplicationInfo.builder()
+              .id(appJson.getString("id"))
+              .name(appJson.getString("name"))
+              .state(state)
+              .startTime(parseEpochMillis(startTimeMs))
+              .endTime(parseEpochMillis(endTimeMs))
+              .duration(duration)
+              .user(appJson.getString("sparkUser"))
+              .build());
+    }
+    return result;
+  }
+
+  private Instant parseEpochMillis(Long epochMillis) {
+    return epochMillis != null ? Instant.ofEpochMilli(epochMillis) : null;
+  }
+
   private Single<HttpResponse<Buffer>> validateResponse(
       HttpResponse<Buffer> response, String errorMessage) {
 
     if (response.statusCode() >= 200 && response.statusCode() < 300) {
       return Single.just(response);
+    }
+
+    int statusCode = response.statusCode();
+    String responseBody = response.bodyAsString();
+
+    log.error("Spark API error: {}. Status: {}, Body: {}", errorMessage, statusCode, responseBody);
+
+    if (statusCode == 404) {
+      return Single.error(SparkException.jobNotFound(extractIdFromError(responseBody)));
+    } else if (statusCode >= 500) {
+      return Single.error(
+          SparkException.connectionError(
+              String.format("%s. Spark cluster may be unavailable", errorMessage)));
     } else {
-      int statusCode = response.statusCode();
-      String responseBody = response.bodyAsString();
-
-      log.error(
-          "Spark API error: {}. Status: {}, Body: {}", errorMessage, statusCode, responseBody);
-
-      // Return specific exceptions based on status code
-      if (statusCode == 404) {
-        return Single.error(
-            SparkException.jobNotFound(extractApplicationIdFromError(responseBody)));
-      } else if (statusCode >= 500) {
-        return Single.error(
-            SparkException.connectionError(
-                String.format("%s. Spark cluster may be unavailable", errorMessage)));
-      } else {
-        return Single.error(SparkException.apiError(errorMessage, statusCode, responseBody));
-      }
+      return Single.error(SparkException.apiError(errorMessage, statusCode, responseBody));
     }
   }
 
-  /** Extract submission ID or application ID from error response if available. */
-  private String extractApplicationIdFromError(String responseBody) {
-    // Try to extract submissionId first, then applicationId
+  private String extractIdFromError(String responseBody) {
     try {
       JsonObject errorJson = new JsonObject(responseBody);
       String submissionId = errorJson.getString(SUBMISSION_ID_FIELD);

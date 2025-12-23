@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ApplicationConfig {
   private VertxSchedulerConfig executeRuleHandler;
+  private VertxSchedulerConfig reconcileJobHandler;
 
   @Data
   @NoArgsConstructor

@@ -1,19 +1,27 @@
 package io.ascend.flockr.admin.client.spark;
 
+import io.ascend.flockr.admin.client.spark.io.response.SparkApplicationInfo;
 import io.ascend.flockr.admin.client.spark.io.response.SparkJobStatusResponse;
 import io.ascend.flockr.admin.client.spark.io.response.SparkJobSubmissionResponse;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
+import java.time.Instant;
+import java.util.List;
 
 /**
  * Client interface for interacting with Apache Spark REST API for historic batch processing.
  *
- * <p>This client provides methods for submitting and managing Spark jobs. It follows the same
- * pattern as FlinkClient for consistency.
+ * <p>This client provides methods for:
  *
- * <p><strong>Note:</strong> This client is task-agnostic. The service layer handles task ID lookup
- * and data accumulation before calling this client.
+ * <ul>
+ *   <li>Submitting jobs to Spark cluster (Master REST API)
+ *   <li>Querying job status and logs
+ *   <li>Listing applications from History Server (for reconciliation)
+ * </ul>
+ *
+ * @author Flockr Team
+ * @since 1.0
  */
 public interface SparkClient {
 
@@ -71,6 +79,45 @@ public interface SparkClient {
    * @return Single containing application logs as string
    */
   Single<String> getApplicationLogs(String applicationId);
+
+  /**
+   * Lists Spark applications from the History Server API.
+   *
+   * <p>Endpoint: GET
+   * /api/v1/applications?status={status}&minDate={date}&maxDate={date}&limit={limit}
+   *
+   * <p><strong>Note:</strong> The History Server may be on a different host/port than the Spark
+   * Master. Configure historyHost and historyPort in SparkConfig.
+   *
+   * @param status filter by status (running, completed, failed) - optional, pass null to skip
+   * @param minDate return apps started after this date - optional, pass null to skip
+   * @param maxDate return apps started before this date - optional, pass null to skip
+   * @param limit maximum number of results - optional, pass null to skip
+   * @return Single containing list of SparkApplicationInfo
+   */
+  Single<List<SparkApplicationInfo>> listApplications(
+      String status, Instant minDate, Instant maxDate, Integer limit);
+
+  /**
+   * Finds applications by name pattern from History Server.
+   *
+   * <p>This method fetches applications from the History Server and filters them by name using a
+   * glob pattern. Useful for reconciliation to find jobs by their assigned spark.app.name.
+   *
+   * <p>Pattern examples:
+   *
+   * <ul>
+   *   <li>"flockr-batch-rule-123-exec-456-*" - matches jobs for rule 123, execution 456
+   *   <li>"flockr-batch-*" - matches all flockr batch jobs
+   * </ul>
+   *
+   * @param namePattern glob pattern to match (* and ? wildcards supported)
+   * @param minDate search apps started after this date
+   * @param maxDate search apps started before this date
+   * @return list of matching applications
+   */
+  Single<List<SparkApplicationInfo>> findApplicationsByNamePattern(
+      String namePattern, Instant minDate, Instant maxDate);
 
   /**
    * Close the Spark client and release resources.

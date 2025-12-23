@@ -28,7 +28,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Getter
 @Slf4j
-public abstract sealed class AbstractHandler implements Handler<Long> permits ExecuteRuleHandler {
+public abstract sealed class AbstractHandler implements Handler<Long>
+    permits ExecuteRuleHandler, ReconcileJobHandler {
 
   /** Current execution state of the handler, volatile for thread-safe visibility */
   protected volatile HandlerState handlerState;
