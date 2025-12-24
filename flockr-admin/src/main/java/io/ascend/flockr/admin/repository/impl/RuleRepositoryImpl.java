@@ -6,6 +6,7 @@ import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.domain.rule.*;
 import io.ascend.flockr.admin.repository.RuleRepository;
 import io.ascend.flockr.admin.util.RuleHelpers;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.sqlclient.Tuple;
@@ -79,6 +80,9 @@ public class RuleRepositoryImpl implements RuleRepository {
   private static final String SQL_UPDATE_STATUS_IF_CURRENT =
       "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
 
+  private static final String SQL_BATCH_UPDATE_RULE_STATUS =
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = ANY($2) AND status = $3";
+
   @Override
   public Single<Boolean> createRules(List<RuleMeta<SourceInfo>> ruleMetas) {
     List<Tuple> batchParams = new ArrayList<>(ruleMetas.size());
@@ -138,6 +142,26 @@ public class RuleRepositoryImpl implements RuleRepository {
                         conn,
                         SQL_UPDATE_STATUS_IF_CURRENT,
                         Tuple.of(newStatus, ruleId, currentStatus))
+                    .doFinally(conn::close));
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public Completable batchUpdateRuleStatus(
+      List<Long> ruleIds, RuleStatus newStatus, RuleStatus expectedCurrentStatus) {
+
+    if (ruleIds.isEmpty()) {
+      return Completable.complete();
+    }
+
+    Long[] ids = ruleIds.toArray(new Long[0]);
+    return postgresWriterClient
+        .getConnection()
+        .flatMapCompletable(
+            conn ->
+                conn.preparedQuery(SQL_BATCH_UPDATE_RULE_STATUS)
+                    .rxExecute(Tuple.of(newStatus.name(), ids, expectedCurrentStatus.name()))
+                    .ignoreElement()
                     .doFinally(conn::close));
   }
 }

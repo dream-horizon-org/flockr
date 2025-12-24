@@ -1,6 +1,7 @@
 package io.ascend.flockr.admin.repository;
 
 import io.ascend.flockr.admin.domain.rule.*;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
@@ -78,4 +79,17 @@ public interface RuleRepository {
    * @return a Single emitting true if the status was updated, false otherwise
    */
   Single<Boolean> updateRuleStatus(Long ruleId, RuleStatus newStatus, RuleStatus currentStatus);
+
+  /**
+   * Batch update rule status for multiple rules.
+   *
+   * <p>Uses PostgreSQL ANY() for efficient batch update with optimistic locking.
+   *
+   * @param ruleIds list of rule IDs to update
+   * @param newStatus the new status to set
+   * @param expectedCurrentStatus the expected current status (for optimistic locking)
+   * @return Completable that completes when all updates are done
+   */
+  Completable batchUpdateRuleStatus(
+      List<Long> ruleIds, RuleStatus newStatus, RuleStatus expectedCurrentStatus);
 }
