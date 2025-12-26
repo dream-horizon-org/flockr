@@ -1,0 +1,38 @@
+{
+  "audienceName": "test-cohort-001",
+  "action": "append",
+  "expireAt": 1735689599,
+  "source": {
+    "query": "SELECT user_id FROM hulk-users.hulk-usersuser_data limit 10;",
+    "type": "ATHENA",
+    "config": {
+      "region": "us-east-1",
+      "workgroup": "primary",
+      "outputLocation": "s3://ascend-test-buck/athena-output/",
+      "accessKey": "test_access_key",
+      "secretKey": "test_secret_key",
+      "sessionToken": "test_session_token"
+      }
+  },
+  "destinationJson": [
+    {
+      "type": "S3",
+      "config": {
+        "bucket": "ascend-test-buck",
+        "path": "/audiences",
+        "region": "us-east-1",
+        "accessKey": "test_access_key",
+        "secretKey": "test_secret_key",
+        "sessionToken": "test_session_token"
+      }
+    },
+    {
+      "type": "KAFKA",
+      "config": {
+        "bootstrapServers": "kafka:9093",
+        "topic": "audience-updates"
+      }
+    }
+  ]
+}
+
