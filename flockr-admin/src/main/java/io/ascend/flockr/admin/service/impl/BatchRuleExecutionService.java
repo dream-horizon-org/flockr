@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import io.ascend.flockr.admin.client.spark.SparkClient;
 import io.ascend.flockr.admin.client.spark.io.request.SparkSubmissionRequest;
 import io.ascend.flockr.admin.client.spark.io.response.SparkApplicationInfo;
+import io.ascend.flockr.admin.client.spark.io.response.SparkJobSubmissionResponse;
 import io.ascend.flockr.admin.config.SparkConfig;
 import io.ascend.flockr.admin.domain.rule.*;
 import io.ascend.flockr.admin.service.RuleExecutionService;
@@ -39,6 +40,10 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class BatchRuleExecutionService implements RuleExecutionService {
+  // Spark property keys
+  private static final String SPARK_APP_NAME = "spark.app.name";
+  private static final String METADATA_SPARK_PROPERTIES = "sparkProperties";
+  private static final String METADATA_SINK_IDS = "sinkIds";
 
   private final SparkClient sparkClient;
   private final SparkConfig sparkConfig;
@@ -69,11 +74,10 @@ public class BatchRuleExecutionService implements RuleExecutionService {
         executionId,
         executableRule.getName());
 
-    // Build Spark submission request from rule
+    // Build Spark submission request from rule TODO make this configurable per as resource tier
     SparkSubmissionRequest request =
-        SparkSubmissionRequest.fromRule(executableRule, sparkConfig.toJobConfig(), executionId);
+        SparkSubmissionRequest.fromRule(executableRule, sparkConfig, executionId);
 
-    // Submit to Spark cluster
     log.info(
         "Submitting BATCH job to Spark cluster for rule {} (execution {})",
         executableRule.getRuleId(),
@@ -111,7 +115,7 @@ public class BatchRuleExecutionService implements RuleExecutionService {
    */
   private JobSubmissionResult buildJobSubmissionResult(
       ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule,
-      io.ascend.flockr.admin.client.spark.io.response.SparkJobSubmissionResponse sparkResponse,
+      SparkJobSubmissionResponse sparkResponse,
       SparkSubmissionRequest request) {
 
     java.util.List<Long> sinkIds =
@@ -119,23 +123,17 @@ public class BatchRuleExecutionService implements RuleExecutionService {
             ? executableRule.getSinkList().stream().map(SinkInfo::getId).toList()
             : java.util.List.of();
 
+    // Convert Spark properties map to JsonObject
+    JsonObject sparkPropertiesJson = new JsonObject();
+    request.getSparkProperties().forEach(sparkPropertiesJson::put);
+
     JsonObject metadata =
         new JsonObject()
-            .put("type", "BATCH")
-            .put("driverMemory", request.getSparkProperties().get("spark.driver.memory"))
-            .put("executorMemory", request.getSparkProperties().get("spark.executor.memory"))
-            .put(
-                "executorCores",
-                Integer.parseInt(request.getSparkProperties().get("spark.executor.cores")))
-            .put(
-                "executorInstances",
-                Integer.parseInt(request.getSparkProperties().get("spark.executor.instances")))
-            .put("serverSparkVersion", sparkResponse.getServerSparkVersion())
-            .put("sinkIds", new JsonArray(sinkIds))
-            .put("attemptNumber", 1);
+            .put(METADATA_SPARK_PROPERTIES, sparkPropertiesJson)
+            .put(METADATA_SINK_IDS, new JsonArray(sinkIds));
 
     return JobSubmissionResult.builder()
-        .jobName(request.getSparkProperties().get("spark.app.name"))
+        .jobName(request.getSparkProperties().get(SPARK_APP_NAME))
         .ruleId(executableRule.getRuleId())
         .jobType(JobType.BATCH)
         .externalJobId(sparkResponse.getSubmissionId())

@@ -4,49 +4,6 @@ import io.ascend.flockr.admin.domain.rule.*;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
-/**
- * Interface for job execution services.
- *
- * <p>Implementations handle job submission to external processing engines:
- *
- * <ol>
- *   <li>Update rule status to RUNNING
- *   <li>Submit job to external processing engine (Spark/Flink)
- *   <li>Capture submission response details
- *   <li>Return {@link JobSubmissionResult} for database logging
- * </ol>
- *
- * <p><b>Design Pattern:</b> This follows the Strategy Pattern, allowing different execution
- * strategies based on rule type (BATCH uses Spark, STREAM uses Flink).
- *
- * <p><b>Separation of Concerns:</b> This service focuses on job submission to external engines. The
- * caller (e.g., scheduler) is responsible for logging the result to the {@code rule_executions}
- * table using {@code RuleExecutionRepository}.
- *
- * <h3>Example Usage:</h3>
- *
- * <pre>{@code
- * // 1. Execute rule
- * Single<JobSubmissionResult> resultSingle =
- *     ruleExecutionService.execute(enrichedRule, "scheduler");
- *
- * // 2. Log to database
- * resultSingle.flatMapCompletable(result ->
- *     ruleExecutionRepository.createExecution(
- *         result.getRuleId(),
- *         result.getSinkIds(),
- *         result.getJobType(),
- *         result.getExternalJobId(),
- *         result.getInitialStatus(),
- *         result.getMetadata(),
- *         result.getSubmittedBy()
- *     )
- * );
- * }</pre>
- *
- * @author Prithu Sharma
- * @since 1.0
- */
 public interface RuleExecutionService {
 
   /**

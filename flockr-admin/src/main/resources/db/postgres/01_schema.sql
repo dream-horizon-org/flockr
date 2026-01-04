@@ -83,7 +83,7 @@ CREATE TABLE rules (
     end_time TIMESTAMP NOT NULL,
     rule_action VARCHAR(50) NOT NULL,
     rule_type VARCHAR(50) NOT NULL CHECK (rule_type IN ('STREAM', 'BATCH')),
-    status VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED',
     configuration JSONB NOT NULL,
     created_by VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,

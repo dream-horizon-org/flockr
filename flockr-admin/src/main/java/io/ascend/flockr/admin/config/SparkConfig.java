@@ -1,7 +1,6 @@
 package io.ascend.flockr.admin.config;
 
 import com.typesafe.config.Optional;
-import io.ascend.flockr.admin.client.spark.io.request.SparkJobConfig;
 import io.ascend.flockr.admin.config.provider.ConfigProvider;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -58,24 +57,5 @@ public class SparkConfig {
   /** Gets the base URL for the Spark REST API. */
   public String getBaseUrl() {
     return String.format("http://%s:%d", host, port);
-  }
-
-  /**
-   * Builds a SparkJobConfig from this configuration.
-   *
-   * <p>Used by BatchJobService to create job submission requests.
-   *
-   * @return SparkJobConfig with current settings
-   */
-  public SparkJobConfig toJobConfig() {
-    return SparkJobConfig.builder()
-        .masterUrl(masterUrl)
-        .jarPath(jarPath)
-        .deployMode(deployMode)
-        .executorMemory(executorMemory)
-        .executorCores(executorCores)
-        .executorInstances(executorInstances)
-        .driverMemory(driverMemory)
-        .build();
   }
 }

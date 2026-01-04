@@ -1,5 +1,6 @@
 package io.ascend.flockr.admin.client.spark.io.request;
 
+import io.ascend.flockr.admin.config.SparkConfig;
 import io.ascend.flockr.admin.domain.rule.ExecutableRule;
 import io.ascend.flockr.admin.domain.rule.SinkInfoEnriched;
 import io.ascend.flockr.admin.domain.rule.SourceInfoEnriched;
@@ -37,8 +38,32 @@ public class SparkSubmissionRequest {
   /** Client Spark version. */
   private static final String CLIENT_SPARK_VERSION = "3.5.0";
 
+  /** Action type for Spark submission. */
+  private static final String ACTION_CREATE_SUBMISSION = "CreateSubmissionRequest";
+
+  // Spark property keys
+  private static final String SPARK_MASTER = "spark.master";
+  private static final String SPARK_DEPLOY_MODE = "spark.submit.deployMode";
+  private static final String SPARK_EXECUTOR_MEMORY = "spark.executor.memory";
+  private static final String SPARK_EXECUTOR_CORES = "spark.executor.cores";
+  private static final String SPARK_EXECUTOR_INSTANCES = "spark.executor.instances";
+  private static final String SPARK_DRIVER_MEMORY = "spark.driver.memory";
+  private static final String SPARK_APP_NAME = "spark.app.name";
+
+  // App name format
+  private static final String APP_NAME_FORMAT = "flockr-batch-rule-%d-exec-%d";
+
+  // JSON field keys
+  private static final String JSON_ACTION = "action";
+  private static final String JSON_APP_RESOURCE = "appResource";
+  private static final String JSON_CLIENT_SPARK_VERSION = "clientSparkVersion";
+  private static final String JSON_MAIN_CLASS = "mainClass";
+  private static final String JSON_APP_ARGS = "appArgs";
+  private static final String JSON_ENVIRONMENT_VARIABLES = "environmentVariables";
+  private static final String JSON_SPARK_PROPERTIES = "sparkProperties";
+
   /** Action type - always "CreateSubmissionRequest" for job submission. */
-  @Builder.Default private String action = "CreateSubmissionRequest";
+  @Builder.Default private String action = ACTION_CREATE_SUBMISSION;
 
   /** Application arguments passed to the main class. */
   private List<String> appArgs;
@@ -59,7 +84,7 @@ public class SparkSubmissionRequest {
   private Map<String, String> sparkProperties;
 
   /**
-   * Creates a SparkSubmissionRequest from rule metadata and Spark job configuration.
+   * Creates a SparkSubmissionRequest from rule metadata and Spark configuration.
    *
    * <p>This factory method:
    *
@@ -70,13 +95,13 @@ public class SparkSubmissionRequest {
    * </ol>
    *
    * @param executableRule enriched rule metadata with source and sink details
-   * @param sparkJobConfig Spark cluster and resource configuration
+   * @param sparkConfig Spark cluster and resource configuration
    * @param executionId the execution ID for this job
    * @return SparkSubmissionRequest ready for submission
    */
   public static SparkSubmissionRequest fromRule(
       ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule,
-      SparkJobConfig sparkJobConfig,
+      SparkConfig sparkConfig,
       Long executionId) {
 
     log.info(
@@ -84,35 +109,32 @@ public class SparkSubmissionRequest {
         executableRule.getRuleId(),
         executionId);
 
-    // Build the job payload JSON
     JsonObject jobPayload = SparkJobPayloadMapper.buildSparkJobPayload(executableRule);
 
-    // Pass payload as first application argument
     List<String> appArgs = List.of(jobPayload.encode());
 
-    // Configure Spark properties
     Map<String, String> sparkProperties =
         Map.of(
-            "spark.master",
-            sparkJobConfig.getMasterUrl(),
-            "spark.submit.deployMode",
-            sparkJobConfig.getDeployMode(),
-            "spark.executor.memory",
-            sparkJobConfig.getExecutorMemory(),
-            "spark.executor.cores",
-            String.valueOf(sparkJobConfig.getExecutorCores()),
-            "spark.executor.instances",
-            String.valueOf(sparkJobConfig.getExecutorInstances()),
-            "spark.driver.memory",
-            sparkJobConfig.getDriverMemory(),
-            "spark.app.name",
-            String.format("flockr-batch-rule-%d-exec-%d", executableRule.getRuleId(), executionId));
+            SPARK_MASTER,
+            sparkConfig.getMasterUrl(),
+            SPARK_DEPLOY_MODE,
+            sparkConfig.getDeployMode(),
+            SPARK_EXECUTOR_MEMORY,
+            sparkConfig.getExecutorMemory(),
+            SPARK_EXECUTOR_CORES,
+            String.valueOf(sparkConfig.getExecutorCores()),
+            SPARK_EXECUTOR_INSTANCES,
+            String.valueOf(sparkConfig.getExecutorInstances()),
+            SPARK_DRIVER_MEMORY,
+            sparkConfig.getDriverMemory(),
+            SPARK_APP_NAME,
+            String.format(APP_NAME_FORMAT, executableRule.getRuleId(), executionId));
 
     // Build the submission request
     SparkSubmissionRequest request =
         SparkSubmissionRequest.builder()
-            .action("CreateSubmissionRequest")
-            .appResource(sparkJobConfig.getJarPath())
+            .action(ACTION_CREATE_SUBMISSION)
+            .appResource(sparkConfig.getJarPath())
             .clientSparkVersion(CLIENT_SPARK_VERSION)
             .mainClass(MAIN_CLASS)
             .appArgs(appArgs)
@@ -131,27 +153,27 @@ public class SparkSubmissionRequest {
   public JsonObject toJsonObject() {
     JsonObject json = new JsonObject();
 
-    json.put("action", action);
-    json.put("appResource", appResource);
-    json.put("clientSparkVersion", clientSparkVersion);
-    json.put("mainClass", mainClass);
+    json.put(JSON_ACTION, action);
+    json.put(JSON_APP_RESOURCE, appResource);
+    json.put(JSON_CLIENT_SPARK_VERSION, clientSparkVersion);
+    json.put(JSON_MAIN_CLASS, mainClass);
 
     if (appArgs != null && !appArgs.isEmpty()) {
       JsonArray argsArray = new JsonArray();
       appArgs.forEach(argsArray::add);
-      json.put("appArgs", argsArray);
+      json.put(JSON_APP_ARGS, argsArray);
     }
 
     if (environmentVariables != null && !environmentVariables.isEmpty()) {
       JsonObject envVars = new JsonObject();
       environmentVariables.forEach(envVars::put);
-      json.put("environmentVariables", envVars);
+      json.put(JSON_ENVIRONMENT_VARIABLES, envVars);
     }
 
     if (sparkProperties != null && !sparkProperties.isEmpty()) {
       JsonObject sparkProps = new JsonObject();
       sparkProperties.forEach(sparkProps::put);
-      json.put("sparkProperties", sparkProps);
+      json.put(JSON_SPARK_PROPERTIES, sparkProps);
     }
 
     return json;
