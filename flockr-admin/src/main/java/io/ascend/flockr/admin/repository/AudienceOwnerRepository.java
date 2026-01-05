@@ -55,9 +55,9 @@ public interface AudienceOwnerRepository {
   Single<Boolean> removeOwner(
       String xProjectId, Long audienceId, String ownerEmail, String userEmail);
 
-  Single<List<AuditLogDefinition>> findByAudienceId(Long cohortId, Integer pageSize, Integer pageNum);
+  Single<List<AuditLogDefinition>> findByAudienceId(Long audienceId, Integer pageSize, Integer pageNum);
 
-  Single<Integer> findCountByAudienceId(Long cohortId);
+  Single<Integer> findCountByAudienceId(Long audienceId);
 
   Single<Long> insertAuditLog(
             String xProjectId,

@@ -6,10 +6,10 @@ public enum AuditLogAction {
     START_DATE_UPDATED("Start Date for Rule"),
     END_DATE_UPDATED("End Date for Rule"),
     CRON_UPDATED("Cron for Rule"),
-    COHORT_VALIDITY_UPDATED("Cohort Validity Updated"),
+    AUDIENCE_VALIDITY_UPDATED("Audience Validity Updated"),
     OWNER_REMOVED("Owner Removed"),
-    COHORT_MARKED_VERIFIED("Cohort marked as verified"),
-    COHORT_MARKED_UNVERIFIED("Cohort marked as unverified"),
+    AUDIENCE_MARKED_VERIFIED("Audience marked as verified"),
+    AUDIENCE_MARKED_UNVERIFIED("Audience marked as unverified"),
     OWNER_ADDED("Owner Added"),
     RULE_TERMINATED("Rule Terminated");
 
