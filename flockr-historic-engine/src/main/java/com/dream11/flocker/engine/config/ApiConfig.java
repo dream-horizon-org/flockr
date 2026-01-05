@@ -9,23 +9,26 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Configuration for REST API sink.
- * 
- * <p>This class contains all configuration parameters needed to send data to
- * a REST API endpoint, including URL, rate limiting, batching, and HTTP settings.
- * 
+ *
+ * <p>This class contains all configuration parameters needed to send data to a REST API endpoint,
+ * including URL, rate limiting, batching, and HTTP settings.
+ *
  * <p><b>Configuration Loading:</b>
- * <p>This class loads default values from {@code config/sink/api/default.conf}
- * and merges them with provided configuration, with provided values taking precedence.
- * 
+ *
+ * <p>This class loads default values from {@code config/sink/api/default.conf} and merges them with
+ * provided configuration, with provided values taking precedence.
+ *
  * <p><b>Default Values:</b>
+ *
  * <ul>
- *   <li>rateLimitPerSecond: 10 (if config file not found, otherwise from config)</li>
- *   <li>batchSize: 100 (if config file not found, otherwise from config)</li>
- *   <li>timeoutSeconds: 30 (if config file not found, otherwise from config)</li>
- *   <li>contentType: "application/json"</li>
+ *   <li>rateLimitPerSecond: 10 (if config file not found, otherwise from config)
+ *   <li>batchSize: 100 (if config file not found, otherwise from config)
+ *   <li>timeoutSeconds: 30 (if config file not found, otherwise from config)
+ *   <li>contentType: "application/json"
  * </ul>
- * 
+ *
  * <p><b>Example Configuration:</b>
+ *
  * <pre>{@code
  * {
  *   "url": "http://localhost:8080/flockr/users/map-cohorts",
@@ -36,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
  *   "projectKey": "tenant1_100"
  * }
  * }</pre>
- * 
+ *
  * @see com.dream11.flocker.engine.modules.sink.impl.ApiSinkImpl
  * @see com.dream11.flocker.engine.utils.ApiClient
  * @author Shivam-Raghuwanshi
@@ -46,63 +49,65 @@ import lombok.extern.slf4j.Slf4j;
 @NoArgsConstructor
 public class ApiConfig {
 
-    private String url;
-    private int rateLimitPerSecond;
-    private int batchSize;
-    private int timeoutSeconds;
-    private String contentType;
-    /** Project key for API authentication (sent as x-project-key header). */
-    private String projectKey;
+  private String url;
+  private int rateLimitPerSecond;
+  private int batchSize;
+  private int timeoutSeconds;
+  private String contentType;
 
-    /**
-     * Creates an ApiConfig instance from a Typesafe Config object.
-     * 
-     * <p>This method:
-     * <ol>
-     *   <li>Loads default configuration from config file</li>
-     *   <li>Merges provided config with defaults (provided values take precedence)</li>
-     *   <li>Creates ApiConfig instance with merged values</li>
-     * </ol>
-     * 
-     * <p>If the default config file cannot be loaded, hardcoded defaults are used.
-     * 
-     * @param config The Typesafe Config object containing API configuration.
-     * @return A new ApiConfig instance with merged configuration values.
-     */
-    public static ApiConfig fromConfig(Config config) {
-        ApiConfig apiConfig = new ApiConfig();
+  /** Project key for API authentication (sent as x-project-key header). */
+  private String projectKey;
 
-        Config defaultConfig = loadDefaultConfig();
+  /**
+   * Creates an ApiConfig instance from a Typesafe Config object.
+   *
+   * <p>This method:
+   *
+   * <ol>
+   *   <li>Loads default configuration from config file
+   *   <li>Merges provided config with defaults (provided values take precedence)
+   *   <li>Creates ApiConfig instance with merged values
+   * </ol>
+   *
+   * <p>If the default config file cannot be loaded, hardcoded defaults are used.
+   *
+   * @param config The Typesafe Config object containing API configuration.
+   * @return A new ApiConfig instance with merged configuration values.
+   */
+  public static ApiConfig fromConfig(Config config) {
+    ApiConfig apiConfig = new ApiConfig();
 
-        Config mergedConfig = config.withFallback(defaultConfig);
+    Config defaultConfig = loadDefaultConfig();
 
-        apiConfig.setUrl(getStringOrNull(mergedConfig, "url"));
-        apiConfig.setRateLimitPerSecond(mergedConfig.getInt("rateLimitPerSecond"));
-        apiConfig.setBatchSize(mergedConfig.getInt("batchSize"));
-        apiConfig.setTimeoutSeconds(mergedConfig.getInt("timeoutSeconds"));
-        apiConfig.setContentType(getStringOrNull(mergedConfig, "contentType") != null
-            ? getStringOrNull(mergedConfig, "contentType") : "application/json");
-        apiConfig.setProjectKey(getStringOrNull(mergedConfig, "projectKey"));
+    Config mergedConfig = config.withFallback(defaultConfig);
 
-        return apiConfig;
+    apiConfig.setUrl(getStringOrNull(mergedConfig, "url"));
+    apiConfig.setRateLimitPerSecond(mergedConfig.getInt("rateLimitPerSecond"));
+    apiConfig.setBatchSize(mergedConfig.getInt("batchSize"));
+    apiConfig.setTimeoutSeconds(mergedConfig.getInt("timeoutSeconds"));
+    apiConfig.setContentType(
+        getStringOrNull(mergedConfig, "contentType") != null
+            ? getStringOrNull(mergedConfig, "contentType")
+            : "application/json");
+    apiConfig.setProjectKey(getStringOrNull(mergedConfig, "projectKey"));
+
+    return apiConfig;
+  }
+
+  private static Config loadDefaultConfig() {
+    try {
+      return ConfigUtil.getConfigFromConfigFile("config/sink/api/%s.conf");
+    } catch (Exception e) {
+      log.warn("Failed to load default API config, using hardcoded defaults: {}", e.getMessage());
+      return ConfigFactory.parseString(
+          "rateLimitPerSecond = 10\n"
+              + "batchSize = 100\n"
+              + "timeoutSeconds = 30\n"
+              + "contentType = \"application/json\"");
     }
+  }
 
-    private static Config loadDefaultConfig() {
-        try {
-            return ConfigUtil.getConfigFromConfigFile("config/sink/api/%s.conf");
-        } catch (Exception e) {
-            log.warn("Failed to load default API config, using hardcoded defaults: {}", e.getMessage());
-            return ConfigFactory.parseString(
-                "rateLimitPerSecond = 10\n" +
-                "batchSize = 100\n" +
-                "timeoutSeconds = 30\n" +
-                "contentType = \"application/json\""
-            );
-        }
-    }
-
-    private static String getStringOrNull(Config config, String path) {
-        return config.hasPath(path) ? config.getString(path) : null;
-    }
+  private static String getStringOrNull(Config config, String path) {
+    return config.hasPath(path) ? config.getString(path) : null;
+  }
 }
-
