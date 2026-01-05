@@ -4,11 +4,19 @@ import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.domain.audience.AudienceOwner;
+import io.ascend.flockr.admin.domain.audit.AuditEntityType;
+import io.ascend.flockr.admin.domain.audit.AuditLogAction;
+import io.ascend.flockr.admin.domain.audit.AuditLogDefinition;
+import io.ascend.flockr.admin.domain.audit.AuditLogValue;
 import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonObject;
+import io.vertx.rxjava3.sqlclient.Row;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.List;
+import java.util.function.Function;
+
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -46,7 +54,28 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
           + "WHERE audience_id = $1 AND x_project_id = $2 "
           + "AND owner_email = $3 AND status = 'ACTIVE'";
 
-  /**
+
+    private static final String FIND_AUDIT_BY_AUDIENCE_ID =
+            "SELECT id, entity_id, entity_name, action, "
+                    + "actor, "
+                    + "created_at, "
+                    + "old_values, new_values "
+                    + "FROM audit_logs "
+                    + "WHERE (entity_type = '" + AuditEntityType.AUDIENCE + "' AND entity_id = $1) "
+                    + "ORDER BY created_at DESC LIMIT $2 OFFSET $3";
+
+    private static final String COUNT_AUDIT_BY_AUDIENCE_ID =
+            "SELECT COUNT(1) FROM audit_logs "
+                    + "WHERE (entity_type = '" + AuditEntityType.AUDIENCE + "' AND entity_id = $1)";
+
+    private static final String INSERT_AUDIT =
+            "INSERT INTO audit_logs "
+                    + "(entity_type, entity_id, entity_name, action, x_project_id, actor, old_values, new_values) "
+                    + "VALUES ('" + AuditEntityType.AUDIENCE + "', $1, $2, $3, $4, $5, $6, $7) "
+                    + "RETURNING id";
+
+
+    /**
    * Retrieves all active owners for a specific audience.
    *
    * @param xProjectId the encrypted project identifier
@@ -112,4 +141,77 @@ public class AudienceOwnerRepositoryImpl implements AudienceOwnerRepository {
         .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to remove owner")))
         .toSingle();
   }
+
+    @Override
+    public Single<List<AuditLogDefinition>> findByAudienceId(
+            Long audienceId, Integer pageSize, Integer pageNum) {
+        int limit = pageSize != null ? pageSize : 10;
+        int offset = (pageNum != null ? pageNum : 0);
+        return postgresReaderClient.fetchAll(
+                FIND_AUDIT_BY_AUDIENCE_ID,
+                Tuple.of(audienceId, limit, offset),
+                AUDIT_LOG_ROW_MAPPER);
+    }
+
+    @Override
+    public Single<Integer> findCountByAudienceId(Long audienceId) {
+        return postgresReaderClient.fetchOne(
+                COUNT_AUDIT_BY_AUDIENCE_ID, Tuple.of(audienceId), row -> row.getInteger(0));
+    }
+
+    @Override
+    public Single<Long> insertAuditLog(
+            String xProjectId,
+            Long audienceId,
+            AuditLogAction action,
+            AuditLogValue value,
+            String actor,
+            String name) {
+        final Tuple params =
+                Tuple.tuple()
+                        .addLong(audienceId)                                        // entity_id
+                        .addString(name)                                            // entity_name
+                        .addString(action != null ? action.name() : null)           // action
+                        .addString(xProjectId)                                      // x_project_id
+                        .addString(actor)                                // actor
+                        .addValue(value != null ? JsonObject.mapFrom(value.getOldValue()) : null) // old_values
+                        .addValue(value != null ? JsonObject.mapFrom(value.getNewValue()) : null); // new_values
+
+        return postgresWriterClient
+                .<Long>executeWithTransaction(
+                        conn ->
+                                postgresWriterClient
+                                        .executeAndGenerateId(conn, INSERT_AUDIT, params)
+                                        .toMaybe())
+                .switchIfEmpty(Maybe.error(new IllegalStateException("Failed to insert audit log")))
+                .toSingle();
+    }
+
+    private static final Function<Row, AuditLogDefinition> AUDIT_LOG_ROW_MAPPER =
+            row -> {
+                AuditLogDefinition def = new AuditLogDefinition();
+                def.setId(row.getLong("id"));
+                def.setAudienceId(row.getLong("entity_id"));
+                String actionStr = row.getString("action");
+                if (actionStr != null) {
+                    try {
+                        def.setAction(AuditLogAction.valueOf(actionStr));
+                    } catch (IllegalArgumentException e) {
+                        def.setAction(null);
+                    }
+                }
+                def.setActor(row.getString("actor"));
+                // created_at is TIMESTAMPTZ; convert to epoch seconds like service expects
+                Long createdAtEpoch =
+                        row.getOffsetDateTime("created_at") != null
+                                ? row.getOffsetDateTime("created_at").toEpochSecond()
+                                : null;
+                def.setCreatedAt(createdAtEpoch);
+                def.setName(row.getString("entity_name"));
+                AuditLogValue value = new AuditLogValue();
+                value.setOldValue(row.getValue("old_values"));
+                value.setNewValue(row.getValue("new_values"));
+                def.setValue(value);
+                return def;
+            };
 }

@@ -6,15 +6,13 @@ import io.ascend.flockr.admin.domain.audience.AudienceType;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.domain.rule.*;
+import io.ascend.flockr.admin.domain.audit.AuditLogAction;
+import io.ascend.flockr.admin.domain.audit.AuditLogValue;
 import io.ascend.flockr.admin.exception.ErrorEnum;
 import io.ascend.flockr.admin.exception.ForbiddenAccessException;
 import io.ascend.flockr.admin.exception.ResourceNotFoundException;
 import io.ascend.flockr.admin.io.request.*;
-import io.ascend.flockr.admin.io.response.AudienceDetailsResponse;
-import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
-import io.ascend.flockr.admin.io.response.AudienceOwnerResponse;
-import io.ascend.flockr.admin.io.response.PaginatedResponse;
-import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
+import io.ascend.flockr.admin.io.response.*;
 import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
 import io.ascend.flockr.admin.repository.AudienceRepository;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
@@ -23,6 +21,7 @@ import io.ascend.flockr.admin.service.AudienceService;
 import io.ascend.flockr.admin.util.AsyncJakartaValidationUtil;
 import io.ascend.flockr.admin.util.RuleHelpers;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.core.Observable;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -87,7 +86,27 @@ public class AudienceServiceImpl implements AudienceService {
             .createdBy(createdBy)
             .build();
 
-    return audienceRepository.createAudience(audienceMeta);
+    return audienceRepository
+        .createAudience(audienceMeta)
+        .flatMap(
+            audienceId -> {
+              AuditLogValue value =
+                  new AuditLogValue(
+                      null,
+                      Map.of(
+                          "name", request.getName(),
+                          "type", request.getType(),
+                          "expireDate", request.getExpireDate()));
+              return audienceOwnerRepository
+                  .insertAuditLog(
+                      xProjectId,
+                      audienceId,
+                      AuditLogAction.AUDIENCE_CREATED,
+                      value,
+                      createdBy,
+                      request.getName())
+                  .map(id -> audienceId);
+            });
   }
 
   /**
@@ -307,7 +326,32 @@ public class AudienceServiceImpl implements AudienceService {
               }
 
               // Persist rules to database
-              return ruleRepository.createRules(list);
+              return ruleRepository
+                  .createRules(list)
+                  .flatMap(
+                      success ->
+                          Observable.fromIterable(list)
+                              .flatMapSingle(
+                                  ruleMeta -> {
+                                    AuditLogValue value =
+                                        new AuditLogValue(
+                                            null,
+                                            Map.of(
+                                                "ruleName", ruleMeta.getName(),
+                                                "ruleAction", ruleMeta.getRuleAction(),
+                                                "ruleType", ruleMeta.getRuleType(),
+                                                "startTime", ruleMeta.getStartTime(),
+                                                "endTime", ruleMeta.getEndTime()));
+                                    return audienceOwnerRepository.insertAuditLog(
+                                        xProjectId,
+                                        ruleMeta.getAudienceId(),
+                                        AuditLogAction.RULE_ADDED,
+                                        value,
+                                        createdBy,
+                                        null);
+                                  })
+                              .ignoreElements()
+                              .andThen(Single.just(success)));
             })
         .doOnSuccess(
             success ->
@@ -767,8 +811,22 @@ public class AudienceServiceImpl implements AudienceService {
               log.info(
                   "Adding owner {} to audience {} by user {}", ownerEmail, audienceId, performedBy);
 
-              return audienceOwnerRepository.addOwner(
-                  xProjectId, audienceId, ownerEmail, performedBy);
+              return audienceOwnerRepository
+                  .addOwner(xProjectId, audienceId, ownerEmail, performedBy)
+                  .flatMap(
+                      success -> {
+                        AuditLogValue value =
+                            new AuditLogValue(null, Map.of("ownerEmail", ownerEmail));
+                        return audienceOwnerRepository
+                            .insertAuditLog(
+                                xProjectId,
+                                audienceId,
+                                AuditLogAction.OWNER_ADDED,
+                                value,
+                                performedBy,
+                                null)
+                            .map(id -> success);
+                      });
             });
   }
 
@@ -815,8 +873,22 @@ public class AudienceServiceImpl implements AudienceService {
                   audienceId,
                   performedBy);
 
-              return audienceOwnerRepository.removeOwner(
-                  xProjectId, audienceId, ownerEmail, performedBy);
+              return audienceOwnerRepository
+                  .removeOwner(xProjectId, audienceId, ownerEmail, performedBy)
+                  .flatMap(
+                      success -> {
+                        AuditLogValue value =
+                            new AuditLogValue(Map.of("ownerEmail", ownerEmail), null);
+                        return audienceOwnerRepository
+                            .insertAuditLog(
+                                xProjectId,
+                                audienceId,
+                                AuditLogAction.OWNER_REMOVED,
+                                value,
+                                performedBy,
+                                null)
+                            .map(id -> success);
+                      });
             });
   }
 
@@ -869,4 +941,87 @@ public class AudienceServiceImpl implements AudienceService {
                 log.error(
                     "Failed to fetch owners for audience {}: {}", audienceId, error.getMessage()));
   }
+
+
+    /**
+     * Retrieves audit log entries for an audience, grouped by calendar date and optionally paginated.
+     *
+     * <p>This method:
+     * <ul>
+     *   <li>Fetches raw audit rows for the given audience.</li>
+     *   <li>Maps each row to an immutable audit item (action, actor, timestamp, details).</li>
+     *   <li>Groups items by local-date string (yyyy-MM-dd), preserving insertion order (most recent first).</li>
+     * </ul>
+     *
+     * <p>Pagination:
+     * <ul>
+     *   <li>When {@code withPagination == false}, computes {@code hasMore} heuristically as {@code data.size() == pageSize}.</li>
+     *   <li>When {@code withPagination == true}, performs a count query and computes
+     *       {@code hasMore} as {@code (pageNum + 1) * pageSize < totalCount}.</li>
+     * </ul>
+     *
+     * @param audienceId the audience identifier
+     * @param pageSize the maximum number of records per page (defaults applied if null/invalid)
+     * @param pageNum the 0-based page index (defaults applied if null/invalid)
+     * @param withPagination whether to compute hasMore using a total-count query
+     * @return a Single emitting a {@link PaginatedResponse} of date-grouped {@link AuditLogResponse} entries
+     */
+    @Override
+    public Single<PaginatedResponse<AuditLogResponse>> getAudienceAuditLog(
+            Long audienceId, Integer pageSize, Integer pageNum, boolean withPagination) {
+        int resolvedPageSize = (pageSize == null || pageSize <= 0) ? DEFAULT_LIMIT : pageSize;
+        int resolvedPage = (pageNum == null || pageNum < 0) ? DEFAULT_PAGE : pageNum;
+        int offset = resolvedPage * resolvedPageSize;
+
+        Single<List<AuditLogResponse>> grouped =
+                audienceOwnerRepository
+                        .findByAudienceId(audienceId, resolvedPageSize, offset)
+                        .map(
+                                logs -> {
+                                    return logs.stream()
+                                            .map(
+                                                    log ->
+                                                            new AuditLogItem(
+                                                                    log.getAction() != null ? log.getAction().name() : null,
+                                                                    log.getActor(),
+                                                                    log.getCreatedAt() != null
+                                                                            ? java.time.Instant.ofEpochSecond(log.getCreatedAt())
+                                                                            : null,
+                                                                    log.getValue() != null
+                                                                            ? log.getValue().toString()
+                                                                            : (log.getName() != null ? log.getName() : null)))
+                                            .collect(
+                                                    java.util.stream.Collectors.groupingBy(
+                                                            it -> toDateString(it.performedAt()),
+                                                            java.util.LinkedHashMap::new,    // preserve insertion order of date groups
+                                                            java.util.stream.Collectors.toList()))     // items within each date also keep encounter order
+                                            .entrySet()
+                                            .stream()
+                                            .map(e -> new AuditLogResponse(e.getKey(), e.getValue()))
+                                            .toList();
+                                });
+
+        if (!withPagination) {
+            return grouped.map(
+                    data ->
+                            new PaginatedResponse<>(
+                                    new PaginatedResponse.PageInfo(resolvedPage, resolvedPageSize, data.size() == resolvedPageSize),
+                                    data));
+        }
+
+        return grouped.zipWith(
+                audienceOwnerRepository
+                        .findCountByAudienceId(audienceId)
+                        .map(
+                                totalCount ->
+                                        new PaginatedResponse.PageInfo(
+                                                resolvedPage, resolvedPageSize, (long) (resolvedPage + 1) * resolvedPageSize < totalCount)),
+                (data, pageInfo) -> new PaginatedResponse<>(pageInfo, data));
+    }
+
+    private String toDateString(java.time.Instant instant) {
+        return java.time.ZonedDateTime.ofInstant(instant, java.time.ZoneId.systemDefault())
+                .toLocalDate()
+                .toString();
+    }
 }

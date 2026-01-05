@@ -118,3 +118,41 @@ CREATE INDEX idx_audience_owners_x_project_id ON audience_owners(x_project_id);
 CREATE INDEX idx_audience_owners_email ON audience_owners(owner_email);
 CREATE INDEX idx_audience_owners_status ON audience_owners(status) WHERE status = 'ACTIVE';
 CREATE INDEX idx_audience_owners_lookup ON audience_owners(audience_id, x_project_id, status);
+
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id             BIGSERIAL PRIMARY KEY,        -- unique log id
+
+  -- primary entity
+  entity_type    VARCHAR(32)  NOT NULL,        -- entity type from code enum (AUDIENCE, RULE, OWNER, etc.)
+  entity_id      BIGINT       NOT NULL,        -- id of the entity being changed
+  entity_name    VARCHAR(255) ,                -- optional cached name for UI display
+
+  -- action
+  action         VARCHAR(16)  NOT NULL,        -- action type from code enum (CREATE, UPDATE, DELETE)
+
+  -- project scope
+  x_project_id   VARCHAR(512) NOT NULL,        -- project identifier (acts as tenant boundary)
+
+  -- actor
+  actor   VARCHAR(255) NOT NULL DEFAULT 'system',
+                                               -- user or system that triggered the change
+
+  -- change snapshots
+  old_values     JSONB,                        -- previous values (only changed fields)
+  new_values     JSONB,                        -- new values (only changed fields)
+
+  -- time
+  created_at     TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE INDEX idx_audit_entity_time
+ON audit_logs (entity_type, entity_id, created_at DESC);
+
+CREATE INDEX idx_audit_project_time
+ON audit_logs (x_project_id, created_at DESC);
+
+CREATE INDEX idx_audit_created_at
+ON audit_logs (created_at DESC);
+

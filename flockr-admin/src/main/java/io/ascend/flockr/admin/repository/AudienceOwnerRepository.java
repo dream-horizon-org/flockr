@@ -1,6 +1,9 @@
 package io.ascend.flockr.admin.repository;
 
 import io.ascend.flockr.admin.domain.audience.AudienceOwner;
+import io.ascend.flockr.admin.domain.audit.AuditLogAction;
+import io.ascend.flockr.admin.domain.audit.AuditLogDefinition;
+import io.ascend.flockr.admin.domain.audit.AuditLogValue;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
@@ -51,4 +54,16 @@ public interface AudienceOwnerRepository {
    */
   Single<Boolean> removeOwner(
       String xProjectId, Long audienceId, String ownerEmail, String userEmail);
+
+  Single<List<AuditLogDefinition>> findByAudienceId(Long cohortId, Integer pageSize, Integer pageNum);
+
+  Single<Integer> findCountByAudienceId(Long cohortId);
+
+  Single<Long> insertAuditLog(
+            String xProjectId,
+            Long audienceId,
+            AuditLogAction action,
+            AuditLogValue value,
+            String actor,
+            String name);
 }
