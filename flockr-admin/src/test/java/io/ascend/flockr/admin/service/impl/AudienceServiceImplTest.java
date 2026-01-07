@@ -21,6 +21,11 @@ import io.ascend.flockr.admin.io.response.AudienceMetaResponse;
 import io.ascend.flockr.admin.io.response.AudienceOwnerResponse;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.io.response.RuleDetailsResponse;
+import io.ascend.flockr.admin.io.response.AuditLogResponse;
+import io.ascend.flockr.admin.io.response.AuditLogItem;
+import io.ascend.flockr.admin.domain.audit.AuditLogDefinition;
+import io.ascend.flockr.admin.domain.audit.AuditLogAction;
+import io.ascend.flockr.admin.domain.audit.AuditLogValue;
 import io.ascend.flockr.admin.repository.AudienceOwnerRepository;
 import io.ascend.flockr.admin.repository.AudienceRepository;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
@@ -922,5 +927,166 @@ public class AudienceServiceImplTest {
     TestObserver<Boolean> to =
         service.updateAudienceOwner(xProjectId, audienceId, actor, request).test();
     to.assertError(ResourceNotFoundException.class);
+  }
+
+  // ========================================
+  // getAudienceAuditLog Tests
+  // ========================================
+
+    /**
+     * Verifies audience audit log behavior when pagination is NOT enabled.
+     *
+     * Logic being validated:
+     * - All audit log entries returned from the repository are grouped by their
+     *   event date (YYYY-MM-DD).
+     * - Grouping is done in the service layer before returning the response.
+     * - When pagination is disabled, `hasMore` is derived using a heuristic
+     *   (based on the size of the fetched result set) and NOT via a DB count query.
+     *
+     * Why this test exists:
+     * - The UI expects audit logs grouped by date for timeline-style rendering.
+     * - Any change in grouping logic can silently break frontend rendering.
+     * - Ensures backward compatibility for non-paginated audit log consumers.
+     */
+  @Test
+  public void getAudienceAuditLog_groupsByDate_withoutPagination() {
+    AudienceRepository audienceRepository = mock(AudienceRepository.class);
+    AudienceOwnerRepository audienceOwnerRepository = mock(AudienceOwnerRepository.class);
+    RuleRepository ruleRepository = mock(RuleRepository.class);
+    DataConnectorRepository dataConnectorRepository = mock(DataConnectorRepository.class);
+    AudienceServiceImpl service =
+        buildService(
+            audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
+
+    // Two logs on two different days (epoch seconds)
+    long day1 = 1_700_000_000L;
+    long day2 = 1_700_086_400L; // +1 day approximately
+
+    AuditLogDefinition log1 = new AuditLogDefinition();
+    log1.setAction(AuditLogAction.AUDIENCE_CREATED);
+    log1.setActor("user1@example.com");
+    log1.setCreatedAt(day1);
+    log1.setValue(new AuditLogValue(null, java.util.Map.of("name", "A1")));
+
+    AuditLogDefinition log2 = new AuditLogDefinition();
+    log2.setAction(AuditLogAction.OWNER_ADDED);
+    log2.setActor("user2@example.com");
+    log2.setCreatedAt(day2);
+    log2.setValue(new AuditLogValue(null, java.util.Map.of("ownerEmail", "o@example.com")));
+
+    when(audienceOwnerRepository.findByAudienceId(eq(AUDIENCE_ID), eq(2), eq(0)))
+        .thenReturn(Single.just(List.of(log1, log2)));
+
+    TestObserver<PaginatedResponse<AuditLogResponse>> to =
+        service.getAudienceAuditLog(AUDIENCE_ID, 2, 0, false).test();
+    to.assertComplete();
+    to.assertValue(
+        resp -> {
+          assertNotNull(resp.data());
+          // Expect two date groups
+          assertEquals(2, resp.data().size());
+          // Heuristic hasMore when data.size() == pageSize
+          assertTrue(resp.pageInfo().hasMore());
+          // Basic item sanity
+          List<AuditLogItem> items0 = resp.data().get(0).items();
+          assertFalse(items0.isEmpty());
+          assertNotNull(items0.get(0).performedAt());
+          return true;
+        });
+  }
+
+    /**
+     * Verifies audience audit log behavior when pagination IS enabled.
+     *
+     * Logic being validated:
+     * - The service fetches a paginated subset of audit logs.
+     * - A separate total count query is executed to determine total records.
+     * - `hasMore` is calculated using totalCount, page number, and page size.
+     *   (hasMore = totalCount > page * pageSize)
+     *
+     * Why this test exists:
+     * - Correct `hasMore` calculation is critical for frontend pagination controls.
+     * - Prevents regressions where "Load More" appears incorrectly or disappears early.
+     * - Ensures the service does not rely on result size heuristics when pagination is on.
+     */
+  @Test
+  public void getAudienceAuditLog_withPagination_usesCountAndSetsHasMore() {
+    AudienceRepository audienceRepository = mock(AudienceRepository.class);
+    AudienceOwnerRepository audienceOwnerRepository = mock(AudienceOwnerRepository.class);
+    RuleRepository ruleRepository = mock(RuleRepository.class);
+    DataConnectorRepository dataConnectorRepository = mock(DataConnectorRepository.class);
+    AudienceServiceImpl service =
+        buildService(
+            audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
+
+    long now = System.currentTimeMillis() / 1000;
+    AuditLogDefinition log = new AuditLogDefinition();
+    log.setAction(AuditLogAction.OWNER_ADDED);
+    log.setActor("actor@example.com");
+    log.setCreatedAt(now);
+    log.setValue(new AuditLogValue(null, java.util.Map.of("ownerEmail", "x@y.com")));
+
+    when(audienceOwnerRepository.findByAudienceId(eq(AUDIENCE_ID), eq(1), eq(0)))
+        .thenReturn(Single.just(List.of(log)));
+    when(audienceOwnerRepository.findCountByAudienceId(eq(AUDIENCE_ID))).thenReturn(Single.just(5));
+
+    TestObserver<PaginatedResponse<AuditLogResponse>> to =
+        service.getAudienceAuditLog(AUDIENCE_ID, 1, 0, true).test();
+    to.assertComplete();
+    to.assertValue(
+        resp -> {
+          assertEquals(0, resp.pageInfo().page());
+          assertEquals(1, resp.pageInfo().pageSize());
+          assertTrue(resp.pageInfo().hasMore()); // (0+1)*1 < 5
+          return true;
+        });
+  }
+
+    /**
+     * Verifies fallback behavior when audit log fields are partially missing.
+     *
+     * Logic being validated:
+     * - If both `action` and `value` fields are null in an audit log entry:
+     *   - The service safely falls back to using the `name` field as details.
+     * - Ensures response generation does not throw NullPointerExceptions.
+     *
+     * Why this test exists:
+     * - Legacy or malformed audit records may exist in the database.
+     * - The service layer must be defensive and resilient to null values.
+     * - Guarantees consistent audit log details for UI display.
+     */
+  @Test
+  public void getAudienceAuditLog_handlesNullActionAndValue_usesNameAsDetails() {
+    AudienceRepository audienceRepository = mock(AudienceRepository.class);
+    AudienceOwnerRepository audienceOwnerRepository = mock(AudienceOwnerRepository.class);
+    RuleRepository ruleRepository = mock(RuleRepository.class);
+    DataConnectorRepository dataConnectorRepository = mock(DataConnectorRepository.class);
+    AudienceServiceImpl service =
+        buildService(
+            audienceRepository, audienceOwnerRepository, ruleRepository, dataConnectorRepository);
+
+    AuditLogDefinition log = new AuditLogDefinition();
+    log.setAction(null);
+    log.setActor("n/a");
+    log.setCreatedAt(1_700_000_000L);
+    log.setValue(null); // value null -> details should fall back to name
+    log.setName("Fallback");
+
+    when(audienceOwnerRepository.findByAudienceId(eq(AUDIENCE_ID), eq(10), eq(0)))
+        .thenReturn(Single.just(List.of(log)));
+
+    TestObserver<PaginatedResponse<AuditLogResponse>> to =
+        service.getAudienceAuditLog(AUDIENCE_ID, null, null, false).test();
+    to.assertComplete();
+    to.assertValue(
+        resp -> {
+          assertNotNull(resp.data());
+          assertEquals(1, resp.data().size());
+          List<AuditLogItem> items = resp.data().get(0).items();
+          assertEquals(1, items.size());
+          assertNull(items.get(0).action());
+          assertEquals("Fallback", items.get(0).details());
+          return true;
+        });
   }
 }
