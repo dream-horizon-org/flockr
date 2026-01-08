@@ -21,8 +21,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Main class for this module -->
-        <main.class>com.dream11.flocker.engine.EngineStart</main.class>
-        <mainClass>com.dream11.flocker.engine.EngineStart</mainClass>
+        <main.class>io.ascend.flockr.engine.EngineStart</main.class>
+        <mainClass>io.ascend.flockr.engine.EngineStart</mainClass>
 
         <!-- Spark and Hadoop versions -->
         <spark.version>4.0.0</spark.version>
