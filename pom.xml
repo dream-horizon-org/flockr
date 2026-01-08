@@ -11,6 +11,7 @@
   <modules>
     <module>flockr-admin</module>
     <module>flockr-users</module>
+    <module>flockr-historic-engine</module>
   </modules>
 
   <properties>

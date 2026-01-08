@@ -91,10 +91,71 @@ services:
       - flockr-network
     restart: unless-stopped
 
+
+  # Spark Master
+  spark-master:
+    image: bitnami/spark:latest
+    hostname: spark-master
+    container_name: spark-master
+    ports:
+      - "8080:8080"  # Spark Web UI
+      - "7077:7077"  # Spark Master port
+      - "4040:4040"  # Spark Application UI
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    networks:
+      - flockr-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spark Worker
+  spark-worker:
+    image: bitnami/spark:latest
+    hostname: spark-worker
+    container_name: spark-worker
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    ports:
+      - "8081:8081"  # Spark Worker Web UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2g
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    networks:
+      - flockr-network
+
+  # Init container: builds & copies Spark JAR
+  spark-jar-init:
+    build:
+      context: .
+      dockerfile: flockr-historic-engine/Dockerfile
+    image: flockr-historic-engine-jar:latest
+    container_name: spark-jar-init
+    volumes:
+      - spark:/shared
+    command: >
+      sh -c "cp /jars/flockr-historic-engine.jar /shared/"
+    restart: "no"
+
 volumes:
   postgres_data:
     driver: local
   aerospike_data:
+    driver: local
+  spark:
     driver: local
 
 networks:
