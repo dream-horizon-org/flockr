@@ -8,7 +8,7 @@ import io.ascend.flockr.admin.client.spark.io.response.SparkApplicationInfo;
 import io.ascend.flockr.admin.client.spark.io.response.SparkJobSubmissionResponse;
 import io.ascend.flockr.admin.config.SparkConfig;
 import io.ascend.flockr.admin.domain.rule.*;
-import io.ascend.flockr.admin.service.RuleExecutionService;
+import io.ascend.flockr.admin.service.RuleExecutionEngine;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Singleton
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
-public class BatchRuleExecutionService implements RuleExecutionService {
+public class BatchRuleExecutionEngine implements RuleExecutionEngine {
   // Spark property keys
   private static final String SPARK_APP_NAME = "spark.app.name";
   private static final String METADATA_SPARK_PROPERTIES = "sparkProperties";

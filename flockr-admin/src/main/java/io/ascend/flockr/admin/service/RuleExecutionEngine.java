@@ -4,7 +4,7 @@ import io.ascend.flockr.admin.domain.rule.*;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
-public interface RuleExecutionService {
+public interface RuleExecutionEngine {
 
   /**
    * Executes a rule by submitting it to the appropriate processing engine.

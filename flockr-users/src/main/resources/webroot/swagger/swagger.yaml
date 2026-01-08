@@ -264,14 +264,14 @@ components:
               type: string
         fileName:
           type: string
+        contentTypeFromMessage:
+          type: boolean
         bodyAsString:
           type: string
         body:
           type: object
         mediaType:
           $ref: '#/components/schemas/MediaType'
-        contentTypeFromMessage:
-          type: boolean
     MediaType:
       type: object
       properties:

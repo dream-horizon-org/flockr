@@ -199,7 +199,7 @@ public class ServiceModule extends DefaultModule {
     bind(DataConnectorService.class).to(DataConnectorServiceImpl.class);
     bind(AudienceService.class).to(AudienceServiceImpl.class);
     bind(AudienceImportService.class).to(AudienceImportServiceImpl.class);
-    bind(BatchRuleExecutionService.class).in(Singleton.class);
+    bind(BatchRuleExecutionEngine.class).in(Singleton.class);
     bind(JobServiceRegistry.class).in(Singleton.class);
   }
 
