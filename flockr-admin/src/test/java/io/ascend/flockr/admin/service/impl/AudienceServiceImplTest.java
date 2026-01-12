@@ -105,6 +105,15 @@ public class AudienceServiceImplTest {
     request.setSinkIds(List.of(1L, 2L));
 
     Long expectedId = 123L;
+
+    // Mock the sink validation
+    DataSinkDetails sink1 =
+        DataSinkDetails.builder().id(1L).name("Sink 1").type("KAFKA").status("ACTIVE").build();
+    DataSinkDetails sink2 =
+        DataSinkDetails.builder().id(2L).name("Sink 2").type("KAFKA").status("ACTIVE").build();
+    when(dataConnectorRepository.getDataSinksByIds(List.of(1L, 2L)))
+        .thenReturn(Single.just(List.of(sink1, sink2)));
+
     when(audienceRepository.createAudience(any(AudienceMeta.class)))
         .thenReturn(Single.just(expectedId));
 
@@ -138,6 +147,12 @@ public class AudienceServiceImplTest {
     request.setExpireDate(1735689600000L);
     request.setSinkIds(List.of(1L));
 
+    // Mock the sink validation
+    DataSinkDetails sink1 =
+        DataSinkDetails.builder().id(1L).name("Sink 1").type("KAFKA").status("ACTIVE").build();
+    when(dataConnectorRepository.getDataSinksByIds(List.of(1L)))
+        .thenReturn(Single.just(List.of(sink1)));
+
     when(audienceRepository.createAudience(any(AudienceMeta.class))).thenReturn(Single.just(456L));
 
     TestObserver<Long> to = service.createAudience(PROJECT_ID, request, null).test();
@@ -164,6 +179,12 @@ public class AudienceServiceImplTest {
     request.setExpireDate(1735689600000L);
     request.setSinkIds(List.of(1L));
 
+    // Mock the sink validation
+    DataSinkDetails sink1 =
+        DataSinkDetails.builder().id(1L).name("Sink 1").type("KAFKA").status("ACTIVE").build();
+    when(dataConnectorRepository.getDataSinksByIds(List.of(1L)))
+        .thenReturn(Single.just(List.of(sink1)));
+
     when(audienceRepository.createAudience(any(AudienceMeta.class))).thenReturn(Single.just(789L));
 
     TestObserver<Long> to = service.createAudience(PROJECT_ID, request, "   ").test();
@@ -189,6 +210,12 @@ public class AudienceServiceImplTest {
     request.setType("CONDITIONAL");
     request.setExpireDate(1735689600000L);
     request.setSinkIds(List.of(1L));
+
+    // Mock the sink validation
+    DataSinkDetails sink1 =
+        DataSinkDetails.builder().id(1L).name("Sink 1").type("KAFKA").status("ACTIVE").build();
+    when(dataConnectorRepository.getDataSinksByIds(List.of(1L)))
+        .thenReturn(Single.just(List.of(sink1)));
 
     when(audienceRepository.createAudience(any(AudienceMeta.class)))
         .thenReturn(Single.error(new RuntimeException("Database error")));

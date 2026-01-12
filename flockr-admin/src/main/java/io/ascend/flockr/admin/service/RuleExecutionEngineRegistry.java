@@ -22,12 +22,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Singleton
-public class JobServiceRegistry {
+public class RuleExecutionEngineRegistry {
 
   private final EnumMap<RuleType, RuleExecutionEngine> services;
 
   @Inject
-  public JobServiceRegistry(BatchRuleExecutionEngine batchJobService) {
+  public RuleExecutionEngineRegistry(BatchRuleExecutionEngine batchJobService) {
     this.services = new EnumMap<>(RuleType.class);
     services.put(RuleType.BATCH, batchJobService);
     log.info("JobServiceRegistry initialized with {} services", services.size());

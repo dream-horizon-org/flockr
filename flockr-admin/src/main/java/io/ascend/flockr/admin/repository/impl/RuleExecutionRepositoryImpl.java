@@ -230,9 +230,7 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
         "Finding stale SUBMITTING executions older than {} minutes (limit 100)", thresholdMinutes);
 
     return postgresReaderClient
-        .fetchAll(sql, this::mapRow)
-        .doOnSuccess(
-            executions -> log.info("Found {} stale SUBMITTING executions", executions.size()));
+        .fetchAll(sql, this::mapRow);
   }
 
   @Override

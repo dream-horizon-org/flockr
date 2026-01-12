@@ -200,7 +200,7 @@ public class ServiceModule extends DefaultModule {
     bind(AudienceService.class).to(AudienceServiceImpl.class);
     bind(AudienceImportService.class).to(AudienceImportServiceImpl.class);
     bind(BatchRuleExecutionEngine.class).in(Singleton.class);
-    bind(JobServiceRegistry.class).in(Singleton.class);
+    bind(RuleExecutionEngineRegistry.class).in(Singleton.class);
   }
 
   /**

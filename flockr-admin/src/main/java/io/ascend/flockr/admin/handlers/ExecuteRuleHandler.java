@@ -10,7 +10,7 @@ import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.ascend.flockr.admin.repository.ExecutionSync;
 import io.ascend.flockr.admin.repository.RuleExecutionRepository;
 import io.ascend.flockr.admin.repository.RuleRepository;
-import io.ascend.flockr.admin.service.JobServiceRegistry;
+import io.ascend.flockr.admin.service.RuleExecutionEngineRegistry;
 import io.ascend.flockr.admin.util.RuleHelpers;
 import io.reactivex.rxjava3.core.*;
 import io.vertx.core.json.JsonObject;
@@ -31,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>Acquires a distributed lease (ensuring only one instance runs across the cluster)
  *   <li>Queries for rules with status=SCHEDULED and start_time <= now and end_time > now
  *   <li>Enriches rules with their associated data source and sink details
- *   <li>Delegates execution to the appropriate job service via {@link JobServiceRegistry}
+ *   <li>Delegates execution to the appropriate job service via {@link RuleExecutionEngineRegistry}
  *   <li>Creates execution records and updates rule statuses atomically
  * </ol>
  *
@@ -47,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author Prithu Sharma
  * @since 1.0
- * @see JobServiceRegistry
+ * @see RuleExecutionEngineRegistry
  * @see AbstractHandler
  */
 @Slf4j
@@ -57,7 +57,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
   private static final String TRIGGER_SOURCE = "system:execute_rule_handler";
 
   private final ObjectMapper objectMapper;
-  private final JobServiceRegistry jobServiceRegistry;
+  private final RuleExecutionEngineRegistry ruleExecutionEngineRegistry;
   private final RuleRepository ruleRepository;
   private final RuleExecutionRepository ruleExecutionRepository;
   private final DataConnectorRepository dataConnectorRepository;
@@ -89,13 +89,13 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
       ApplicationConfig config,
       ExecutionSync executionSync,
       ObjectMapper objectMapper,
-      JobServiceRegistry jobServiceRegistry,
+      RuleExecutionEngineRegistry ruleExecutionEngineRegistry,
       RuleRepository ruleRepository,
       RuleExecutionRepository ruleExecutionRepository,
       DataConnectorRepository dataConnectorRepository) {
     super(HandlerState.WAITING_TRIGGER, vertx, executionSync, config.getExecuteRuleHandler());
     this.objectMapper = objectMapper;
-    this.jobServiceRegistry = jobServiceRegistry;
+    this.ruleExecutionEngineRegistry = ruleExecutionEngineRegistry;
     this.ruleRepository = ruleRepository;
     this.ruleExecutionRepository = ruleExecutionRepository;
     this.dataConnectorRepository = dataConnectorRepository;
@@ -121,7 +121,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
   @Override
   public void handle(Long event) {
     if (!checkAndUpdateState()) {
-      log.trace("Handler not ready, skipping execution cycle");
+      log.info("Handler not ready, skipping");
       return;
     }
 
@@ -206,7 +206,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    * <ol>
    *   <li><b>Prepare:</b> Create pending execution record and update rule status
    *   <li><b>Submit:</b> Submit to external processing engine (Spark/Flink) via {@link
-   *       JobServiceRegistry}
+   *       RuleExecutionEngineRegistry}
    *   <li><b>Record:</b> Log submission details to rule_executions table
    *   <li><b>Update:</b> Update rule status based on job submission result
    * </ol>
@@ -267,7 +267,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
             executableRule.getRuleId(),
             RuleStatus.SCHEDULED,
             RuleStatus.SUBMITTING)
-        .flatMap(executionId -> submitRuleToJobService(executableRule, executionId))
+        .flatMap(executionId -> submitRuleToEngine(executableRule, executionId))
         .onErrorResumeNext(
             error -> {
               log.error(
@@ -312,10 +312,10 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    * @param executionId the execution record ID
    * @return Single emitting 1 on success, 0 on failure
    */
-  private Single<Integer> submitRuleToJobService(
+  private Single<Integer> submitRuleToEngine(
       ExecutableRule<SourceInfoEnriched, SinkInfoEnriched> executableRule, Long executionId) {
 
-    return jobServiceRegistry
+    return ruleExecutionEngineRegistry
         .get(executableRule.getRuleType())
         .execute(executableRule, executionId)
         .flatMap(

@@ -146,3 +146,23 @@ limit 1),
   'ACTIVE',
   'system'
 );
+
+-- Lease for ExecuteRuleHandler (executes scheduled rules)
+INSERT INTO distributed_lease (lease_key, holder_id, acquired_at, expires_at)
+VALUES (
+    'executeRuleHandler',
+    'system-init',
+    NOW() - INTERVAL '1 hour',  -- Set to past so it's immediately available
+    NOW() - INTERVAL '55 minutes'  -- Expired so any handler can acquire it
+)
+ON CONFLICT (lease_key) DO NOTHING;
+
+-- Lease for ReconcileJobHandler (reconciles job states)
+INSERT INTO distributed_lease (lease_key, holder_id, acquired_at, expires_at)
+VALUES (
+    'reconcileJobHandler',
+    'system-init',
+    NOW() - INTERVAL '1 hour',  -- Set to past so it's immediately available
+    NOW() - INTERVAL '55 minutes'  -- Expired so any handler can acquire it
+)
+ON CONFLICT (lease_key) DO NOTHING;

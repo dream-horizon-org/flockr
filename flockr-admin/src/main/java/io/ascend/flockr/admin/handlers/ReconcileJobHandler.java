@@ -11,7 +11,7 @@ import io.ascend.flockr.admin.domain.rule.RuleType;
 import io.ascend.flockr.admin.repository.ExecutionSync;
 import io.ascend.flockr.admin.repository.RuleExecutionRepository;
 import io.ascend.flockr.admin.repository.RuleRepository;
-import io.ascend.flockr.admin.service.JobServiceRegistry;
+import io.ascend.flockr.admin.service.RuleExecutionEngineRegistry;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
@@ -53,13 +53,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public non-sealed class ReconcileJobHandler extends AbstractHandler {
-
   /** Minimum age (in minutes) for an execution to be considered stale. */
   private static final int RECONCILE_THRESHOLD_MINUTES = 5;
 
   private final RuleExecutionRepository ruleExecutionRepository;
   private final RuleRepository ruleRepository;
-  private final JobServiceRegistry jobServiceRegistry;
+  private final RuleExecutionEngineRegistry ruleExecutionEngineRegistry;
 
   /**
    * Creates a new ReconcileJobHandler.
@@ -69,7 +68,7 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
    * @param executionSync distributed lock mechanism for handler coordination
    * @param ruleExecutionRepository repository for rule execution CRUD operations
    * @param ruleRepository repository for rule CRUD operations
-   * @param jobServiceRegistry registry that routes to appropriate service by rule type
+   * @param ruleExecutionEngineRegistry registry that routes to appropriate service by rule type
    */
   @Inject
   public ReconcileJobHandler(
@@ -78,17 +77,17 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
       ExecutionSync executionSync,
       RuleExecutionRepository ruleExecutionRepository,
       RuleRepository ruleRepository,
-      JobServiceRegistry jobServiceRegistry) {
+      RuleExecutionEngineRegistry ruleExecutionEngineRegistry) {
     super(HandlerState.WAITING_TRIGGER, vertx, executionSync, config.getReconcileJobHandler());
     this.ruleExecutionRepository = ruleExecutionRepository;
     this.ruleRepository = ruleRepository;
-    this.jobServiceRegistry = jobServiceRegistry;
+    this.ruleExecutionEngineRegistry = ruleExecutionEngineRegistry;
   }
 
   @Override
   public void handle(Long event) {
     if (!checkAndUpdateState()) {
-      log.trace("ReconcileJobHandler not ready, skipping");
+      log.info("ReconcileJobHandler not ready, skipping");
       return;
     }
 
@@ -182,7 +181,7 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
   private Single<Integer> reconcileByRuleType(RuleType ruleType, List<RuleExecution> executions) {
     log.info("Reconciling {} {} executions", executions.size(), ruleType);
 
-    return jobServiceRegistry
+    return ruleExecutionEngineRegistry
         .get(ruleType)
         .fetchAndMatchApplications(executions)
         .flatMap(this::processBatchUpdates);

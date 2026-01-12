@@ -29,7 +29,7 @@ public class RestVerticle extends AbstractRestVerticle {
 
   @Override
   protected ClassInjector getInjector() {
-    return new GuiceInjector();
+    return GuiceInjector::getInstance;
   }
 
   @Override

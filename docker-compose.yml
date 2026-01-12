@@ -82,7 +82,7 @@ services:
     volumes:
       - ./logs:/app/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/healthcheck"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -93,20 +93,25 @@ services:
 
 
   # Spark Master
-  spark-master:
-    image: bitnami/spark:latest
-    hostname: spark-master
-    container_name: spark-master
-    ports:
-      - "8080:8080"  # Spark Web UI
-      - "7077:7077"  # Spark Master port
-      - "4040:4040"  # Spark Application UI
+  flockr-spark-master:
+    image: apache/spark:3.5.3
+    container_name: flockr-spark-master
+    hostname: flockr-spark-master
     environment:
-      - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_MASTER_OPTS=-Dspark.master.rest.enabled=true -Dspark.master.rest.port=6066
+      - SPARK_MASTER_HOST=flockr-spark-master
+    command: ["/opt/spark/sbin/start-master.sh"]
+    depends_on:
+      spark-jar-init:
+        condition: service_completed_successfully
+    ports:
+      - '8210:8080'   # Spark Master Web UI
+      - '8211:7077'   # Spark Master RPC port for workers
+      - '8212:6066'   # REST Submission API (deprecated but enabled)
+    
+    volumes:
+      - spark-jars:/opt/spark-apps:ro  # Mount JARs read-only
     networks:
       - flockr-network
     healthcheck:
@@ -116,26 +121,44 @@ services:
       retries: 5
 
   # Spark Worker
-  spark-worker:
-    image: bitnami/spark:latest
-    hostname: spark-worker
-    container_name: spark-worker
+  flockr-spark-worker:
+    image: apache/spark:3.5.3
+    container_name: flockr-spark-worker
+    hostname: flockr-spark-worker
     depends_on:
-      spark-master:
+      flockr-spark-master:
         condition: service_healthy
+      spark-jar-init:
+        condition: service_completed_successfully
     ports:
-      - "8081:8081"  # Spark Worker Web UI
+      - '8220:8081'   # Spark Worker Web UI
     environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=2g
+      - SPARK_NO_DAEMONIZE=true
       - SPARK_WORKER_CORES=2
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
+      - SPARK_WORKER_MEMORY=2g
+    command: ["/opt/spark/sbin/start-worker.sh", "spark://flockr-spark-master:7077"]
+    volumes:
+      - spark-jars:/opt/spark-apps:ro  # Mount JARs read-only
     networks:
       - flockr-network
+
+  # Spark Submit Client - Use this to submit jobs
+  spark-submit:
+    image: apache/spark:3.5.3
+    container_name: spark-submit
+    depends_on:
+      flockr-spark-master:
+        condition: service_healthy
+      spark-jar-init:
+        condition: service_completed_successfully
+    volumes:
+      - spark-jars:/opt/spark-apps:ro
+    networks:
+      - flockr-network
+    entrypoint: /bin/bash
+    command: -c "echo '✅ Spark Submit Client Ready' && tail -f /dev/null"
+    profiles:
+      - submit  # Only start when explicitly requested
 
   # Init container: builds & copies Spark JAR
   spark-jar-init:
@@ -145,9 +168,14 @@ services:
     image: flockr-historic-engine-jar:latest
     container_name: spark-jar-init
     volumes:
-      - spark:/shared
+      - spark-jars:/opt/spark-apps
     command: >
-      sh -c "cp /jars/flockr-historic-engine.jar /shared/"
+      sh -c "
+        echo '📦 Copying Spark application JAR...' &&
+        cp /jars/flockr-historic-engine.jar /opt/spark-apps/ &&
+        echo '✅ JAR available at: /opt/spark-apps/flockr-historic-engine.jar' &&
+        ls -lh /opt/spark-apps/
+      "
     restart: "no"
 
 volumes:
@@ -155,7 +183,7 @@ volumes:
     driver: local
   aerospike_data:
     driver: local
-  spark:
+  spark-jars:
     driver: local
 
 networks:
