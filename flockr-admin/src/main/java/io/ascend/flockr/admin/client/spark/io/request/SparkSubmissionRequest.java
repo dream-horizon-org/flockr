@@ -63,7 +63,7 @@ public class SparkSubmissionRequest {
   private static final String JSON_SPARK_PROPERTIES = "sparkProperties";
 
   /** Action type - always "CreateSubmissionRequest" for job submission. */
-  @Builder.Default private String action = ACTION_CREATE_SUBMISSION;
+  private String action = ACTION_CREATE_SUBMISSION;
 
   /** Application arguments passed to the main class. */
   private List<String> appArgs;
@@ -164,11 +164,9 @@ public class SparkSubmissionRequest {
       json.put(JSON_APP_ARGS, argsArray);
     }
 
-    if (environmentVariables != null && !environmentVariables.isEmpty()) {
-      JsonObject envVars = new JsonObject();
-      environmentVariables.forEach(envVars::put);
-      json.put(JSON_ENVIRONMENT_VARIABLES, envVars);
-    }
+    JsonObject envVars = new JsonObject();
+    environmentVariables.forEach(envVars::put);
+    json.put(JSON_ENVIRONMENT_VARIABLES, envVars);
 
     if (sparkProperties != null && !sparkProperties.isEmpty()) {
       JsonObject sparkProps = new JsonObject();
