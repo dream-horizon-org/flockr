@@ -27,7 +27,7 @@ public class SparkConfig {
   // Job submission defaults
   private static final String DEFAULT_MASTER_URL = "spark://localhost:7077";
   private static final String DEFAULT_JAR_PATH =
-      "file:///opt/spark/jars/flockr-historic-engine.jar";
+      "file:///opt/spark-apps/flockr-historic-engine.jar";
   private static final String DEFAULT_DEPLOY_MODE = "cluster";
   private static final String DEFAULT_EXECUTOR_MEMORY = "2g";
   private static final Integer DEFAULT_EXECUTOR_CORES = 2;
