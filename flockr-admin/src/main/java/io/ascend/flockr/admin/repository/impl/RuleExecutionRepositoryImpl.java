@@ -37,7 +37,7 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
 
   private static final String SQL_CREATE =
       "INSERT INTO rule_execution (rule_id, type, status, metadata, created_by) "
-          + "VALUES ($1, $2, $3, $4, $5) RETURNING id";
+          + "VALUES ($1, $2, $3, CAST($4 as JSONB), $5) RETURNING id";
 
   private static final String SQL_UPDATE_STATUS_AND_REF =
       "UPDATE rule_execution SET status = $1, external_job_id = $2, updated_at = NOW() "
