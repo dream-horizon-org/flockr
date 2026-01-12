@@ -59,7 +59,7 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
           + "created_by, created_at, updated_at "
           + "FROM rule_execution "
           + "WHERE status = 'SUBMITTING' "
-          + "AND updated_at < NOW() - INTERVAL '%d minutes' "
+          //          + "AND updated_at < NOW() - INTERVAL '%d minutes' "
           + "ORDER BY updated_at ASC"
           + " LIMIT 100";
 
@@ -229,8 +229,7 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
     log.debug(
         "Finding stale SUBMITTING executions older than {} minutes (limit 100)", thresholdMinutes);
 
-    return postgresReaderClient
-        .fetchAll(sql, this::mapRow);
+    return postgresReaderClient.fetchAll(sql, this::mapRow);
   }
 
   @Override

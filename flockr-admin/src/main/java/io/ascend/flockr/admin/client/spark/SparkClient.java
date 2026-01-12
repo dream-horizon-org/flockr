@@ -15,9 +15,9 @@ import java.util.List;
  * <p>This client provides methods for:
  *
  * <ul>
- *   <li>Submitting jobs to Spark cluster (Master REST API)
+ *   <li>Submitting jobs to Spark cluster (Master REST API on port 6066)
  *   <li>Querying job status and logs
- *   <li>Listing applications from History Server (for reconciliation)
+ *   <li>Listing applications from Spark Master Web UI (on port 8080) for reconciliation
  * </ul>
  *
  * @author Flockr Team
@@ -81,15 +81,17 @@ public interface SparkClient {
   Single<String> getApplicationLogs(String applicationId);
 
   /**
-   * Lists Spark applications from the History Server API.
+   * Lists Spark applications from the Spark Master Web UI.
    *
-   * <p>Endpoint: GET
-   * /api/v1/applications?status={status}&minDate={date}&maxDate={date}&limit={limit}
+   * <p>Endpoint: GET /json/ on Spark Master Web UI (typically port 8080)
    *
-   * <p><strong>Note:</strong> The History Server may be on a different host/port than the Spark
-   * Master. Configure historyHost and historyPort in SparkConfig.
+   * <p>This method queries the Spark Master Web UI to get both active and completed applications.
+   * The Web UI provides a JSON endpoint that includes application metadata.
    *
-   * @param status filter by status (running, completed, failed) - optional, pass null to skip
+   * <p><strong>Note:</strong> This uses the Spark Master Web UI (port 8080), not the REST
+   * submission API (port 6066) or History Server (port 18080).
+   *
+   * @param status filter by status (RUNNING, FINISHED) - optional, pass null to skip
    * @param minDate return apps started after this date - optional, pass null to skip
    * @param maxDate return apps started before this date - optional, pass null to skip
    * @param limit maximum number of results - optional, pass null to skip
@@ -99,10 +101,10 @@ public interface SparkClient {
       String status, Instant minDate, Instant maxDate, Integer limit);
 
   /**
-   * Finds applications by name pattern from History Server.
+   * Finds applications by name pattern from Spark Master Web UI.
    *
-   * <p>This method fetches applications from the History Server and filters them by name using a
-   * glob pattern. Useful for reconciliation to find jobs by their assigned spark.app.name.
+   * <p>This method fetches applications from the Spark Master Web UI and filters them by name using
+   * a glob pattern. Useful for reconciliation to find jobs by their assigned spark.app.name.
    *
    * <p>Pattern examples:
    *

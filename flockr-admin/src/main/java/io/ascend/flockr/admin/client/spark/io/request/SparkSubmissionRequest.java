@@ -36,7 +36,7 @@ public class SparkSubmissionRequest {
   private static final String MAIN_CLASS = "com.dream11.flocker.engine.EngineStart";
 
   /** Client Spark version. */
-  private static final String CLIENT_SPARK_VERSION = "3.5.0";
+  private static final String CLIENT_SPARK_VERSION = "3.5.3";
 
   /** Action type for Spark submission. */
   private static final String ACTION_CREATE_SUBMISSION = "CreateSubmissionRequest";

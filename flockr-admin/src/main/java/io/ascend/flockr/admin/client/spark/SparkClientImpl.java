@@ -15,8 +15,6 @@ import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.ext.web.client.HttpRequest;
 import io.vertx.rxjava3.ext.web.client.HttpResponse;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -30,10 +28,6 @@ public class SparkClientImpl implements SparkClient {
   private static final String SUBMISSION_ID_FIELD = "submissionId";
   private static final String APPLICATION_ID_FIELD = "applicationId";
   private static final String STATUS_FIELD = "status";
-
-  /** Date format required by Spark History Server API */
-  private static final DateTimeFormatter HISTORY_DATE_FORMAT =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'GMT'").withZone(ZoneOffset.UTC);
 
   private final WebClient webClient;
   private final SparkConfig sparkConfig;
@@ -134,39 +128,20 @@ public class SparkClientImpl implements SparkClient {
                     "Failed to get application logs for applicationId {}", applicationId, error));
   }
 
-  // ==================== History Server Methods ====================
+  // ==================== Spark Master Web UI Methods ====================
 
   @Override
   public Single<List<SparkApplicationInfo>> listApplications(
       String status, Instant minDate, Instant maxDate, Integer limit) {
 
-    StringBuilder pathBuilder = new StringBuilder("/api/v1/applications");
-    List<String> params = new ArrayList<>();
+    // Use Spark Master Web UI REST API endpoint
+    String path = "/json/";
+    log.debug("Listing applications from Spark Master Web UI: {}", path);
 
-    if (status != null) {
-      params.add("status=" + status);
-    }
-    if (minDate != null) {
-      params.add("minDate=" + HISTORY_DATE_FORMAT.format(minDate));
-    }
-    if (maxDate != null) {
-      params.add("maxDate=" + HISTORY_DATE_FORMAT.format(maxDate));
-    }
-    if (limit != null) {
-      params.add("limit=" + limit);
-    }
-
-    if (!params.isEmpty()) {
-      pathBuilder.append("?").append(String.join("&", params));
-    }
-
-    String path = pathBuilder.toString();
-    log.debug("Listing applications from history server: {}", path);
-
-    return executeHistoryServerRequest(path)
-        .map(this::parseApplicationList)
-        .doOnSuccess(apps -> log.debug("Found {} applications from history server", apps.size()))
-        .doOnError(e -> log.error("Failed to list applications from history server", e));
+    return executeWebUIRequest(path)
+        .map(response -> parseApplicationListFromWebUI(response, status, minDate, maxDate, limit))
+        .doOnSuccess(apps -> log.debug("Found {} applications from Spark Master", apps.size()))
+        .doOnError(e -> log.error("Failed to list applications from Spark Master", e));
   }
 
   @Override
@@ -179,7 +154,7 @@ public class SparkClientImpl implements SparkClient {
 
     log.debug("Finding applications matching pattern: {} (regex: {})", namePattern, regex);
 
-    return listApplications(null, minDate, maxDate, 500)
+    return listApplications(null, minDate, maxDate, null)
         .map(
             apps ->
                 apps.stream()
@@ -219,10 +194,13 @@ public class SparkClientImpl implements SparkClient {
     }
   }
 
-  /** Execute GET request for listing applications (same endpoint as job submission). */
-  private Single<HttpResponse<Buffer>> executeHistoryServerRequest(String path) {
+  /** Execute GET request to Spark Master Web UI (port 8080 by default for web UI). */
+  private Single<HttpResponse<Buffer>> executeWebUIRequest(String path) {
+    // Spark Master Web UI is typically on port 8080, not the REST submission port (6066)
+    int webUIPort = 8080;
+
     HttpRequest<Buffer> request =
-        webClient.prepareHttpGETRequest(sparkConfig.getHost(), sparkConfig.getPort(), path);
+        webClient.prepareHttpGETRequest(sparkConfig.getHost(), webUIPort, path);
     request.timeout(sparkConfig.getRequestTimeout());
 
     return request
@@ -233,53 +211,118 @@ public class SparkClientImpl implements SparkClient {
                 return Single.just(response);
               }
               log.error(
-                  "History server error: status={}, body={}",
+                  "Spark Master Web UI error: status={}, body={}",
                   response.statusCode(),
                   response.bodyAsString());
               return Single.error(
                   SparkException.apiError(
-                      "History server request failed",
+                      "Spark Master Web UI request failed",
                       response.statusCode(),
                       response.bodyAsString()));
             });
   }
 
-  /** Parse the JSON response from History Server into SparkApplicationInfo list. */
-  private List<SparkApplicationInfo> parseApplicationList(HttpResponse<Buffer> response) {
-    JsonArray appsArray = response.bodyAsJsonArray();
+  /**
+   * Parse the JSON response from Spark Master Web UI into SparkApplicationInfo list.
+   *
+   * <p>Spark Master Web UI /json/ endpoint returns format:
+   *
+   * <pre>
+   * {
+   *   "activeapps": [...],
+   *   "completedapps": [...]
+   * }
+   * </pre>
+   *
+   * Each app has: id, starttime, name, cores, user, memoryperslave, submitdate, state, duration
+   */
+  private List<SparkApplicationInfo> parseApplicationListFromWebUI(
+      HttpResponse<Buffer> response,
+      String statusFilter,
+      Instant minDate,
+      Instant maxDate,
+      Integer limit) {
+
+    JsonObject root = response.bodyAsJsonObject();
     List<SparkApplicationInfo> result = new ArrayList<>();
 
-    for (int i = 0; i < appsArray.size(); i++) {
-      JsonObject appJson = appsArray.getJsonObject(i);
-
-      // Handle nested attempts array (Spark 2.x+ format)
-      JsonArray attempts = appJson.getJsonArray("attempts");
-      String state = "UNKNOWN";
-      Long startTimeMs = null;
-      Long endTimeMs = null;
-      Long duration = null;
-
-      if (attempts != null && !attempts.isEmpty()) {
-        JsonObject latestAttempt = attempts.getJsonObject(0);
-        boolean completed = latestAttempt.getBoolean("completed", false);
-        state = completed ? "FINISHED" : "RUNNING";
-        startTimeMs = latestAttempt.getLong("startTime");
-        endTimeMs = latestAttempt.getLong("endTime");
-        duration = latestAttempt.getLong("duration");
+    // Parse active applications
+    JsonArray activeApps = root.getJsonArray("activeapps");
+    if (activeApps != null) {
+      for (int i = 0; i < activeApps.size(); i++) {
+        JsonObject appJson = activeApps.getJsonObject(i);
+        SparkApplicationInfo app = parseWebUIApplication(appJson, "RUNNING");
+        if (matchesFilters(app, statusFilter, minDate, maxDate)) {
+          result.add(app);
+        }
       }
-
-      result.add(
-          SparkApplicationInfo.builder()
-              .id(appJson.getString("id"))
-              .name(appJson.getString("name"))
-              .state(state)
-              .startTime(parseEpochMillis(startTimeMs))
-              .endTime(parseEpochMillis(endTimeMs))
-              .duration(duration)
-              .user(appJson.getString("sparkUser"))
-              .build());
     }
+
+    // Parse completed applications
+    JsonArray completedApps = root.getJsonArray("completedapps");
+    if (completedApps != null) {
+      for (int i = 0; i < completedApps.size(); i++) {
+        JsonObject appJson = completedApps.getJsonObject(i);
+        SparkApplicationInfo app = parseWebUIApplication(appJson, "FINISHED");
+        if (matchesFilters(app, statusFilter, minDate, maxDate)) {
+          result.add(app);
+        }
+      }
+    }
+
+    // Apply limit if specified
+    if (limit != null && result.size() > limit) {
+      result = result.subList(0, limit);
+    }
+
     return result;
+  }
+
+  /** Parse a single application from Spark Master Web UI format. */
+  private SparkApplicationInfo parseWebUIApplication(JsonObject appJson, String state) {
+    // starttime is in milliseconds
+    Long startTimeMs = appJson.getLong("starttime");
+    Long duration = appJson.getLong("duration");
+
+    Instant startTime = parseEpochMillis(startTimeMs);
+    Instant endTime = null;
+
+    // Calculate end time if we have start time and duration
+    if (startTime != null && duration != null && duration > 0) {
+      endTime = startTime.plusMillis(duration);
+    }
+
+    return SparkApplicationInfo.builder()
+        .id(appJson.getString("id"))
+        .name(appJson.getString("name"))
+        .state(state)
+        .startTime(startTime)
+        .endTime(endTime)
+        .duration(duration)
+        .user(appJson.getString("user"))
+        .build();
+  }
+
+  /** Check if an application matches the given filters. */
+  private boolean matchesFilters(
+      SparkApplicationInfo app, String statusFilter, Instant minDate, Instant maxDate) {
+
+    // Status filter
+    if (statusFilter != null && !statusFilter.equalsIgnoreCase(app.getState())) {
+      return false;
+    }
+
+    // Date range filter
+    if (app.getStartTime() != null) {
+      if (minDate != null && app.getStartTime().isBefore(minDate)) {
+        return false;
+      }
+      if (maxDate != null && app.getStartTime().isAfter(maxDate)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private Instant parseEpochMillis(Long epochMillis) {

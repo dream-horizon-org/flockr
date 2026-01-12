@@ -192,7 +192,7 @@ public class BatchRuleExecutionEngine implements RuleExecutionEngine {
   private List<ReconciliationMatch> matchExecutionsToApps(
       List<RuleExecution> executions, List<SparkApplicationInfo> sparkApps) {
 
-    log.info("Fetched {} Spark applications from History Server", sparkApps.size());
+    log.info("Fetched {} Spark applications from List", sparkApps.size());
 
     // Build lookup map: applicationName -> SparkApplicationInfo
     Map<String, SparkApplicationInfo> appByName = new HashMap<>();
