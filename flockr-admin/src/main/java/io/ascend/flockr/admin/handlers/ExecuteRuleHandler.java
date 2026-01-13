@@ -567,6 +567,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
 
     // Copy denormalized fields
     executableRule.setAudienceName(rule.getAudienceName());
+    executableRule.setExpireAt(rule.getExpireAt());
 
     return executableRule;
   }

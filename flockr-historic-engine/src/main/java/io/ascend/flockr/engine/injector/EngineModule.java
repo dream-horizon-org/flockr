@@ -226,7 +226,7 @@ public class EngineModule extends AbstractModule {
 
         sinks.add(new S3SinkImpl(s3Config, sparkSession, writeMode, outputPath));
         log.info("Added S3 sink: {}", outputPath);
-      } else if ("API".equals(type)) {
+      } else if ("WEBHOOK".equals(type)) {
         Object configObj = config.getConfig();
         ApiConfig apiConfig;
 

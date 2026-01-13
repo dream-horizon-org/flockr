@@ -33,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SparkSubmissionRequest {
 
   /** Main class for Spark batch processing engine. */
-  private static final String MAIN_CLASS = "com.dream11.flocker.engine.EngineStart";
+  private static final String MAIN_CLASS = "io.ascend.flockr.engine.EngineStart";
 
   /** Client Spark version. */
   private static final String CLIENT_SPARK_VERSION = "3.5.3";
