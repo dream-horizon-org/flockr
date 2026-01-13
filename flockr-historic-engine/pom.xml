@@ -25,8 +25,8 @@
         <mainClass>io.ascend.flockr.engine.EngineStart</mainClass>
 
         <!-- Spark and Hadoop versions -->
-        <spark.version>3.5.3</spark.version>
-        <scala.binary.version>2.12</scala.binary.version>
+        <spark.version>4.0.1</spark.version>
+        <scala.binary.version>2.13</scala.binary.version>
         <hadoop.version>3.3.6</hadoop.version>
         <aws.sdk.bundle.version>1.12.772</aws.sdk.bundle.version>
         <kafka.version>3.7.0</kafka.version>

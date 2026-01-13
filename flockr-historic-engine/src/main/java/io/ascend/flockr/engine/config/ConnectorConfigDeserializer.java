@@ -58,14 +58,21 @@ public class ConnectorConfigDeserializer extends JsonDeserializer<ConnectorConfi
 
       try {
         SourceTypes sourceType = SourceTypes.valueOf(type);
-        parsedConfig =
-            switch (sourceType) {
-              case S3 -> S3Config.fromConfig(config);
-              case ATHENA -> AthenaConfig.fromConfig(config);
-              case KAFKA -> KafkaConfig.fromConfig(config);
-              case REDSHIFT -> throw new UnsupportedOperationException(
-                  "Redshift source not yet implemented");
-            };
+        switch (sourceType) {
+          case S3:
+            parsedConfig = S3Config.fromConfig(config);
+            break;
+          case ATHENA:
+            parsedConfig = AthenaConfig.fromConfig(config);
+            break;
+          case KAFKA:
+            parsedConfig = KafkaConfig.fromConfig(config);
+            break;
+          case REDSHIFT:
+            throw new UnsupportedOperationException("Redshift source not yet implemented");
+          default:
+            throw new IllegalArgumentException("Unknown source type: " + sourceType);
+        }
       } catch (IllegalArgumentException e) {
         // Not a source type, try sink types
         // Use normalized type for validation - WEBHOOK has already been normalized to API

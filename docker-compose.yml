@@ -93,7 +93,7 @@ services:
 
   # Spark Master
   flockr-spark-master:
-    image: apache/spark:3.5.3-scala2.12-java17-ubuntu
+    image: apache/spark:4.0.1-scala2.13-java17-ubuntu
     container_name: flockr-spark-master
     hostname: flockr-spark-master
     environment:
@@ -110,8 +110,6 @@ services:
       - '8212:6066'   # REST Submission API
     volumes:
       - spark-jars:/opt/spark-apps:ro  # Mount JARs read-only
-      - ./docker/config/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro  # Java 17 compatibility options
-      - ./docker/config/spark-env.sh:/opt/spark/conf/spark-env.sh:ro  # Java 17 environment options
     networks:
       - flockr-network
     healthcheck:
@@ -122,7 +120,7 @@ services:
 
   # Spark Worker
   flockr-spark-worker:
-    image: apache/spark:3.5.3-scala2.12-java17-ubuntu
+    image: apache/spark:4.0.1-scala2.13-java17-ubuntu
     container_name: flockr-spark-worker
     hostname: flockr-spark-worker
     depends_on:
@@ -139,14 +137,12 @@ services:
     command: ["/opt/spark/sbin/start-worker.sh", "spark://flockr-spark-master:7077"]
     volumes:
       - spark-jars:/opt/spark-apps:ro  # Mount JARs read-only
-      - ./docker/config/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro  # Java 17 compatibility options
-      - ./docker/config/spark-env.sh:/opt/spark/conf/spark-env.sh:ro  # Java 17 environment options
     networks:
       - flockr-network
 
   # Spark Submit Client - Use this to submit jobs
   spark-submit:
-    image: apache/spark:3.5.3-scala2.12-java17-ubuntu
+    image: apache/spark:4.0.1-scala2.13-java17-ubuntu
     container_name: spark-submit
     depends_on:
       flockr-spark-master:

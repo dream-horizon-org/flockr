@@ -62,14 +62,22 @@ public class ConnectorConfigParser {
     Config sourceConfig =
         config.hasPath("config") ? config.getConfig("config") : ConfigFactory.empty();
 
-    Object parsedConfig =
-        switch (sourceType) {
-          case S3 -> S3Config.fromConfig(sourceConfig);
-          case ATHENA -> AthenaConfig.fromConfig(sourceConfig);
-          case KAFKA -> KafkaConfig.fromConfig(sourceConfig);
-          case REDSHIFT -> throw new UnsupportedOperationException(
-              "Redshift source not yet implemented");
-        };
+    Object parsedConfig;
+    switch (sourceType) {
+      case S3:
+        parsedConfig = S3Config.fromConfig(sourceConfig);
+        break;
+      case ATHENA:
+        parsedConfig = AthenaConfig.fromConfig(sourceConfig);
+        break;
+      case KAFKA:
+        parsedConfig = KafkaConfig.fromConfig(sourceConfig);
+        break;
+      case REDSHIFT:
+        throw new UnsupportedOperationException("Redshift source not yet implemented");
+      default:
+        throw new IllegalArgumentException("Unknown source type: " + sourceType);
+    }
 
     return new ConnectorConfig(type, parsedConfig);
   }

@@ -150,13 +150,19 @@ public class EngineModule extends AbstractModule {
 
     if (configObj instanceof Config) {
       Config typesafeConfig = (Config) configObj;
-      configObj =
-          switch (type) {
-            case S3 -> S3Config.fromConfig(typesafeConfig);
-            case ATHENA -> AthenaConfig.fromConfig(typesafeConfig);
-            case KAFKA -> KafkaConfig.fromConfig(typesafeConfig);
-            default -> throw new IllegalArgumentException("Unsupported source type: " + type);
-          };
+      switch (type) {
+        case S3:
+          configObj = S3Config.fromConfig(typesafeConfig);
+          break;
+        case ATHENA:
+          configObj = AthenaConfig.fromConfig(typesafeConfig);
+          break;
+        case KAFKA:
+          configObj = KafkaConfig.fromConfig(typesafeConfig);
+          break;
+        default:
+          throw new IllegalArgumentException("Unsupported source type: " + type);
+      }
     }
 
     return SourceFactory.createSource(type, configObj, sparkSession);
@@ -205,10 +211,18 @@ public class EngineModule extends AbstractModule {
     for (ConnectorConfig config : sinkConfigs) {
       String type = config.getType().toUpperCase();
       switch (type) {
-        case "S3" -> sinks.add(createS3Sink(config));
-        case "API" -> sinks.add(createApiSink(config));
-        case "KAFKA" -> sinks.add(createKafkaSink(config));
-        default -> log.warn("Unknown sink type: {}, skipping", type);
+        case "S3":
+          sinks.add(createS3Sink(config));
+          break;
+        case "API":
+          sinks.add(createApiSink(config));
+          break;
+        case "KAFKA":
+          sinks.add(createKafkaSink(config));
+          break;
+        default:
+          log.warn("Unknown sink type: {}, skipping", type);
+          break;
       }
     }
 
