@@ -25,12 +25,13 @@
         <mainClass>io.ascend.flockr.engine.EngineStart</mainClass>
 
         <!-- Spark and Hadoop versions -->
-        <spark.version>4.0.0</spark.version>
-        <scala.binary.version>2.13</scala.binary.version>
+        <spark.version>3.5.3</spark.version>
+        <scala.binary.version>2.12</scala.binary.version>
         <hadoop.version>3.3.6</hadoop.version>
         <aws.sdk.bundle.version>1.12.772</aws.sdk.bundle.version>
         <kafka.version>3.7.0</kafka.version>
         <jackson.version>2.18.0</jackson.version>
+        <guice.version>4.0</guice.version>
     </properties>
 
     <dependencies>
@@ -75,7 +76,7 @@
             <artifactId>slf4j-api</artifactId>
             <scope>compile</scope>
         </dependency>
-        
+
         <!-- SLF4J Simple implementation for standalone execution -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -84,7 +85,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Google Guice for dependency injection -->
+       <!-- Guice 4.0 is compatible with Guava 14.0+ -->
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
@@ -190,7 +191,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.6.3</version>
                 <configuration>
-                    <source>21</source>
+                    <source>17</source>
                     <encoding>UTF-8</encoding>
                     <doclint>none</doclint>
                 </configuration>

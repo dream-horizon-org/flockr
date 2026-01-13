@@ -6,6 +6,8 @@ import io.ascend.flockr.admin.domain.rule.SinkInfoEnriched;
 import io.ascend.flockr.admin.domain.rule.SourceInfoEnriched;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -49,6 +51,34 @@ public class SparkSubmissionRequest {
   private static final String SPARK_EXECUTOR_INSTANCES = "spark.executor.instances";
   private static final String SPARK_DRIVER_MEMORY = "spark.driver.memory";
   private static final String SPARK_APP_NAME = "spark.app.name";
+  private static final String SPARK_DRIVER_EXTRA_JAVA_OPTIONS = "spark.driver.extraJavaOptions";
+  private static final String SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS = "spark.executor.extraJavaOptions";
+
+  /**
+   * Returns Java 17+ module system compatibility options required for Spark 3.5.3.
+   *
+   * <p>These options allow Spark to access internal JDK classes that are not exported by default
+   * in Java 9+ module system. Required to prevent IllegalAccessError when Spark accesses classes
+   * like sun.nio.ch.DirectBuffer.
+   *
+   * @return Space-separated string of --add-opens JVM arguments
+   */
+  private static String getJava17SparkOptions() {
+    List<String> options = new ArrayList<>();
+    options.add("--add-opens java.base/sun.nio.ch=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.lang=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.lang.reflect=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.lang.invoke=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.util=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.util.concurrent=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.io=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.nio=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.net=ALL-UNNAMED");
+    options.add("--add-opens java.base/java.text=ALL-UNNAMED");
+    options.add("--add-opens java.desktop/java.awt.font=ALL-UNNAMED");
+    return String.join(" ", options);
+  }
 
   // App name format
   private static final String APP_NAME_FORMAT = "flockr-batch-rule-%d-exec-%d";
@@ -113,22 +143,20 @@ public class SparkSubmissionRequest {
 
     List<String> appArgs = List.of(jobPayload.encode());
 
-    Map<String, String> sparkProperties =
-        Map.of(
-            SPARK_MASTER,
-            sparkConfig.getMasterUrl(),
-            SPARK_DEPLOY_MODE,
-            sparkConfig.getDeployMode(),
-            SPARK_EXECUTOR_MEMORY,
-            sparkConfig.getExecutorMemory(),
-            SPARK_EXECUTOR_CORES,
-            String.valueOf(sparkConfig.getExecutorCores()),
-            SPARK_EXECUTOR_INSTANCES,
-            String.valueOf(sparkConfig.getExecutorInstances()),
-            SPARK_DRIVER_MEMORY,
-            sparkConfig.getDriverMemory(),
-            SPARK_APP_NAME,
-            String.format(APP_NAME_FORMAT, executableRule.getRuleId(), executionId));
+    // Build Spark properties with Java 17 compatibility options
+    Map<String, String> sparkProperties = new HashMap<>();
+    sparkProperties.put(SPARK_MASTER, sparkConfig.getMasterUrl());
+    sparkProperties.put(SPARK_DEPLOY_MODE, sparkConfig.getDeployMode());
+    sparkProperties.put(SPARK_EXECUTOR_MEMORY, sparkConfig.getExecutorMemory());
+    sparkProperties.put(SPARK_EXECUTOR_CORES, String.valueOf(sparkConfig.getExecutorCores()));
+    sparkProperties.put(SPARK_EXECUTOR_INSTANCES, String.valueOf(sparkConfig.getExecutorInstances()));
+    sparkProperties.put(SPARK_DRIVER_MEMORY, sparkConfig.getDriverMemory());
+    sparkProperties.put(SPARK_APP_NAME, String.format(APP_NAME_FORMAT, executableRule.getRuleId(), executionId));
+    
+    // Add Java 17+ module system compatibility options for both driver and executor
+    String java17Options = getJava17SparkOptions();
+    sparkProperties.put(SPARK_DRIVER_EXTRA_JAVA_OPTIONS, java17Options);
+    sparkProperties.put(SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS, java17Options);
 
     // Build the submission request
     SparkSubmissionRequest request =

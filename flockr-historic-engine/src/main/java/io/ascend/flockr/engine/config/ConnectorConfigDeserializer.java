@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValueFactory;
 import io.ascend.flockr.engine.enums.SinkTypes;
 import io.ascend.flockr.engine.enums.SourceTypes;
 import java.io.IOException;
@@ -24,7 +25,26 @@ public class ConnectorConfigDeserializer extends JsonDeserializer<ConnectorConfi
       throw new IllegalArgumentException("Connector configuration must have 'type' field");
     }
 
-    String type = node.get("type").asText().toUpperCase();
+    String originalType = node.get("type").asText().toUpperCase();
+    // Normalize WEBHOOK to API - they are treated identically
+    // This MUST happen before any validation to ensure consistent type handling
+    String type = "WEBHOOK".equals(originalType) ? "API" : originalType;
+
+    // Validate the normalized type first, even if config is null
+    // Always use the normalized 'type' variable, never 'originalType' for validation
+    try {
+      SourceTypes.valueOf(type);
+    } catch (IllegalArgumentException e) {
+      // Not a source type, validate as sink type using normalized type
+      try {
+        SinkTypes.valueOf(type); // Use normalized type, not originalType
+      } catch (IllegalArgumentException ex) {
+        log.error("Unknown connector type: {} (normalized from: {})", type, originalType);
+        throw new IllegalArgumentException(
+            "Unknown connector type: " + originalType + " (normalized to: " + type + ")", ex);
+      }
+    }
+
     JsonNode configNode = node.has("config") ? node.get("config") : null;
 
     Object parsedConfig = null;
@@ -47,10 +67,21 @@ public class ConnectorConfigDeserializer extends JsonDeserializer<ConnectorConfi
                   "Redshift source not yet implemented");
             };
       } catch (IllegalArgumentException e) {
+        // Not a source type, try sink types
+        // Use normalized type for validation - WEBHOOK has already been normalized to API
         try {
-          SinkTypes.valueOf(type); // Validate it's a valid sink type
+          SinkTypes.valueOf(type); // Validate using normalized type
           if ("API".equals(type)) {
-            parsedConfig = ApiConfig.fromConfig(config);
+            // WEBHOOK is normalized to API, so both use ApiConfig
+            // Map timeoutMs to timeoutSeconds if present (WEBHOOK input format)
+            Config apiConfig = config;
+            if (config.hasPath("timeoutMs") && !config.hasPath("timeoutSeconds")) {
+              int timeoutMs = config.getInt("timeoutMs");
+              int timeoutSeconds = timeoutMs / 1000;
+              apiConfig =
+                  config.withValue("timeoutSeconds", ConfigValueFactory.fromAnyRef(timeoutSeconds));
+            }
+            parsedConfig = ApiConfig.fromConfig(apiConfig);
           } else if ("S3".equals(type)) {
             parsedConfig = S3Config.fromConfig(config);
           } else if ("KAFKA".equals(type)) {
@@ -59,12 +90,16 @@ public class ConnectorConfigDeserializer extends JsonDeserializer<ConnectorConfi
             parsedConfig = config;
           }
         } catch (IllegalArgumentException ex) {
-          log.error("Unknown connector type: {}", type);
-          throw new IllegalArgumentException("Unknown connector type: " + type, ex);
+          // This should not happen if normalization worked correctly
+          log.error(
+              "Unknown connector type after normalization: {} (original: {})", type, originalType);
+          throw new IllegalArgumentException(
+              "Unknown connector type: " + originalType + " (normalized to: " + type + ")", ex);
         }
       }
     }
 
+    // Store normalized type (WEBHOOK becomes API)
     return new ConnectorConfig(type, parsedConfig);
   }
 }
