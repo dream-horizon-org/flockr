@@ -27,6 +27,10 @@ public class SinkFactory {
           throw new IllegalArgumentException("S3Config and SparkSession are required for S3 sink");
         }
         return new S3SinkImpl(s3Config, sparkSession);
+      case API:
+      case WEBHOOK:
+        throw new UnsupportedOperationException(
+            sinkType + " sinks should be created through EngineModule, not SinkFactory");
       default:
         throw new IllegalArgumentException("Invalid sink type: " + sinkType);
     }

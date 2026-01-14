@@ -53,14 +53,21 @@ public class ConfigConverter {
 
     try {
       SourceTypes sourceType = SourceTypes.valueOf(type.toUpperCase());
-      parsedConfig =
-          switch (sourceType) {
-            case S3 -> S3Config.fromConfig(config);
-            case ATHENA -> AthenaConfig.fromConfig(config);
-            case KAFKA -> KafkaConfig.fromConfig(config);
-            case REDSHIFT -> throw new UnsupportedOperationException(
-                "Redshift source not yet implemented");
-          };
+      switch (sourceType) {
+        case S3:
+          parsedConfig = S3Config.fromConfig(config);
+          break;
+        case ATHENA:
+          parsedConfig = AthenaConfig.fromConfig(config);
+          break;
+        case KAFKA:
+          parsedConfig = KafkaConfig.fromConfig(config);
+          break;
+        case REDSHIFT:
+          throw new UnsupportedOperationException("Redshift source not yet implemented");
+        default:
+          throw new IllegalArgumentException("Unknown source type: " + sourceType);
+      }
     } catch (IllegalArgumentException e) {
       log.error("Unknown source type: {}", type);
       throw new IllegalArgumentException("Unknown source type: " + type, e);

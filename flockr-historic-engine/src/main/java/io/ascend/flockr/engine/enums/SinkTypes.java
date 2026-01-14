@@ -3,7 +3,8 @@ package io.ascend.flockr.engine.enums;
 public enum SinkTypes {
   KAFKA("kafka"),
   S3("s3"),
-  API("api");
+  API("api"),
+  WEBHOOK("webhook");
 
   private final String configType;
 

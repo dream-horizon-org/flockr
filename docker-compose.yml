@@ -91,10 +91,9 @@ services:
       - flockr-network
     restart: unless-stopped
 
-
   # Spark Master
   flockr-spark-master:
-    image: apache/spark:3.5.3-scala2.12-java17-ubuntu
+    image: apache/spark:4.0.1-scala2.13-java17-ubuntu
     container_name: flockr-spark-master
     hostname: flockr-spark-master
     environment:
@@ -108,8 +107,7 @@ services:
     ports:
       - '8210:8080'   # Spark Master Web UI
       - '8211:7077'   # Spark Master RPC port for workers
-      - '8212:6066'   # REST Submission API (deprecated but enabled)
-    
+      - '8212:6066'   # REST Submission API
     volumes:
       - spark-jars:/opt/spark-apps:ro  # Mount JARs read-only
     networks:
@@ -122,7 +120,7 @@ services:
 
   # Spark Worker
   flockr-spark-worker:
-    image: apache/spark:3.5.3-scala2.12-java17-ubuntu
+    image: apache/spark:4.0.1-scala2.13-java17-ubuntu
     container_name: flockr-spark-worker
     hostname: flockr-spark-worker
     depends_on:
@@ -144,7 +142,7 @@ services:
 
   # Spark Submit Client - Use this to submit jobs
   spark-submit:
-    image: apache/spark:3.5.3
+    image: apache/spark:4.0.1-scala2.13-java17-ubuntu
     container_name: spark-submit
     depends_on:
       flockr-spark-master:

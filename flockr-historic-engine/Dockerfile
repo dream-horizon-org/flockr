@@ -26,7 +26,7 @@ RUN mvn clean package -DskipTests -B -pl flockr-historic-engine -am
 # =========================================
 # Stage 2: Artifact image (JAR carrier only)
 # =========================================
-FROM eclipse-temurin:11-jre
+FROM eclipse-temurin:17-jre
 
 LABEL maintainer="flockr-team"
 LABEL purpose="flockr-historic-spark-jar-artifact"

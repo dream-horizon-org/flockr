@@ -79,15 +79,12 @@ public class EngineModule extends AbstractModule {
   private final List<ConnectorConfig> sinkConfigs;
 
   /** Audience/cohort name (used for API sinks). */
-  @SuppressWarnings("unused")
   private final String audienceName;
 
   /** Action type ("append" or "remove", used for API sinks). */
-  @SuppressWarnings("unused")
   private final String action;
 
   /** Expiration timestamp (used for API sinks). */
-  @SuppressWarnings("unused")
   private final Long expireAt;
 
   /**
@@ -153,13 +150,19 @@ public class EngineModule extends AbstractModule {
 
     if (configObj instanceof Config) {
       Config typesafeConfig = (Config) configObj;
-      configObj =
-          switch (type) {
-            case S3 -> S3Config.fromConfig(typesafeConfig);
-            case ATHENA -> AthenaConfig.fromConfig(typesafeConfig);
-            case KAFKA -> KafkaConfig.fromConfig(typesafeConfig);
-            default -> throw new IllegalArgumentException("Unsupported source type: " + type);
-          };
+      switch (type) {
+        case S3:
+          configObj = S3Config.fromConfig(typesafeConfig);
+          break;
+        case ATHENA:
+          configObj = AthenaConfig.fromConfig(typesafeConfig);
+          break;
+        case KAFKA:
+          configObj = KafkaConfig.fromConfig(typesafeConfig);
+          break;
+        default:
+          throw new IllegalArgumentException("Unsupported source type: " + type);
+      }
     }
 
     return SourceFactory.createSource(type, configObj, sparkSession);
@@ -207,84 +210,130 @@ public class EngineModule extends AbstractModule {
 
     for (ConnectorConfig config : sinkConfigs) {
       String type = config.getType().toUpperCase();
-      if ("S3".equals(type)) {
-        S3Config s3Config;
-        Object configObj = config.getConfig();
-
-        if (configObj instanceof S3Config) {
-          s3Config = (S3Config) configObj;
-        } else if (configObj instanceof Config) {
-          s3Config = S3Config.fromConfig((Config) configObj);
-        } else {
-          throw new IllegalArgumentException(
-              "Unknown config type for S3 sink: " + configObj.getClass().getName());
-        }
-
-        String writeMode =
-            s3Config.getWriteMode() != null ? s3Config.getWriteMode() : Constants.WRITE_MODE_APPEND;
-        String outputPath = "s3a://" + s3Config.getBucket() + "/" + s3Config.getPath();
-
-        sinks.add(new S3SinkImpl(s3Config, sparkSession, writeMode, outputPath));
-        log.info("Added S3 sink: {}", outputPath);
-      } else if ("WEBHOOK".equals(type)) {
-        Object configObj = config.getConfig();
-        ApiConfig apiConfig;
-
-        if (configObj instanceof ApiConfig) {
-          apiConfig = (ApiConfig) configObj;
-        } else if (configObj instanceof Config) {
-          apiConfig = ApiConfig.fromConfig((Config) configObj);
-        } else {
-          throw new IllegalArgumentException(
-              "Unknown config type for API sink: " + configObj.getClass().getName());
-        }
-
-        sinks.add(new ApiSinkImpl(apiConfig, audienceName, action, expireAt));
-        log.info("Added API sink with rate limit: {}/sec", apiConfig.getRateLimitPerSecond());
-      } else if ("KAFKA".equals(type)) {
-        Object configObj = config.getConfig();
-        KafkaConfig kafkaConfig;
-
-        if (configObj instanceof KafkaConfig) {
-          kafkaConfig = (KafkaConfig) configObj;
-        } else if (configObj instanceof Config) {
-          kafkaConfig = KafkaConfig.fromConfig((Config) configObj);
-        } else {
-          throw new IllegalArgumentException(
-              "Unknown config type for Kafka sink: " + configObj.getClass().getName());
-        }
-
-        // Create KafkaProducerConfig from KafkaConfig
-        KafkaProducerConfig producerConfig = new KafkaProducerConfig();
-        producerConfig.setBootstrapServers(kafkaConfig.getBootstrapServersUrl());
-        producerConfig.setTopic(kafkaConfig.getTopic());
-        producerConfig.setKeySerializerClass(
-            "org.apache.kafka.common.serialization.StringSerializer");
-        producerConfig.setValueSerializerClass(
-            "org.apache.kafka.common.serialization.StringSerializer");
-
-        // Create KafkaProducer
-        Properties props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, producerConfig.getBootstrapServers());
-        props.put(
-            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, producerConfig.getKeySerializerClass());
-        props.put(
-            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, producerConfig.getValueSerializerClass());
-        props.put(ProducerConfig.ACKS_CONFIG, "all");
-        props.put(ProducerConfig.RETRIES_CONFIG, 3);
-        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
-        props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
-        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
-
-        KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(props);
-        sinks.add(new KafkaSinkImpl(kafkaProducer, producerConfig));
-        log.info(
-            "Added Kafka sink for topic: {} at bootstrap servers: {}",
-            producerConfig.getTopic(),
-            producerConfig.getBootstrapServers());
+      switch (type) {
+        case "S3":
+          sinks.add(createS3Sink(config));
+          break;
+        case "API":
+          sinks.add(createApiSink(config));
+          break;
+        case "KAFKA":
+          sinks.add(createKafkaSink(config));
+          break;
+        default:
+          log.warn("Unknown sink type: {}, skipping", type);
+          break;
       }
     }
 
     return sinks;
+  }
+
+  /**
+   * Creates an S3 sink from the connector configuration.
+   *
+   * @param config The connector configuration.
+   * @return An S3SinkImpl instance.
+   */
+  private Sink<String> createS3Sink(ConnectorConfig config) {
+    S3Config s3Config = extractConfig(config, S3Config.class, S3Config::fromConfig);
+    String writeMode =
+        s3Config.getWriteMode() != null ? s3Config.getWriteMode() : Constants.WRITE_MODE_APPEND;
+    String outputPath = "s3a://" + s3Config.getBucket() + "/" + s3Config.getPath();
+
+    Sink<String> sink = new S3SinkImpl(s3Config, sparkSession, writeMode, outputPath);
+    log.info("Added S3 sink: {}", outputPath);
+    return sink;
+  }
+
+  /**
+   * Creates an API sink from the connector configuration.
+   *
+   * @param config The connector configuration.
+   * @return An ApiSinkImpl instance.
+   */
+  private Sink<String> createApiSink(ConnectorConfig config) {
+    ApiConfig apiConfig = extractConfig(config, ApiConfig.class, ApiConfig::fromConfig);
+    Sink<String> sink = new ApiSinkImpl(apiConfig, audienceName, action, expireAt);
+    log.info("Added API sink with rate limit: {}/sec", apiConfig.getRateLimitPerSecond());
+    return sink;
+  }
+
+  /**
+   * Creates a Kafka sink from the connector configuration.
+   *
+   * @param config The connector configuration.
+   * @return A KafkaSinkImpl instance.
+   */
+  private Sink<String> createKafkaSink(ConnectorConfig config) {
+    KafkaConfig kafkaConfig = extractConfig(config, KafkaConfig.class, KafkaConfig::fromConfig);
+
+    // Create KafkaProducerConfig from KafkaConfig
+    KafkaProducerConfig producerConfig = new KafkaProducerConfig();
+    producerConfig.setBootstrapServers(kafkaConfig.getBootstrapServersUrl());
+    producerConfig.setTopic(kafkaConfig.getTopic());
+    producerConfig.setKeySerializerClass("org.apache.kafka.common.serialization.StringSerializer");
+    producerConfig.setValueSerializerClass(
+        "org.apache.kafka.common.serialization.StringSerializer");
+
+    // Create KafkaProducer with optimized settings
+    Properties props = createKafkaProducerProperties(producerConfig);
+    KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(props);
+
+    Sink<String> sink = new KafkaSinkImpl(kafkaProducer, producerConfig);
+    log.info(
+        "Added Kafka sink for topic: {} at bootstrap servers: {}",
+        producerConfig.getTopic(),
+        producerConfig.getBootstrapServers());
+    return sink;
+  }
+
+  /**
+   * Extracts and converts a configuration object from ConnectorConfig.
+   *
+   * @param config The connector configuration.
+   * @param configClass The expected configuration class type.
+   * @param fromConfigConverter Function to convert Config to the expected type.
+   * @param <T> The configuration type.
+   * @return The converted configuration object.
+   * @throws IllegalArgumentException If the config type is unknown.
+   */
+  private <T> T extractConfig(
+      ConnectorConfig config,
+      Class<T> configClass,
+      java.util.function.Function<Config, T> fromConfigConverter) {
+    Object configObj = config.getConfig();
+
+    if (configClass.isInstance(configObj)) {
+      return configClass.cast(configObj);
+    } else if (configObj instanceof Config) {
+      return fromConfigConverter.apply((Config) configObj);
+    } else {
+      throw new IllegalArgumentException(
+          "Unknown config type for "
+              + config.getType()
+              + " sink: "
+              + configObj.getClass().getName());
+    }
+  }
+
+  /**
+   * Creates Kafka producer properties with optimized settings.
+   *
+   * @param producerConfig The Kafka producer configuration.
+   * @return Properties configured for Kafka producer.
+   */
+  private Properties createKafkaProducerProperties(KafkaProducerConfig producerConfig) {
+    Properties props = new Properties();
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, producerConfig.getBootstrapServers());
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, producerConfig.getKeySerializerClass());
+    props.put(
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, producerConfig.getValueSerializerClass());
+    props.put(ProducerConfig.ACKS_CONFIG, "all");
+    props.put(ProducerConfig.RETRIES_CONFIG, 3);
+    props.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
+    props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
+    props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
+    return props;
   }
 }

@@ -6,6 +6,7 @@ import io.ascend.flockr.admin.domain.rule.SinkInfoEnriched;
 import io.ascend.flockr.admin.domain.rule.SourceInfoEnriched;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -36,7 +37,7 @@ public class SparkSubmissionRequest {
   private static final String MAIN_CLASS = "io.ascend.flockr.engine.EngineStart";
 
   /** Client Spark version. */
-  private static final String CLIENT_SPARK_VERSION = "3.5.3";
+  private static final String CLIENT_SPARK_VERSION = "4.0.1";
 
   /** Action type for Spark submission. */
   private static final String ACTION_CREATE_SUBMISSION = "CreateSubmissionRequest";
@@ -49,6 +50,7 @@ public class SparkSubmissionRequest {
   private static final String SPARK_EXECUTOR_INSTANCES = "spark.executor.instances";
   private static final String SPARK_DRIVER_MEMORY = "spark.driver.memory";
   private static final String SPARK_APP_NAME = "spark.app.name";
+
 
   // App name format
   private static final String APP_NAME_FORMAT = "flockr-batch-rule-%d-exec-%d";
@@ -113,22 +115,15 @@ public class SparkSubmissionRequest {
 
     List<String> appArgs = List.of(jobPayload.encode());
 
-    Map<String, String> sparkProperties =
-        Map.of(
-            SPARK_MASTER,
-            sparkConfig.getMasterUrl(),
-            SPARK_DEPLOY_MODE,
-            sparkConfig.getDeployMode(),
-            SPARK_EXECUTOR_MEMORY,
-            sparkConfig.getExecutorMemory(),
-            SPARK_EXECUTOR_CORES,
-            String.valueOf(sparkConfig.getExecutorCores()),
-            SPARK_EXECUTOR_INSTANCES,
-            String.valueOf(sparkConfig.getExecutorInstances()),
-            SPARK_DRIVER_MEMORY,
-            sparkConfig.getDriverMemory(),
-            SPARK_APP_NAME,
-            String.format(APP_NAME_FORMAT, executableRule.getRuleId(), executionId));
+    // Build Spark properties
+    Map<String, String> sparkProperties = new HashMap<>();
+    sparkProperties.put(SPARK_MASTER, sparkConfig.getMasterUrl());
+    sparkProperties.put(SPARK_DEPLOY_MODE, sparkConfig.getDeployMode());
+    sparkProperties.put(SPARK_EXECUTOR_MEMORY, sparkConfig.getExecutorMemory());
+    sparkProperties.put(SPARK_EXECUTOR_CORES, String.valueOf(sparkConfig.getExecutorCores()));
+    sparkProperties.put(SPARK_EXECUTOR_INSTANCES, String.valueOf(sparkConfig.getExecutorInstances()));
+    sparkProperties.put(SPARK_DRIVER_MEMORY, sparkConfig.getDriverMemory());
+    sparkProperties.put(SPARK_APP_NAME, String.format(APP_NAME_FORMAT, executableRule.getRuleId(), executionId));
 
     // Build the submission request
     SparkSubmissionRequest request =
