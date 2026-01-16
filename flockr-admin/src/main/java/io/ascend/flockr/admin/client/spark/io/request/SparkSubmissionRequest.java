@@ -51,7 +51,6 @@ public class SparkSubmissionRequest {
   private static final String SPARK_DRIVER_MEMORY = "spark.driver.memory";
   private static final String SPARK_APP_NAME = "spark.app.name";
 
-
   // App name format
   private static final String APP_NAME_FORMAT = "flockr-batch-rule-%d-exec-%d";
 
@@ -121,9 +120,11 @@ public class SparkSubmissionRequest {
     sparkProperties.put(SPARK_DEPLOY_MODE, sparkConfig.getDeployMode());
     sparkProperties.put(SPARK_EXECUTOR_MEMORY, sparkConfig.getExecutorMemory());
     sparkProperties.put(SPARK_EXECUTOR_CORES, String.valueOf(sparkConfig.getExecutorCores()));
-    sparkProperties.put(SPARK_EXECUTOR_INSTANCES, String.valueOf(sparkConfig.getExecutorInstances()));
+    sparkProperties.put(
+        SPARK_EXECUTOR_INSTANCES, String.valueOf(sparkConfig.getExecutorInstances()));
     sparkProperties.put(SPARK_DRIVER_MEMORY, sparkConfig.getDriverMemory());
-    sparkProperties.put(SPARK_APP_NAME, String.format(APP_NAME_FORMAT, executableRule.getRuleId(), executionId));
+    sparkProperties.put(
+        SPARK_APP_NAME, String.format(APP_NAME_FORMAT, executableRule.getRuleId(), executionId));
 
     // Build the submission request
     SparkSubmissionRequest request =
