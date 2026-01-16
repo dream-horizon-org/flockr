@@ -69,42 +69,25 @@ public interface RuleExecutionRepository {
       RuleStatus newRuleStatus);
 
   /**
-   * Finds executions stuck in SUBMITTING or RUNNING status for longer than the threshold.
+   * Finds executions stuck in specified statuses for longer than the threshold.
    *
-   * <p>Used by the reconciliation process to find jobs that may have been submitted but whose
-   * response was lost, or jobs that are running but may have completed/failed externally.
+   * <p>Used by the reconciliation process to find jobs that may need status sync with external
+   * engine (Spark/Flink).
    *
    * <p><b>Query behavior:</b>
    *
    * <ul>
-   *   <li>Filters by status IN (SUBMITTING, RUNNING) AND updated_at older than threshold
+   *   <li>Filters by status IN (provided statuses) AND updated_at older than threshold
    *   <li>Orders by updated_at ASC (oldest first)
    *   <li>Limited to 100 records per batch to prevent overwhelming the system
    * </ul>
    *
    * @param thresholdMinutes minimum age in minutes for an execution to be considered stale
+   * @param statuses list of statuses to query for reconciliation
    * @return Single containing list of stale executions needing reconciliation (max 100)
    */
-  Single<List<RuleExecution>> findStaleExecutionsForReconciliation(int thresholdMinutes);
-
-  /**
-   * Increments reconciliation retry count for unmatched executions and reclaims them. Sets
-   * updated_at = NOW() + 1 minute for retry.
-   *
-   * @param executionIds list of unmatched execution IDs
-   * @return Completable that completes when update is done
-   */
-  Completable incrementRetryCountAndReclaim(List<Long> executionIds);
-
-  /**
-   * Marks executions as FAILED after exhausting reconciliation retries. Stores failure reason in
-   * metadata.
-   *
-   * @param executionIds list of execution IDs to mark failed
-   * @param failureReason reason for failure to store in metadata
-   * @return Completable that completes when update is done
-   */
-  Completable markFailedWithReason(List<Long> executionIds, String failureReason);
+  Single<List<RuleExecution>> findStaleExecutionsForReconciliation(
+      int thresholdMinutes, List<JobStatus> statuses);
 
   /**
    * Batch update execution status and external job details for reconciled executions.

@@ -18,6 +18,7 @@ import io.vertx.rxjava3.sqlclient.Tuple;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,24 +57,12 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
 
   private static final String SQL_FIND_STALE_FOR_RECONCILIATION =
       "SELECT id, name, rule_id, type, status, metadata, external_job_id, "
-          + "reconciliation_retries, created_by, created_at, updated_at "
+          + "created_by, created_at, updated_at "
           + "FROM rule_execution "
-          + "WHERE status IN ('SUBMITTING', 'RUNNING') "
+          + "WHERE status = ANY($1) "
           + "AND updated_at < NOW() - INTERVAL '%d minutes' "
           + "ORDER BY updated_at ASC "
           + "LIMIT 100";
-
-  private static final String SQL_INCREMENT_RETRY_AND_RECLAIM =
-      "UPDATE rule_execution SET "
-          + "reconciliation_retries = reconciliation_retries + 1, "
-          + "updated_at = NOW() + INTERVAL '1 minute' "
-          + "WHERE id = ANY($1)";
-
-  private static final String SQL_MARK_FAILED_WITH_REASON =
-      "UPDATE rule_execution SET status = 'FAILED', "
-          + "metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('failure_reason', $2::text), "
-          + "updated_at = NOW() "
-          + "WHERE id = ANY($1)";
 
   /** SQL for batch update using UNNEST for efficient multi-row update. */
   private static final String SQL_BATCH_UPDATE_STATUS_AND_REF =
@@ -127,7 +116,6 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
         .status(JobStatus.valueOf(row.getString("status")))
         .metadata(row.getJsonObject("metadata"))
         .externalJobId(row.getString("external_job_id"))
-        .reconciliationRetries(row.getInteger("reconciliation_retries"))
         .createdBy(row.getString("created_by"))
         .createdAt(toInstant(row.getLocalDateTime("created_at")))
         .updatedAt(toInstant(row.getLocalDateTime("updated_at")))
@@ -233,46 +221,32 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
   }
 
   @Override
-  public Single<List<RuleExecution>> findStaleExecutionsForReconciliation(int thresholdMinutes) {
+  public Single<List<RuleExecution>> findStaleExecutionsForReconciliation(
+      int thresholdMinutes, List<JobStatus> statuses) {
+    if (statuses.isEmpty()) {
+      return Single.just(List.of());
+    }
+
     String sql = String.format(SQL_FIND_STALE_FOR_RECONCILIATION, thresholdMinutes);
+    String[] statusArray = statuses.stream().map(JobStatus::name).toArray(String[]::new);
+
     log.debug(
-        "Finding stale SUBMITTING/RUNNING executions older than {} minutes (limit 100)",
+        "Finding stale executions with statuses {} older than {} minutes (limit 100)",
+        statuses,
         thresholdMinutes);
 
-    return postgresReaderClient.fetchAll(sql, this::mapRow);
-  }
-
-  @Override
-  public Completable incrementRetryCountAndReclaim(List<Long> executionIds) {
-    if (executionIds.isEmpty()) {
-      return Completable.complete();
-    }
-
-    Long[] ids = executionIds.toArray(new Long[0]);
     return postgresWriterClient
         .getConnection()
-        .flatMapCompletable(
+        .flatMap(
             conn ->
-                conn.preparedQuery(SQL_INCREMENT_RETRY_AND_RECLAIM)
-                    .rxExecute(Tuple.of(ids))
-                    .ignoreElement()
-                    .doFinally(conn::close));
-  }
-
-  @Override
-  public Completable markFailedWithReason(List<Long> executionIds, String failureReason) {
-    if (executionIds.isEmpty()) {
-      return Completable.complete();
-    }
-
-    Long[] ids = executionIds.toArray(new Long[0]);
-    return postgresWriterClient
-        .getConnection()
-        .flatMapCompletable(
-            conn ->
-                conn.preparedQuery(SQL_MARK_FAILED_WITH_REASON)
-                    .rxExecute(Tuple.of(ids, failureReason))
-                    .ignoreElement()
+                conn.preparedQuery(sql)
+                    .rxExecute(Tuple.of((Object) statusArray))
+                    .map(
+                        rows -> {
+                          List<RuleExecution> result = new ArrayList<>();
+                          rows.forEach(row -> result.add(mapRow(row)));
+                          return result;
+                        })
                     .doFinally(conn::close));
   }
 

@@ -1,5 +1,8 @@
 package io.ascend.flockr.admin.domain.rule;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Status of a rule job execution.
  *
@@ -9,22 +12,48 @@ package io.ascend.flockr.admin.domain.rule;
  * @since 1.0
  */
 public enum JobStatus {
-  SUBMITTING,
+  /** Job submission in progress. */
+  SUBMITTING(true),
+
   /** Job created, pending submission to Spark/Flink. */
-  SUBMITTED,
+  SUBMITTED(false),
 
   /** Job running on Spark/Flink. */
-  RUNNING,
+  RUNNING(true),
 
   /** Job completed successfully. */
-  COMPLETED,
+  COMPLETED(false),
 
   /** Job failed. */
-  FAILED,
+  FAILED(false),
 
   /** Job being retried after failure. */
-  RETRYING,
+  RETRYING(false),
 
   /** Job was cancelled. */
-  CANCELLED
+  CANCELLED(false);
+
+  private final boolean reconcilable;
+
+  JobStatus(boolean reconcilable) {
+    this.reconcilable = reconcilable;
+  }
+
+  /**
+   * Returns whether this status should be checked during reconciliation.
+   *
+   * @return true if executions with this status should be reconciled with external engine
+   */
+  public boolean isReconcilable() {
+    return reconcilable;
+  }
+
+  /**
+   * Returns all statuses that should be reconciled with external engine.
+   *
+   * @return list of reconcilable statuses
+   */
+  public static List<JobStatus> getReconcilableStatuses() {
+    return Arrays.stream(values()).filter(JobStatus::isReconcilable).toList();
+  }
 }
