@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * Validates that end time is after start time.
  *
  * <p>This annotation should be applied at the class/type level to validate two epoch timestamp
- * fields where one must be after the other.
+ * fields where one must be after the other by a minimum time difference.
  *
  * @author Prithu Sharma
  * @since 1.0
@@ -23,6 +23,8 @@ import java.lang.annotation.Target;
 @Documented
 public @interface ValidTimeRange {
   String message() default "End time must be after start time";
+
+  Class<?>[] groups() default {};
 
   Class<? extends Payload>[] payload() default {};
 
@@ -39,4 +41,11 @@ public @interface ValidTimeRange {
    * @return end time field name
    */
   String endTimeField() default "endTime";
+
+  /**
+   * Minimum time difference in seconds between start and end time.
+   *
+   * @return minimum time difference in seconds
+   */
+  long minDiffSeconds() default 300;
 }

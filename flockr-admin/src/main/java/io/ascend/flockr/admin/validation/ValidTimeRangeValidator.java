@@ -15,12 +15,13 @@ import jakarta.validation.ConstraintValidatorContext;
 public class ValidTimeRangeValidator
     implements ConstraintValidator<ValidTimeRange, CreateRulesRequest.Rule> {
 
-  private static final Integer DEFAULT_DIFF_SECONDS = 300;
+  private long minDiffSeconds;
   private String startTimeField;
   private String endTimeField;
 
   @Override
   public void initialize(ValidTimeRange constraintAnnotation) {
+    this.minDiffSeconds = constraintAnnotation.minDiffSeconds();
     this.startTimeField = constraintAnnotation.startTimeField();
     this.endTimeField = constraintAnnotation.endTimeField();
   }
@@ -35,13 +36,14 @@ public class ValidTimeRangeValidator
     if (startTime == null || endTime == null) {
       return true;
     }
-    if (endTime + DEFAULT_DIFF_SECONDS <= startTime) {
+    // End time must be at least minDiffSeconds after start time
+    if (endTime <= startTime + minDiffSeconds) {
       context.disableDefaultConstraintViolation();
       context
           .buildConstraintViolationWithTemplate(
               String.format(
-                  "End time must be after start time. Start time: %d, End time: %d",
-                  startTime, endTime))
+                  "End time must be at least %d seconds after start time. Start time: %d, End time: %d",
+                  minDiffSeconds, startTime, endTime))
           .addPropertyNode(endTimeField)
           .addConstraintViolation();
       return false;

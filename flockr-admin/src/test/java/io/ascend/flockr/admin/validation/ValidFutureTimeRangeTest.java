@@ -35,7 +35,7 @@ class ValidFutureTimeRangeTest {
     // Arrange
     long currentTime = Instant.now().getEpochSecond();
     long startTime = currentTime + 100; // 100 seconds in future
-    long endTime = currentTime + 200; // 200 seconds in future
+    long endTime = currentTime + 500; // 500 seconds in future (400 seconds after start)
 
     CreateRulesRequest.Rule rule = createRule(startTime, endTime);
 
@@ -106,8 +106,8 @@ class ValidFutureTimeRangeTest {
         "Should have violation on endTime field");
     assertTrue(
         violations.stream()
-            .anyMatch(v -> v.getMessage().contains("End time must be after start time")),
-        "Should have message about end time being after start time");
+            .anyMatch(v -> v.getMessage().contains("at least 300 seconds after start time")),
+        "Should have message about end time being at least 300 seconds after start time");
   }
 
   @Test
@@ -116,7 +116,7 @@ class ValidFutureTimeRangeTest {
     // Arrange
     long currentTime = Instant.now().getEpochSecond();
     long startTime = currentTime + 400; // 400 seconds in future
-    long endTime = startTime; // Same as start time
+    long endTime = startTime; // Same as start time (< 300 seconds after)
 
     CreateRulesRequest.Rule rule = createRule(startTime, endTime);
 
@@ -171,20 +171,16 @@ class ValidFutureTimeRangeTest {
   void testCustomDeltaConfiguration() {
     // Test that we can use custom delta in other contexts
     long currentTime = Instant.now().getEpochSecond();
-    long timeJustInFuture = currentTime + 1; // Only 1 second in future
+    long timeJustInFuture = currentTime + 100; // 100 seconds in future
+    long endTime = timeJustInFuture + 400; // 400 seconds after start (meets 300 second requirement)
 
-    CreateRulesRequest.Rule rule = createRule(timeJustInFuture, timeJustInFuture + 100);
+    CreateRulesRequest.Rule rule = createRule(timeJustInFuture, endTime);
 
     Set<ConstraintViolation<CreateRulesRequest.Rule>> violations = validator.validate(rule);
 
-    // With default delta of 0, this should pass
+    // With default delta of 300, endTime must be at least 300 seconds after startTime
     assertTrue(
-        violations.stream()
-            .noneMatch(
-                v ->
-                    v.getPropertyPath().toString().contains("startTime")
-                        && v.getMessage().contains("must be")),
-        "Should pass when time is just barely in future with delta=0");
+        violations.isEmpty(), "Should pass when endTime is at least 300 seconds after startTime");
   }
 
   @Test
