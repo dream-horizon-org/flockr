@@ -45,6 +45,9 @@ public class RuleExecution {
   /** External job reference ID (Spark submissionId or Flink jobId). */
   private String externalJobId;
 
+  /** Number of reconciliation retry attempts for unmatched SUBMITTING jobs. */
+  private Integer reconciliationRetries;
+
   /** Who/what created this execution. */
   private String createdBy;
 

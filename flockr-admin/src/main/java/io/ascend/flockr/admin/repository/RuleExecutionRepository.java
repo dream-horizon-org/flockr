@@ -69,15 +69,15 @@ public interface RuleExecutionRepository {
       RuleStatus newRuleStatus);
 
   /**
-   * Finds executions stuck in SUBMITTING status for longer than the threshold.
+   * Finds executions stuck in SUBMITTING or RUNNING status for longer than the threshold.
    *
    * <p>Used by the reconciliation process to find jobs that may have been submitted but whose
-   * response was lost or the process crashed before updating the database.
+   * response was lost, or jobs that are running but may have completed/failed externally.
    *
    * <p><b>Query behavior:</b>
    *
    * <ul>
-   *   <li>Filters by status = SUBMITTING AND updated_at older than threshold
+   *   <li>Filters by status IN (SUBMITTING, RUNNING) AND updated_at older than threshold
    *   <li>Orders by updated_at ASC (oldest first)
    *   <li>Limited to 100 records per batch to prevent overwhelming the system
    * </ul>
@@ -85,27 +85,26 @@ public interface RuleExecutionRepository {
    * @param thresholdMinutes minimum age in minutes for an execution to be considered stale
    * @return Single containing list of stale executions needing reconciliation (max 100)
    */
-  Single<List<RuleExecution>> findStaleSubmittingExecutions(int thresholdMinutes);
+  Single<List<RuleExecution>> findStaleExecutionsForReconciliation(int thresholdMinutes);
 
   /**
-   * Claims stale executions by updating their updated_at to 1 hour in the future.
+   * Increments reconciliation retry count for unmatched executions and reclaims them. Sets
+   * updated_at = NOW() + 1 minute for retry.
    *
-   * <p>This implements a distributed lock pattern to prevent multiple reconciliation job instances
-   * from processing the same records concurrently. By setting updated_at to NOW() + 1 hour, the
-   * records won't be picked up by subsequent reconciliation runs until the claim expires.
-   *
-   * <p><b>Concurrency behavior:</b>
-   *
-   * <ul>
-   *   <li>Uses RETURNING clause to only return IDs that were actually updated
-   *   <li>If another instance already claimed a record, it won't be in the result
-   *   <li>Claim expires after 1 hour if reconciliation fails
-   * </ul>
-   *
-   * @param executionIds list of execution IDs to claim
-   * @return Single containing list of successfully claimed execution IDs
+   * @param executionIds list of unmatched execution IDs
+   * @return Completable that completes when update is done
    */
-  Single<List<Long>> claimStaleExecutions(List<Long> executionIds);
+  Completable incrementRetryCountAndReclaim(List<Long> executionIds);
+
+  /**
+   * Marks executions as FAILED after exhausting reconciliation retries. Stores failure reason in
+   * metadata.
+   *
+   * @param executionIds list of execution IDs to mark failed
+   * @param failureReason reason for failure to store in metadata
+   * @return Completable that completes when update is done
+   */
+  Completable markFailedWithReason(List<Long> executionIds, String failureReason);
 
   /**
    * Batch update execution status and external job details for reconciled executions.

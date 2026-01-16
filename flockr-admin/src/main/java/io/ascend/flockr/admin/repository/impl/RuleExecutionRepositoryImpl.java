@@ -54,18 +54,26 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
   private static final String SQL_UPDATE_RULE_STATUS_IF_CURRENT =
       "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
 
-  private static final String SQL_FIND_STALE_SUBMITTING =
+  private static final String SQL_FIND_STALE_FOR_RECONCILIATION =
       "SELECT id, name, rule_id, type, status, metadata, external_job_id, "
-          + "created_by, created_at, updated_at "
+          + "reconciliation_retries, created_by, created_at, updated_at "
           + "FROM rule_execution "
-          + "WHERE status = 'SUBMITTING' "
-          //          + "AND updated_at < NOW() - INTERVAL '%d minutes' "
-          + "ORDER BY updated_at ASC"
-          + " LIMIT 100";
+          + "WHERE status IN ('SUBMITTING', 'RUNNING') "
+          + "AND updated_at < NOW() - INTERVAL '%d minutes' "
+          + "ORDER BY updated_at ASC "
+          + "LIMIT 100";
 
-  private static final String SQL_CLAIM_STALE_EXECUTIONS =
-      "UPDATE rule_execution SET updated_at = NOW() + INTERVAL '1 hour' "
-          + "WHERE id = ANY($1) RETURNING id";
+  private static final String SQL_INCREMENT_RETRY_AND_RECLAIM =
+      "UPDATE rule_execution SET "
+          + "reconciliation_retries = reconciliation_retries + 1, "
+          + "updated_at = NOW() + INTERVAL '1 minute' "
+          + "WHERE id = ANY($1)";
+
+  private static final String SQL_MARK_FAILED_WITH_REASON =
+      "UPDATE rule_execution SET status = 'FAILED', "
+          + "metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('failure_reason', $2::text), "
+          + "updated_at = NOW() "
+          + "WHERE id = ANY($1)";
 
   /** SQL for batch update using UNNEST for efficient multi-row update. */
   private static final String SQL_BATCH_UPDATE_STATUS_AND_REF =
@@ -119,6 +127,7 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
         .status(JobStatus.valueOf(row.getString("status")))
         .metadata(row.getJsonObject("metadata"))
         .externalJobId(row.getString("external_job_id"))
+        .reconciliationRetries(row.getInteger("reconciliation_retries"))
         .createdBy(row.getString("created_by"))
         .createdAt(toInstant(row.getLocalDateTime("created_at")))
         .updatedAt(toInstant(row.getLocalDateTime("updated_at")))
@@ -224,33 +233,46 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
   }
 
   @Override
-  public Single<List<RuleExecution>> findStaleSubmittingExecutions(int thresholdMinutes) {
-    String sql = String.format(SQL_FIND_STALE_SUBMITTING, thresholdMinutes);
+  public Single<List<RuleExecution>> findStaleExecutionsForReconciliation(int thresholdMinutes) {
+    String sql = String.format(SQL_FIND_STALE_FOR_RECONCILIATION, thresholdMinutes);
     log.debug(
-        "Finding stale SUBMITTING executions older than {} minutes (limit 100)", thresholdMinutes);
+        "Finding stale SUBMITTING/RUNNING executions older than {} minutes (limit 100)",
+        thresholdMinutes);
 
     return postgresReaderClient.fetchAll(sql, this::mapRow);
   }
 
   @Override
-  public Single<List<Long>> claimStaleExecutions(List<Long> executionIds) {
+  public Completable incrementRetryCountAndReclaim(List<Long> executionIds) {
     if (executionIds.isEmpty()) {
-      return Single.just(List.of());
+      return Completable.complete();
     }
 
     Long[] ids = executionIds.toArray(new Long[0]);
     return postgresWriterClient
         .getConnection()
-        .flatMap(
+        .flatMapCompletable(
             conn ->
-                conn.preparedQuery(SQL_CLAIM_STALE_EXECUTIONS)
-                    .rxExecute(Tuple.of((Object) ids))
-                    .map(
-                        rows -> {
-                          List<Long> claimedIds = new java.util.ArrayList<>();
-                          rows.forEach(row -> claimedIds.add(row.getLong("id")));
-                          return claimedIds;
-                        })
+                conn.preparedQuery(SQL_INCREMENT_RETRY_AND_RECLAIM)
+                    .rxExecute(Tuple.of(ids))
+                    .ignoreElement()
+                    .doFinally(conn::close));
+  }
+
+  @Override
+  public Completable markFailedWithReason(List<Long> executionIds, String failureReason) {
+    if (executionIds.isEmpty()) {
+      return Completable.complete();
+    }
+
+    Long[] ids = executionIds.toArray(new Long[0]);
+    return postgresWriterClient
+        .getConnection()
+        .flatMapCompletable(
+            conn ->
+                conn.preparedQuery(SQL_MARK_FAILED_WITH_REASON)
+                    .rxExecute(Tuple.of(ids, failureReason))
+                    .ignoreElement()
                     .doFinally(conn::close));
   }
 

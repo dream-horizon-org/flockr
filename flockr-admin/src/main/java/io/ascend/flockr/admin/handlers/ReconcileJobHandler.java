@@ -21,23 +21,24 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Handler for reconciling stuck job submissions.
  *
- * <p>Periodically finds executions stuck in SUBMITTING status and reconciles them by checking their
- * actual state in the external execution engine (Spark/Flink).
+ * <p>Periodically finds executions stuck in SUBMITTING or RUNNING status and reconciles them by
+ * checking their actual state in the external execution engine (Spark/Flink).
  *
  * <p><b>Reconciliation flow:</b>
  *
  * <ol>
- *   <li>Find stale SUBMITTING executions (limit 100, using updated_at)
- *   <li>Claim by setting updated_at = NOW() + 1 hour (prevents concurrent processing)
+ *   <li>Find stale SUBMITTING/RUNNING executions (limit 100, using updated_at threshold)
  *   <li>Fetch apps from external engine (single batch API call per job type)
- *   <li>Match and batch update: group by status, execute batch UPDATEs
- *   <li>Unmatched executions are skipped (retried after claim expires in 1 hour)
+ *   <li>For matched executions: update status if changed (status change prevents re-pickup)
+ *   <li>For unmatched SUBMITTING: increment retry count + reclaim, or mark FAILED after max retries
+ *   <li>RUNNING executions are checked and updated if status changed
  * </ol>
  *
  * <p><b>Performance optimizations:</b>
@@ -45,7 +46,8 @@ import lombok.extern.slf4j.Slf4j;
  * <ul>
  *   <li>Single Spark/Flink API call instead of N individual calls
  *   <li>Batch database updates grouped by status
- *   <li>Claim-based locking for distributed safety
+ *   <li>No upfront claiming - status changes or retry increment handle concurrency
+ *   <li>Skip updates when status unchanged
  * </ul>
  *
  * @author Sudhanshu Rai
@@ -55,6 +57,9 @@ import lombok.extern.slf4j.Slf4j;
 public non-sealed class ReconcileJobHandler extends AbstractHandler {
   /** Minimum age (in minutes) for an execution to be considered stale. */
   private static final int RECONCILE_THRESHOLD_MINUTES = 5;
+
+  /** Maximum reconciliation retry attempts before marking as FAILED. */
+  private static final int MAX_RECONCILIATION_RETRIES = 5;
 
   private final RuleExecutionRepository ruleExecutionRepository;
   private final RuleRepository ruleRepository;
@@ -115,13 +120,13 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
   }
 
   /**
-   * Main reconciliation logic - finds, claims, and processes stale executions.
+   * Main reconciliation logic - finds and processes all stale executions.
    *
    * @return Single containing count of successfully reconciled executions
    */
   private Single<Integer> reconcileStaleExecutions() {
     return ruleExecutionRepository
-        .findStaleSubmittingExecutions(RECONCILE_THRESHOLD_MINUTES)
+        .findStaleExecutionsForReconciliation(RECONCILE_THRESHOLD_MINUTES)
         .flatMap(
             staleExecutions -> {
               if (staleExecutions.isEmpty()) {
@@ -129,45 +134,59 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
                 return Single.just(0);
               }
 
-              log.info("Found {} stale executions to reconcile", staleExecutions.size());
+              // Separate SUBMITTING and RUNNING for logging
+              Map<JobStatus, List<RuleExecution>> byCurrentStatus =
+                  staleExecutions.stream().collect(Collectors.groupingBy(RuleExecution::getStatus));
 
-              List<Long> executionIds =
-                  staleExecutions.stream().map(RuleExecution::getExecutionId).toList();
+              int submittingCount =
+                  byCurrentStatus.getOrDefault(JobStatus.SUBMITTING, List.of()).size();
+              int runningCount = byCurrentStatus.getOrDefault(JobStatus.RUNNING, List.of()).size();
 
-              return ruleExecutionRepository
-                  .claimStaleExecutions(executionIds)
-                  .flatMap(claimedIds -> processClaimedExecutions(staleExecutions, claimedIds));
+              log.info(
+                  "Found {} stale executions (SUBMITTING: {}, RUNNING: {})",
+                  staleExecutions.size(),
+                  submittingCount,
+                  runningCount);
+
+              return processExecutions(staleExecutions);
             });
   }
 
   /**
-   * Processes claimed executions by grouping them by rule type and reconciling each group.
+   * Processes all stale executions by fetching external status and updating accordingly.
    *
-   * @param staleExecutions all stale executions found
-   * @param claimedIds IDs of successfully claimed executions
+   * @param executions all stale executions to process
    * @return Single containing count of processed executions
    */
-  private Single<Integer> processClaimedExecutions(
-      List<RuleExecution> staleExecutions, List<Long> claimedIds) {
+  private Single<Integer> processExecutions(List<RuleExecution> executions) {
+    // Build maps for change detection and retry tracking
+    Map<Long, JobStatus> currentStatusByExecutionId =
+        executions.stream()
+            .collect(Collectors.toMap(RuleExecution::getExecutionId, RuleExecution::getStatus));
 
-    if (claimedIds.isEmpty()) {
-      log.info("No executions claimed (possibly already claimed by another instance)");
-      return Single.just(0);
-    }
+    Map<Long, Integer> retryCountByExecutionId =
+        executions.stream()
+            .filter(e -> e.getStatus() == JobStatus.SUBMITTING)
+            .collect(
+                Collectors.toMap(
+                    RuleExecution::getExecutionId,
+                    e -> e.getReconciliationRetries() != null ? e.getReconciliationRetries() : 0));
 
-    log.info("Claimed {} executions for reconciliation", claimedIds.size());
-
-    List<RuleExecution> claimed =
-        staleExecutions.stream().filter(e -> claimedIds.contains(e.getExecutionId())).toList();
-
+    // Group by rule type for engine-specific API calls
     Map<RuleType, List<RuleExecution>> byType =
-        claimed.stream()
+        executions.stream()
             .collect(
                 Collectors.groupingBy(
                     e -> e.getExecutionType() == JobType.BATCH ? RuleType.BATCH : RuleType.STREAM));
 
     return Observable.fromIterable(byType.entrySet())
-        .concatMapSingle(entry -> reconcileByRuleType(entry.getKey(), entry.getValue()))
+        .concatMapSingle(
+            entry ->
+                reconcileByRuleType(
+                    entry.getKey(),
+                    entry.getValue(),
+                    currentStatusByExecutionId,
+                    retryCountByExecutionId))
         .reduce(0, Integer::sum);
   }
 
@@ -176,43 +195,165 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
    *
    * @param ruleType type of rules to reconcile (BATCH or STREAM)
    * @param executions list of executions of this type
+   * @param currentStatusByExecutionId map of execution ID to current status for change detection
+   * @param retryCountByExecutionId map of execution ID to retry count for SUBMITTING
    * @return Single containing count of processed executions
    */
-  private Single<Integer> reconcileByRuleType(RuleType ruleType, List<RuleExecution> executions) {
+  private Single<Integer> reconcileByRuleType(
+      RuleType ruleType,
+      List<RuleExecution> executions,
+      Map<Long, JobStatus> currentStatusByExecutionId,
+      Map<Long, Integer> retryCountByExecutionId) {
+
     log.info("Reconciling {} {} executions", executions.size(), ruleType);
 
     return ruleExecutionEngineRegistry
         .get(ruleType)
         .fetchAndMatchApplications(executions)
-        .flatMap(this::processBatchUpdates);
+        .flatMap(
+            matches ->
+                processBatchUpdates(
+                    executions, matches, currentStatusByExecutionId, retryCountByExecutionId));
   }
 
   /**
-   * Processes batch updates for matched executions.
+   * Processes batch updates for matched executions and handles unmatched SUBMITTING.
    *
-   * @param matches list of reconciliation matches
+   * @param executions all executions being processed
+   * @param matches list of reconciliation matches from external engine
+   * @param currentStatusByExecutionId map of execution ID to current status
+   * @param retryCountByExecutionId map of execution ID to retry count for SUBMITTING
    * @return Single containing count of processed executions
    */
-  private Single<Integer> processBatchUpdates(List<ReconciliationMatch> matches) {
-    if (matches.isEmpty()) {
-      log.info("No matched executions to update");
+  private Single<Integer> processBatchUpdates(
+      List<RuleExecution> executions,
+      List<ReconciliationMatch> matches,
+      Map<Long, JobStatus> currentStatusByExecutionId,
+      Map<Long, Integer> retryCountByExecutionId) {
+
+    // Find matched execution IDs
+    Set<Long> matchedIds =
+        matches.stream().map(ReconciliationMatch::getExecutionId).collect(Collectors.toSet());
+
+    // Find unmatched SUBMITTING executions (need retry handling)
+    List<RuleExecution> unmatchedSubmitting =
+        executions.stream()
+            .filter(e -> e.getStatus() == JobStatus.SUBMITTING)
+            .filter(e -> !matchedIds.contains(e.getExecutionId()))
+            .toList();
+
+    // Filter matched to only those with status changes
+    List<ReconciliationMatch> changedMatches =
+        filterMatchesWithStatusChange(matches, currentStatusByExecutionId);
+
+    if (changedMatches.isEmpty() && unmatchedSubmitting.isEmpty()) {
+      log.info("No status changes and no unmatched SUBMITTING to process");
       return Single.just(0);
     }
 
-    Map<JobStatus, List<ReconciliationMatch>> matchesByJobStatus = groupMatchesByJobStatus(matches);
-    Map<RuleStatus, List<Long>> ruleIdsByRuleStatus = groupRuleIdsByRuleStatus(matchesByJobStatus);
-
     List<Completable> operations = new ArrayList<>();
-    operations.addAll(buildExecutionUpdateOperations(matchesByJobStatus));
-    operations.addAll(buildRuleUpdateOperations(ruleIdsByRuleStatus));
+
+    // Handle matched executions with status changes
+    if (!changedMatches.isEmpty()) {
+      log.info("{} matched executions have status changes", changedMatches.size());
+
+      Map<JobStatus, List<ReconciliationMatch>> matchesByJobStatus =
+          groupMatchesByJobStatus(changedMatches);
+      Map<RuleStatus, List<Long>> ruleIdsByRuleStatus =
+          groupRuleIdsByRuleStatus(matchesByJobStatus);
+
+      operations.addAll(buildExecutionUpdateOperations(matchesByJobStatus));
+      operations.addAll(buildRuleUpdateOperations(ruleIdsByRuleStatus));
+    }
+
+    // Handle unmatched SUBMITTING (retry or fail)
+    if (!unmatchedSubmitting.isEmpty()) {
+      operations.add(handleUnmatchedSubmitting(unmatchedSubmitting, retryCountByExecutionId));
+    }
 
     return Completable.merge(operations)
-        .toSingle(() -> matches.size())
+        .toSingle(() -> changedMatches.size() + unmatchedSubmitting.size())
         .onErrorResumeNext(
             error -> {
               log.error("Error during batch updates", error);
               return Single.just(0);
             });
+  }
+
+  /**
+   * Handles unmatched SUBMITTING executions: increment retry or mark FAILED.
+   *
+   * @param unmatchedSubmitting list of unmatched SUBMITTING executions
+   * @param retryCountByExecutionId map of execution ID to current retry count
+   * @return Completable that handles all unmatched executions
+   */
+  private Completable handleUnmatchedSubmitting(
+      List<RuleExecution> unmatchedSubmitting, Map<Long, Integer> retryCountByExecutionId) {
+
+    List<Long> toMarkFailed = new ArrayList<>();
+    List<Long> toRetry = new ArrayList<>();
+
+    for (RuleExecution exec : unmatchedSubmitting) {
+      int retries = retryCountByExecutionId.getOrDefault(exec.getExecutionId(), 0);
+      if (retries >= MAX_RECONCILIATION_RETRIES) {
+        log.warn(
+            "Execution {} (rule {}) exceeded {} retries, marking as FAILED",
+            exec.getExecutionId(),
+            exec.getRuleId(),
+            MAX_RECONCILIATION_RETRIES);
+        toMarkFailed.add(exec.getExecutionId());
+      } else {
+        log.info(
+            "Execution {} (rule {}) not found in external engine, retry {}/{}",
+            exec.getExecutionId(),
+            exec.getRuleId(),
+            retries + 1,
+            MAX_RECONCILIATION_RETRIES);
+        toRetry.add(exec.getExecutionId());
+      }
+    }
+
+    String failureReason =
+        "Reconciliation failed: Job not found in external engine after "
+            + MAX_RECONCILIATION_RETRIES
+            + " retries";
+
+    return Completable.mergeArray(
+        ruleExecutionRepository.markFailedWithReason(toMarkFailed, failureReason),
+        ruleExecutionRepository.incrementRetryCountAndReclaim(toRetry));
+  }
+
+  /**
+   * Filters matches to only those where external status differs from current DB status.
+   *
+   * @param matches list of reconciliation matches
+   * @param currentStatusByExecutionId map of execution ID to current status
+   * @return filtered list of matches with actual status changes
+   */
+  private List<ReconciliationMatch> filterMatchesWithStatusChange(
+      List<ReconciliationMatch> matches, Map<Long, JobStatus> currentStatusByExecutionId) {
+
+    return matches.stream()
+        .filter(
+            match -> {
+              JobStatus current = currentStatusByExecutionId.get(match.getExecutionId());
+              if (current == null) {
+                log.warn(
+                    "No current status found for execution {}, skipping", match.getExecutionId());
+                return false;
+              }
+              JobStatus resolved = mapStateToJobStatus(match.getState());
+              boolean changed = resolved != current;
+              if (!changed) {
+                log.debug(
+                    "Skipping execution {} - status unchanged (current: {}, external: {})",
+                    match.getExecutionId(),
+                    current,
+                    resolved);
+              }
+              return changed;
+            })
+        .toList();
   }
 
   /**

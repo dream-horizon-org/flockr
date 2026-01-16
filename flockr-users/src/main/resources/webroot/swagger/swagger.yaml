@@ -262,16 +262,16 @@ components:
             type: array
             items:
               type: string
-        fileName:
+        contentTypeFromMessage:
+          type: boolean
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
+        bodyAsString:
           type: string
         body:
           type: object
-        bodyAsString:
+        fileName:
           type: string
-        mediaType:
-          $ref: '#/components/schemas/MediaType'
-        contentTypeFromMessage:
-          type: boolean
     MediaType:
       type: object
       properties:
@@ -283,9 +283,9 @@ components:
           type: object
           additionalProperties:
             type: string
-        wildcardType:
-          type: boolean
         wildcardSubtype:
+          type: boolean
+        wildcardType:
           type: boolean
     MultipartFormDataInput:
       type: object
