@@ -2,10 +2,11 @@ package io.ascend.flockr.engine.config;
 
 import com.typesafe.config.Config;
 import io.ascend.flockr.engine.config.provider.ConfigProvider;
+import java.io.Serializable;
 import lombok.Data;
 
 @Data
-public class KafkaProducerConfig {
+public class KafkaProducerConfig implements Serializable {
 
   private String bootstrapServers;
   private String topic;

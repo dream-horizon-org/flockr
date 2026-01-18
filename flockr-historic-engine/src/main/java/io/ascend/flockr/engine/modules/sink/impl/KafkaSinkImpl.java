@@ -1,177 +1,122 @@
 package io.ascend.flockr.engine.modules.sink.impl;
 
+import static org.apache.spark.sql.functions.lit;
+
 import io.ascend.flockr.engine.config.KafkaProducerConfig;
+import io.ascend.flockr.engine.constants.Constants;
+import io.ascend.flockr.engine.dto.AudienceMetadata;
+import io.ascend.flockr.engine.dto.UserIdRow;
+import io.ascend.flockr.engine.exception.JobException;
 import io.ascend.flockr.engine.modules.sink.Sink;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.Future;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 @Slf4j
-public class KafkaSinkImpl implements Sink<String> {
+public class KafkaSinkImpl implements Sink {
 
-  private final KafkaProducer<String, String> kafkaProducer;
   private final KafkaProducerConfig kafkaConfig;
 
-  public KafkaSinkImpl(
-      KafkaProducer<String, String> kafkaProducer, KafkaProducerConfig kafkaConfig) {
-    if (kafkaProducer == null) {
-      throw new IllegalArgumentException("KafkaProducer cannot be null");
-    }
+  public KafkaSinkImpl(KafkaProducerConfig kafkaConfig) {
     if (kafkaConfig == null) {
       throw new IllegalArgumentException("KafkaProducerConfig cannot be null");
     }
     if (kafkaConfig.getTopic() == null || kafkaConfig.getTopic().isEmpty()) {
       throw new IllegalArgumentException("Kafka topic cannot be null or empty");
     }
-    this.kafkaProducer = kafkaProducer;
     this.kafkaConfig = kafkaConfig;
-    log.info("KafkaSinkImpl initialized for topic: {}", kafkaConfig.getTopic());
   }
 
   @Override
-  public void write(String data) throws Exception {
-    if (data == null) {
-      throw new IllegalArgumentException("Data cannot be null");
-    }
+  public void write(Dataset<UserIdRow> userIds, AudienceMetadata metadata) {
+    log.info("Writing dataset to Kafka topic: {}", kafkaConfig.getTopic());
 
-    log.debug("Sending data to Kafka topic: {}", kafkaConfig.getTopic());
+    final KafkaProducerConfig config = this.kafkaConfig;
+    Dataset<Row> dataWithMetadata =
+        userIds
+            .toDF()
+            .withColumn(Constants.AUDIENCE_NAME_COLUMN, lit(metadata.getAudienceName()))
+            .withColumn(Constants.ACTION_COLUMN, lit(metadata.getAction()))
+            .withColumn(Constants.EXPIRE_AT_COLUMN, lit(metadata.getExpireAt()));
 
-    ProducerRecord<String, String> record = new ProducerRecord<>(kafkaConfig.getTopic(), data);
-    kafkaProducer.send(
-        record,
-        new Callback() {
-          @Override
-          public void onCompletion(RecordMetadata metadata, Exception exception) {
-            if (exception != null) {
-              log.error(
-                  "Failed to send message to Kafka topic: {}", kafkaConfig.getTopic(), exception);
-              // Note: We can't throw here as this is async, but we log the error
-            } else {
-              log.debug(
-                  "Message sent successfully to Kafka topic: {}, partition: {}, offset: {}",
-                  kafkaConfig.getTopic(),
-                  metadata.partition(),
-                  metadata.offset());
+    dataWithMetadata.foreachPartition(
+        iterator -> {
+          if (!iterator.hasNext()) {
+            log.info("No records to process in this partition");
+            return;
+          }
+          Properties props = createKafkaProducerProperties(config);
+          try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
+            int successCount = 0;
+            int errorCount = 0;
+            List<Future<RecordMetadata>> futures = new ArrayList<>();
+            while (iterator.hasNext()) {
+              Row row = iterator.next();
+              try {
+                String json = row.json();
+                ProducerRecord<String, String> record =
+                    new ProducerRecord<>(config.getTopic(), json);
+                futures.add(producer.send(record));
+              } catch (Exception e) {
+                log.error("Error converting row to JSON or sending to Kafka", e);
+                errorCount++;
+              }
+            }
+            for (Future<RecordMetadata> future : futures) {
+              try {
+                future.get(); // Blocks until acknowledged, throws on failure
+                successCount++;
+              } catch (Exception e) {
+                log.error("Kafka send failed for message", e);
+                errorCount++;
+              }
+            }
+            producer.flush();
+            log.info(
+                "Successfully sent {} messages from partition to Kafka topic: {}, errors: {}",
+                successCount,
+                config.getTopic(),
+                errorCount);
+
+            if (errorCount > 0) {
+              throw new JobException(
+                  "Failed to send " + errorCount + " messages to Kafka in partition");
             }
           }
         });
-  }
 
-  @Override
-  public void writeDataset(Dataset<Row> dataset) throws Exception {
-    if (dataset == null) {
-      throw new IllegalArgumentException("Dataset cannot be null");
-    }
-
-    log.info("Writing dataset to Kafka topic: {}", kafkaConfig.getTopic());
-
-    // Convert dataset rows to JSON strings and send to Kafka
-    List<Row> rows = dataset.collectAsList();
-    log.info("Collected {} rows to send to Kafka", rows.size());
-
-    int successCount = 0;
-    int errorCount = 0;
-    List<Future<RecordMetadata>> futures = new java.util.ArrayList<>();
-
-    for (Row row : rows) {
-      try {
-        // Convert row to JSON string
-        String json = rowToJson(row);
-        ProducerRecord<String, String> record = new ProducerRecord<>(kafkaConfig.getTopic(), json);
-        Future<RecordMetadata> future =
-            kafkaProducer.send(
-                record,
-                new Callback() {
-                  @Override
-                  public void onCompletion(RecordMetadata metadata, Exception exception) {
-                    if (exception != null) {
-                      log.error(
-                          "Failed to send message to Kafka topic: {}",
-                          kafkaConfig.getTopic(),
-                          exception);
-                    } else {
-                      log.debug(
-                          "Message sent successfully to Kafka topic: {}, partition: {}, offset: {}",
-                          kafkaConfig.getTopic(),
-                          metadata.partition(),
-                          metadata.offset());
-                    }
-                  }
-                });
-        futures.add(future);
-        successCount++;
-      } catch (Exception e) {
-        log.error("Error converting row to JSON or sending to Kafka", e);
-        errorCount++;
-      }
-    }
-
-    // Wait for all sends to complete
-    for (Future<RecordMetadata> future : futures) {
-      try {
-        future.get();
-      } catch (Exception e) {
-        log.error("Error waiting for Kafka send to complete", e);
-      }
-    }
-
-    log.info(
-        "Successfully sent {} messages to Kafka topic: {}, errors: {}",
-        successCount,
-        kafkaConfig.getTopic(),
-        errorCount);
-
-    if (errorCount > 0) {
-      throw new RuntimeException("Failed to send " + errorCount + " messages to Kafka");
-    }
+    log.info("Successfully sent data to Kafka topic: {}", kafkaConfig.getTopic());
   }
 
   /**
-   * Converts a Spark Row to JSON string. Simple implementation that creates a JSON object with
-   * column names as keys.
+   * Creates Kafka producer properties with optimized settings.
+   *
+   * <p>This static method is used within the foreachPartition lambda to create Properties for
+   * KafkaProducer instances on each partition.
+   *
+   * @param producerConfig The Kafka producer configuration.
+   * @return Properties configured for Kafka producer.
    */
-  private String rowToJson(Row row) {
-    StringBuilder json = new StringBuilder("{");
-    String[] columns = row.schema().fieldNames();
-    for (int i = 0; i < columns.length; i++) {
-      if (i > 0) {
-        json.append(",");
-      }
-      json.append("\"").append(columns[i]).append("\":");
-      Object value = row.get(i);
-      if (value == null) {
-        json.append("null");
-      } else if (value instanceof String) {
-        json.append("\"").append(escapeJson(value.toString())).append("\"");
-      } else if (value instanceof Number || value instanceof Boolean) {
-        json.append(value);
-      } else {
-        json.append("\"").append(escapeJson(value.toString())).append("\"");
-      }
-    }
-    json.append("}");
-    return json.toString();
-  }
-
-  /** Escapes special characters in JSON strings. */
-  private String escapeJson(String str) {
-    return str.replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t");
-  }
-
-  @Override
-  public void flush() throws Exception {
-    log.debug("Flushing Kafka producer for topic: {}", kafkaConfig.getTopic());
-    kafkaProducer.flush();
-    log.debug("Kafka producer flushed successfully");
+  private static Properties createKafkaProducerProperties(KafkaProducerConfig producerConfig) {
+    Properties props = new Properties();
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, producerConfig.getBootstrapServers());
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, producerConfig.getKeySerializerClass());
+    props.put(
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, producerConfig.getValueSerializerClass());
+    props.put(ProducerConfig.ACKS_CONFIG, "all");
+    props.put(ProducerConfig.RETRIES_CONFIG, 3);
+    props.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
+    props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
+    props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
+    return props;
   }
 }

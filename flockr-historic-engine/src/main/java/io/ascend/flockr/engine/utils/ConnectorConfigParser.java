@@ -5,8 +5,6 @@ import com.typesafe.config.ConfigFactory;
 import io.ascend.flockr.engine.config.ApiConfig;
 import io.ascend.flockr.engine.config.AthenaConfig;
 import io.ascend.flockr.engine.config.ConnectorConfig;
-import io.ascend.flockr.engine.config.KafkaConfig;
-import io.ascend.flockr.engine.config.S3Config;
 import io.ascend.flockr.engine.enums.SourceTypes;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,17 +62,9 @@ public class ConnectorConfigParser {
 
     Object parsedConfig;
     switch (sourceType) {
-      case S3:
-        parsedConfig = S3Config.fromConfig(sourceConfig);
-        break;
       case ATHENA:
         parsedConfig = AthenaConfig.fromConfig(sourceConfig);
         break;
-      case KAFKA:
-        parsedConfig = KafkaConfig.fromConfig(sourceConfig);
-        break;
-      case REDSHIFT:
-        throw new UnsupportedOperationException("Redshift source not yet implemented");
       default:
         throw new IllegalArgumentException("Unknown source type: " + sourceType);
     }

@@ -21,4 +21,9 @@ public class Constants {
   public static final String OUTPUT_PATH_PREFIX = "output/";
   public static final String FLOCKR_SPARK_MASTER = "flockr-spark-master";
   public static final String FLOCKR_SPARK_MASTER_PORT = "7077";
+
+  public static final String USER_ID_COLUMN = "user_id";
+  public static final String AUDIENCE_NAME_COLUMN = "audience_name";
+  public static final String ACTION_COLUMN = "action";
+  public static final String EXPIRE_AT_COLUMN = "expire_at";
 }

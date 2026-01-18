@@ -9,10 +9,13 @@ import com.amazonaws.services.athena.AmazonAthenaClientBuilder;
 import com.amazonaws.services.athena.model.*;
 import com.amazonaws.services.athena.model.QueryExecutionState;
 import io.ascend.flockr.engine.config.AthenaConfig;
+import io.ascend.flockr.engine.dto.UserIdRow;
+import io.ascend.flockr.engine.exception.JobException;
 import io.ascend.flockr.engine.modules.source.Source;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
@@ -25,43 +28,18 @@ import org.apache.spark.sql.SparkSession;
  *   <li>Execute SQL queries on AWS Athena
  *   <li>Wait for query completion with polling
  *   <li>Read query results from S3 (CSV or Parquet format)
+ *   <li>Extract user IDs and convert to type-safe Dataset&lt;UserIdRow&gt;
  *   <li>Handle AWS credentials (permanent and temporary with session tokens)
  *   <li>Extract database name from SQL query if not provided in config
  * </ul>
  *
- * <p><b>Query Execution Flow:</b>
- *
- * <ol>
- *   <li>Validates AWS credentials
- *   <li>Creates Athena client with credentials
- *   <li>Starts query execution via Athena API
- *   <li>Polls query status until completion (max 5 minutes)
- *   <li>Reads results from S3 output location
- * </ol>
- *
- * <p><b>Result Reading:</b>
- *
- * <p>The class attempts to read results as CSV first (Athena's default format), then falls back to
- * Parquet if CSV reading fails. Results are read from the S3 location specified in the
- * configuration.
- *
- * <p><b>Database Extraction:</b>
- *
- * <p>If database is not provided in config, the class attempts to extract it from the SQL query by
- * looking for patterns like "FROM database.table" or "JOIN database.table".
- *
- * <p><b>Credentials:</b>
- *
- * <p>Supports both permanent credentials (accessKey + secretKey) and temporary credentials
- * (accessKey + secretKey + sessionToken). The appropriate credentials provider is configured
- * automatically.
- *
  * @see Source
  * @see AthenaConfig
+ * @see UserIdRow
  * @author Shivam-Raghuwanshi
  */
 @Slf4j
-public class AthenaSourceImpl implements Source<Dataset<Row>> {
+public class AthenaSourceImpl implements Source {
 
   /** Athena configuration containing credentials, region, workgroup, etc. */
   private final AthenaConfig athenaConfig;
@@ -91,7 +69,7 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
   }
 
   @Override
-  public Dataset<Row> read() throws Exception {
+  public Dataset<UserIdRow> read() throws Exception {
     log.info(
         "Reading data from Athena: database={}, region={}",
         athenaConfig.getDatabase() != null
@@ -114,28 +92,20 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
     }
 
     if (athenaConfig.getOutputLocation() != null && !athenaConfig.getOutputLocation().isEmpty()) {
-      // Read from S3 output location (Athena query results are written to S3)
       String s3Path;
 
-      // If we have the actual result path from query execution, use it directly
       if (actualResultPath != null && !actualResultPath.isEmpty()) {
-        // Convert s3:// to s3a:// for Spark
         s3Path = actualResultPath.replace("s3://", "s3a://");
-        log.info("Reading Athena query results from S3: {}", s3Path);
       } else if (queryExecutionId != null) {
-        // Fallback: construct path from output location and query execution ID
         String basePath = athenaConfig.getOutputLocation();
         basePath = basePath.endsWith("/") ? basePath : basePath + "/";
         s3Path = basePath + queryExecutionId + "/";
-        // Convert s3:// to s3a:// for Spark
         s3Path = s3Path.replace("s3://", "s3a://");
-        log.info("Reading Athena query results from S3: {}", s3Path);
       } else {
         s3Path = athenaConfig.getOutputLocation();
-        // Convert s3:// to s3a:// for Spark
         s3Path = s3Path.replace("s3://", "s3a://");
-        log.info("Reading Athena query results from S3: {}", s3Path);
       }
+      log.info("Reading Athena query results from S3: {}", s3Path);
 
       // Configure S3 access if credentials are provided
       if (athenaConfig.getAccessKey() != null && athenaConfig.getSecretKey() != null) {
@@ -195,7 +165,22 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
               parquetException);
         }
       }
-      return data;
+
+      // Validate user_id column exists
+      if (!java.util.Arrays.asList(data.columns()).contains("user_id")) {
+        throw new JobException(
+            "Athena query must return a 'user_id' column. Found columns: "
+                + String.join(", ", data.columns()));
+      }
+
+      // Convert to type-safe UserIdRow
+      log.debug("Converting Athena results to type-safe UserIdRow dataset");
+      Dataset<UserIdRow> userIds = data.select("user_id").as(Encoders.bean(UserIdRow.class));
+
+      long count = userIds.count();
+      log.info("Successfully extracted {} user IDs from Athena query results", count);
+
+      return userIds;
     } else {
       log.error("Athena output location is required but not specified");
       throw new IllegalStateException("Athena outputLocation must be specified in configuration");
@@ -355,7 +340,7 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
               || reason.contains("security token")
               || reason.contains("invalid"))) {
         errorMessage +=
-            "\nPlease verify your AWS credentials (accessKey, secretKey, and sessionToken if using temporary credentials) are valid and have proper permissions for Athena.";
+            "Please verify your AWS credentials (accessKey, secretKey, and sessionToken if using temporary credentials) are valid and have proper permissions for Athena.";
       }
       throw new RuntimeException(errorMessage);
     } else if (queryState == QueryExecutionState.CANCELLED) {
@@ -364,29 +349,20 @@ public class AthenaSourceImpl implements Source<Dataset<Row>> {
 
     log.info("Athena query completed successfully. State: {}", queryState);
 
-    // Get the actual output location from the query execution result
     String actualOutputLocation =
         getQueryExecutionResult.getQueryExecution().getResultConfiguration().getOutputLocation();
     String resultPath = null;
 
     if (actualOutputLocation != null && !actualOutputLocation.isEmpty()) {
-      // Athena returns the base output location, results are in: outputLocation/queryExecutionId/
-      // But the actualOutputLocation might already include the query execution ID
-      // Check if it ends with .csv or contains the query execution ID
+      String basePath =
+          actualOutputLocation.endsWith("/") ? actualOutputLocation : actualOutputLocation + "/";
       if (actualOutputLocation.contains(queryExecutionId)) {
-        // Already contains the query execution ID, use as directory
-        resultPath =
-            actualOutputLocation.endsWith("/") ? actualOutputLocation : actualOutputLocation + "/";
+        resultPath = basePath;
       } else {
-        // Construct the path: outputLocation/queryExecutionId/
-        String basePath =
-            actualOutputLocation.endsWith("/") ? actualOutputLocation : actualOutputLocation + "/";
         resultPath = basePath + queryExecutionId + "/";
       }
       log.info("Athena query results location: {}", resultPath);
     }
-
-    // Small delay to ensure files are written
     Thread.sleep(1000);
 
     return new QueryExecutionResult(queryExecutionId, resultPath);

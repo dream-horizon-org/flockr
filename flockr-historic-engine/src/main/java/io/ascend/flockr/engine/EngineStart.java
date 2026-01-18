@@ -64,7 +64,7 @@ public class EngineStart {
     try {
       log.info("Starting Flocker Spark Engine...");
 
-      EngineOrchestrator orchestrator = new EngineOrchestrator();
+      EngineOrchestrator orchestrator = EngineOrchestrator.getInstance();
       orchestrator.execute(args);
 
     } catch (IllegalArgumentException e) {

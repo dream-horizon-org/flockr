@@ -6,13 +6,5 @@ public enum SinkTypes {
   API("api"),
   WEBHOOK("webhook");
 
-  private final String configType;
-
-  SinkTypes(String configType) {
-    this.configType = configType;
-  }
-
-  public String getConfigType() {
-    return configType;
-  }
+  SinkTypes(String configType) {}
 }
