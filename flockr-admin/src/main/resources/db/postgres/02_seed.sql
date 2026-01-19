@@ -117,7 +117,7 @@ where
 	kind = 'SOURCE'
 	and type = 'ATHENA'
 limit 1),
-  '{"connectorType": "ATHENA", "accessKey": "AKIAIOSFODNN7EXAMPLE", "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "queryOutputLocation": "s3://flockr-athena-results/output/", "workgroup": "primary", "region": "us-east-1"}',
+  '{"connectorType": "ATHENA", "accessKey": "ASIA54S6SGWZWNBLF73L", "secretKey": "P3o7Wd3BpeFjIsWcyYWW5iMANim7hSy0upafin2y", "queryOutputLocation": "s3://hascend/athena_out/", "workgroup": "primary", "region": "us-east-1"}',
   'ACTIVE',
   'system'
 );
