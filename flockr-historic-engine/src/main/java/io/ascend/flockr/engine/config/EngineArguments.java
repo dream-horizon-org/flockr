@@ -21,6 +21,9 @@ public class EngineArguments {
   @JsonProperty("action")
   private String action;
 
+  @JsonProperty("xProjectId")
+  private String xProjectId;
+
   /** Single source configuration. Only one source is supported. */
   @JsonProperty("source")
   private SourceConfig source;

@@ -14,7 +14,6 @@ import io.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import io.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import io.ascend.flockr.users.exception.errors.DefinedErrors;
 import io.ascend.flockr.users.service.UserCohortsService;
-import io.ascend.flockr.users.util.CommonUtils;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
@@ -96,7 +95,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
     Single<Boolean> single;
     try {
       if (request.getAction().equals(Constants.ACTION_APPEND)) {
-        Long cohortExpiry = request.expiryEpochFromExpireAt();
+        Long cohortExpiry = request.getExpireAt();
         single =
             aerospikeClient.appendCohort(userKey, request.getCohortKey(), cohortExpiry, setName);
       } else {
@@ -714,8 +713,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
   private Single<Boolean> createAppendOperation(
       BatchMapUserCohortsRequest request, String userKey, String setName) {
 
-    Long cohortExpiry =
-        CommonUtils.getEpochFromExpireAt(request.getExpireAt(), request.getAction());
+    Long cohortExpiry = request.getExpireAt();
     return aerospikeClient.appendCohort(userKey, request.getCohortKey(), cohortExpiry, setName);
   }
 

@@ -2,7 +2,6 @@ package io.ascend.flockr.engine.bootstrap;
 
 import io.ascend.flockr.engine.config.AthenaConfig;
 import io.ascend.flockr.engine.config.ConnectorConfig;
-import io.ascend.flockr.engine.config.S3Config;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -40,11 +39,10 @@ public class AwsCredentialsConfigurator {
    * </ol>
    *
    * @param sourceConnectorConfig The source connector configuration.
-   * @return The extracted AthenaConfig if source is ATHENA, null otherwise.
    * @throws IllegalStateException If source config is null or invalid.
    * @throws IllegalArgumentException If ATHENA source is missing required credentials.
    */
-  public AthenaConfig configureCredentials(ConnectorConfig sourceConnectorConfig) {
+  public void configureCredentials(ConnectorConfig sourceConnectorConfig) {
     String sourceType = sourceConnectorConfig.getType().toUpperCase();
     Object configObj = sourceConnectorConfig.getConfig();
 
@@ -53,7 +51,6 @@ public class AwsCredentialsConfigurator {
     }
 
     AthenaConfig athenaConfig = null;
-    S3Config sourceS3Config;
 
     if ("ATHENA".equalsIgnoreCase(sourceType)) {
       athenaConfig = (AthenaConfig) configObj;
@@ -72,13 +69,11 @@ public class AwsCredentialsConfigurator {
 
       log.info(
           "Athena config - AccessKey: {}, SecretKey: {}, SessionToken: {}",
-          athenaConfig.getAccessKey() != null
-              ? athenaConfig
-                      .getAccessKey()
-                      .substring(0, Math.min(5, athenaConfig.getAccessKey().length()))
-                  + "..."
-              : "null",
-          athenaConfig.getSecretKey() != null ? "***" : "null",
+          athenaConfig
+                  .getAccessKey()
+                  .substring(0, Math.min(5, athenaConfig.getAccessKey().length()))
+              + "...",
+          "***",
           athenaConfig.getSessionToken() != null
               ? "present (" + athenaConfig.getSessionToken().length() + " chars)"
               : "null");
@@ -88,27 +83,7 @@ public class AwsCredentialsConfigurator {
           athenaConfig.getSecretKey(),
           athenaConfig.getSessionToken(),
           "Athena source");
-
-    } else if ("S3".equalsIgnoreCase(sourceType)) {
-      sourceS3Config = (S3Config) configObj;
-      log.info(
-          "S3 source config loaded - bucket: {}, path: {}",
-          sourceS3Config.getBucket(),
-          sourceS3Config.getPath());
-
-      // Configure credentials if available (optional for S3)
-      if (sourceS3Config.getAccessKey() != null && sourceS3Config.getSecretKey() != null) {
-        configureSystemProperties(
-            sourceS3Config.getAccessKey(),
-            sourceS3Config.getSecretKey(),
-            sourceS3Config.getSessionToken(),
-            "S3 source");
-      }
-    } else {
-      log.info("Source type: {} - no AWS credentials configuration needed", sourceType);
     }
-
-    return athenaConfig;
   }
 
   /**

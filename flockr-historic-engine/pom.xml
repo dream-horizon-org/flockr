@@ -29,7 +29,7 @@
         <aws.sdk.bundle.version>1.12.772</aws.sdk.bundle.version>
         <kafka.version>3.7.0</kafka.version>
         <jackson.version>2.18.0</jackson.version>
-        <guice.version>4.0</guice.version>
+        <guice.version>7.0.0</guice.version>
         
         <!-- Dependency versions -->
         <lombok.version>1.18.30</lombok.version>
@@ -51,29 +51,26 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
         </dependency>
+
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
         </dependency>
 
-        <!-- Hadoop AWS and AWS SDK for S3 access -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-aws</artifactId>
             <version>${hadoop.version}</version>
-            <scope>provided</scope>
         </dependency>
+
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-bundle</artifactId>
             <version>${aws.sdk.bundle.version}</version>
         </dependency>
 
-        <!-- Lombok (annotations only at compile time) -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -175,6 +172,7 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <outputFile>${project.basedir}/target/flockr/${project.artifactId}-${project.version}-fat.jar</outputFile>
                             <transformers combine.children="override">
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>

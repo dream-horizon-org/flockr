@@ -13,9 +13,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.ext.web.client.HttpRequest;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -33,8 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 public class WebhookSinkPusher implements SinkPusher {
 
   private static final String PROJECT_KEY_HEADER = "x-project-key";
-  private static final DateTimeFormatter EXPIRE_DATE_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC"));
 
   private final WebClient webClient;
 
@@ -214,11 +209,11 @@ public class WebhookSinkPusher implements SinkPusher {
       payload.put("action", action);
     }
 
-    // expire_at formatted as "yyyy-MM-dd HH:mm:ss"
+    // expire_at as Unix epoch timestamp in milliseconds
     if (record.getExpireDate() != null) {
-      String formattedDate =
-          EXPIRE_DATE_FORMATTER.format(Instant.ofEpochSecond(record.getExpireDate()));
-      payload.put("expire_at", formattedDate);
+      // Convert from seconds to milliseconds
+      Long expireAtMillis = record.getExpireDate() * 1000L;
+      payload.put("expire_at", expireAtMillis);
     }
 
     return payload;

@@ -91,14 +91,14 @@ public class ApiSinkImpl implements Sink {
             batchRequests.add(request);
 
             if (batchRequests.size() >= config.getBatchSize()) {
-              sendBatchToApi(httpClient, config, batchRequests);
+              sendBatchToApi(httpClient, config, batchRequests, meta.getXProjectId());
               processedCount += batchRequests.size();
               batchRequests.clear();
             }
           }
 
           if (!batchRequests.isEmpty()) {
-            sendBatchToApi(httpClient, config, batchRequests);
+            sendBatchToApi(httpClient, config, batchRequests, meta.getXProjectId());
             processedCount += batchRequests.size();
           }
 
@@ -119,7 +119,10 @@ public class ApiSinkImpl implements Sink {
    * @throws Exception If the API call fails.
    */
   private static void sendBatchToApi(
-      HttpClient httpClient, ApiConfig config, List<AudienceUpdateRequest> requests)
+      HttpClient httpClient,
+      ApiConfig config,
+      List<AudienceUpdateRequest> requests,
+      String xProjectId)
       throws Exception {
     if (requests == null || requests.isEmpty()) {
       return;
@@ -135,9 +138,7 @@ public class ApiSinkImpl implements Sink {
             .timeout(Duration.ofSeconds(config.getTimeoutSeconds()))
             .header("Content-Type", config.getContentType());
 
-    if (config.getProjectKey() != null && !config.getProjectKey().isEmpty()) {
-      requestBuilder.header("x-project-key", config.getProjectKey());
-    }
+    requestBuilder.header("x-project-key", xProjectId);
 
     HttpRequest request =
         requestBuilder.POST(HttpRequest.BodyPublishers.ofString(requestBody)).build();

@@ -3,8 +3,6 @@ package io.ascend.flockr.engine.config;
 import com.typesafe.config.Config;
 import io.ascend.flockr.engine.config.provider.ConfigProvider;
 import io.ascend.flockr.engine.enums.FormatTypes;
-import java.util.HashMap;
-import java.util.Map;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,49 +14,6 @@ import org.apache.hadoop.conf.Configuration;
  * <p>This class contains all configuration parameters needed to read from or write to Amazon S3,
  * including bucket, path, format, compression, and AWS credentials.
  *
- * <p><b>Usage:</b>
- *
- * <p>This configuration can be used for both sources and sinks:
- *
- * <ul>
- *   <li><b>Source</b>: Read data from S3 (Parquet, CSV, etc.)
- *   <li><b>Sink</b>: Write data to S3 (Parquet, CSV, etc.)
- * </ul>
- *
- * <p><b>Required Fields (for sink):</b>
- *
- * <ul>
- *   <li>bucket: S3 bucket name
- *   <li>path: S3 path within the bucket
- * </ul>
- *
- * <p><b>Optional Fields:</b>
- *
- * <ul>
- *   <li>format: File format (PARQUET, CSV, JSON) - defaults to PARQUET
- *   <li>compression: Compression type (snappy, gzip, etc.)
- *   <li>accessKey: AWS access key ID (inherited from source if not provided)
- *   <li>secretKey: AWS secret access key (inherited from source if not provided)
- *   <li>sessionToken: AWS session token for temporary credentials
- *   <li>region: AWS region
- *   <li>partitions: Number of partitions for writing (0 = auto)
- *   <li>writeMode: Write mode (append, overwrite, etc.) - defaults to append
- *   <li>options: Additional Spark options as key-value pairs
- * </ul>
- *
- * <p><b>Example Configuration:</b>
- *
- * <pre>{@code
- * {
- *   "bucket": "my-bucket",
- *   "path": "output/path",
- *   "format": "parquet",
- *   "compression": "snappy",
- *   "writeMode": "append"
- * }
- * }</pre>
- *
- * @see io.ascend.flockr.engine.modules.source.impl.S3SourceImpl
  * @see io.ascend.flockr.engine.modules.sink.impl.S3SinkImpl
  * @author Shivam-Raghuwanshi
  */

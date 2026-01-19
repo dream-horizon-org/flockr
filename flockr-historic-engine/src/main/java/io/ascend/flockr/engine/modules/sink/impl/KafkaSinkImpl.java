@@ -8,7 +8,6 @@ import io.ascend.flockr.engine.dto.AudienceMetadata;
 import io.ascend.flockr.engine.dto.UserIdRow;
 import io.ascend.flockr.engine.exception.JobException;
 import io.ascend.flockr.engine.modules.sink.Sink;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
