@@ -9,27 +9,6 @@ import lombok.NoArgsConstructor;
 /**
  * Represents a single audience update request item.
  *
- * <p>This DTO (Data Transfer Object) is used to serialize audience update requests to JSON. Each
- * request contains information about a user's association with an audience.
- *
- * <p><b>Example JSON:</b>
- *
- * <pre>{@code
- * {
- *   "user_id": "12345",
- *   "audience_key": "audience-1",
- *   "action": "append",
- *   "expire_at": 1735689599
- * }
- * }</pre>
- *
- * <p><b>Factory Methods:</b>
- *
- * <p>To create instances of this DTO, use {@link
- * io.ascend.flockr.engine.dto.builder.AudienceUpdateRequestFactory}. The factory provides methods
- * for creating requests with different user ID types.
- *
- * @see io.ascend.flockr.engine.dto.builder.AudienceUpdateRequestFactory
  * @author Shivam-Raghuwanshi
  */
 @Data

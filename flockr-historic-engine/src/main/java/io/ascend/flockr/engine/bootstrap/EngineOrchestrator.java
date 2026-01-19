@@ -8,8 +8,9 @@ import io.ascend.flockr.engine.config.EngineArguments;
 import io.ascend.flockr.engine.config.SourceConfig;
 import io.ascend.flockr.engine.constants.Constants;
 import io.ascend.flockr.engine.injector.EngineModule;
-import io.ascend.flockr.engine.service.s3.S3Process;
+import io.ascend.flockr.engine.service.BaseProcess;
 import java.util.List;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 
@@ -31,14 +32,14 @@ import org.apache.spark.sql.SparkSession;
  */
 @Slf4j
 public class EngineOrchestrator {
-
+  @Getter private static volatile EngineOrchestrator instance = new EngineOrchestrator();
   private final ArgumentParser argumentParser;
   private final ConfigConverter configConverter;
   private final AwsCredentialsConfigurator awsCredentialsConfigurator;
   private final InternalSinkConfigurator internalSinkConfigurator;
   private final SparkSessionFactory sparkSessionFactory;
 
-  public EngineOrchestrator() {
+  private EngineOrchestrator() {
     this.argumentParser = new ArgumentParser();
     this.configConverter = new ConfigConverter();
     this.awsCredentialsConfigurator = new AwsCredentialsConfigurator();
@@ -46,15 +47,7 @@ public class EngineOrchestrator {
     this.sparkSessionFactory = new SparkSessionFactory();
   }
 
-  /**
-   * Executes the Flocker Historic Engine with the provided command-line arguments.
-   *
-   * <p>This method handles the complete lifecycle including SparkSession creation and cleanup.
-   *
-   * @param args Command-line arguments containing JSON configuration.
-   * @throws Exception If any error occurs during execution.
-   */
-  public void execute(String[] args) throws Exception {
+  public void execute(String[] args) {
     SparkSession sparkSession = null;
     try {
       // Parse and validate arguments
@@ -105,6 +98,7 @@ public class EngineOrchestrator {
       sparkSession = sparkSessionFactory.createSparkSession();
 
       // Set up dependency injection
+      log.debug("Guice injector created successfully");
       Injector injector =
           Guice.createInjector(
               new EngineModule(
@@ -114,12 +108,10 @@ public class EngineOrchestrator {
                   audienceName,
                   action,
                   expireAt));
-      log.debug("Guice injector created successfully");
 
-      // Execute processing
-      S3Process s3Process = injector.getInstance(S3Process.class);
-      log.info("Starting S3 processing with query and action: {}", action);
-      s3Process.processWithQuery(sqlQuery, audienceName, action, expireAt);
+      log.info("Starting Base processing with query and action: {}", action);
+      BaseProcess baseProcess = injector.getInstance(BaseProcess.class);
+      baseProcess.processWithQuery(audienceName, action, expireAt);
       log.info("Flocker Engine completed successfully");
     } finally {
       // Ensure SparkSession is properly stopped

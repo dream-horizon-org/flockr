@@ -59,28 +59,16 @@ public class ConnectorConfigDeserializer extends JsonDeserializer<ConnectorConfi
       try {
         SourceTypes sourceType = SourceTypes.valueOf(type);
         switch (sourceType) {
-          case S3:
-            parsedConfig = S3Config.fromConfig(config);
-            break;
           case ATHENA:
             parsedConfig = AthenaConfig.fromConfig(config);
             break;
-          case KAFKA:
-            parsedConfig = KafkaConfig.fromConfig(config);
-            break;
-          case REDSHIFT:
-            throw new UnsupportedOperationException("Redshift source not yet implemented");
           default:
             throw new IllegalArgumentException("Unknown source type: " + sourceType);
         }
       } catch (IllegalArgumentException e) {
-        // Not a source type, try sink types
-        // Use normalized type for validation - WEBHOOK has already been normalized to API
         try {
           SinkTypes.valueOf(type); // Validate using normalized type
           if ("API".equals(type)) {
-            // WEBHOOK is normalized to API, so both use ApiConfig
-            // Map timeoutMs to timeoutSeconds if present (WEBHOOK input format)
             Config apiConfig = config;
             if (config.hasPath("timeoutMs") && !config.hasPath("timeoutSeconds")) {
               int timeoutMs = config.getInt("timeoutMs");
@@ -97,7 +85,6 @@ public class ConnectorConfigDeserializer extends JsonDeserializer<ConnectorConfi
             parsedConfig = config;
           }
         } catch (IllegalArgumentException ex) {
-          // This should not happen if normalization worked correctly
           log.error(
               "Unknown connector type after normalization: {} (original: {})", type, originalType);
           throw new IllegalArgumentException(
@@ -106,7 +93,6 @@ public class ConnectorConfigDeserializer extends JsonDeserializer<ConnectorConfi
       }
     }
 
-    // Store normalized type (WEBHOOK becomes API)
     return new ConnectorConfig(type, parsedConfig);
   }
 }

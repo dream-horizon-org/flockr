@@ -73,9 +73,6 @@ public class S3Config {
   private String accessKey;
   private String secretKey;
   private String region;
-  private int partitions;
-  private String compression;
-  private Map<String, String> options;
 
   /** Write mode for S3 sink (append, overwrite, etc.). */
   private String writeMode;
@@ -203,9 +200,7 @@ public class S3Config {
     s3Config.setAccessKey(getStringOrNull(config, "accessKey"));
     s3Config.setSecretKey(getStringOrNull(config, "secretKey"));
     s3Config.setRegion(getStringOrNull(config, "region"));
-    s3Config.setCompression(getStringOrNull(config, "compression"));
     s3Config.setWriteMode(getStringOrNull(config, "writeMode"));
-    s3Config.setPartitions(config.hasPath("partitions") ? config.getInt("partitions") : 0);
 
     if (config.hasPath("format")) {
       try {
@@ -214,14 +209,6 @@ public class S3Config {
         throw new IllegalArgumentException("Invalid format type: " + config.getString("format"), e);
       }
     }
-
-    if (config.hasPath("options")) {
-      Map<String, String> options = new HashMap<>();
-      Config optionsConfig = config.getConfig("options");
-      optionsConfig.root().keySet().forEach(key -> options.put(key, optionsConfig.getString(key)));
-      s3Config.setOptions(options);
-    }
-
     return s3Config;
   }
 

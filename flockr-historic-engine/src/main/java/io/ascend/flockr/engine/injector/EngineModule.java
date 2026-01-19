@@ -18,15 +18,12 @@ import io.ascend.flockr.engine.modules.sink.impl.ApiSinkImpl;
 import io.ascend.flockr.engine.modules.sink.impl.KafkaSinkImpl;
 import io.ascend.flockr.engine.modules.sink.impl.S3SinkImpl;
 import io.ascend.flockr.engine.modules.source.Source;
-import io.ascend.flockr.engine.modules.source.impl.SourceFactory;
+import io.ascend.flockr.engine.modules.source.SourceFactory;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
+import java.util.function.Function;
+
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -42,9 +39,8 @@ import org.apache.spark.sql.SparkSession;
  *
  * <p><b>Source Creation:</b>
  *
- * <p>The module creates Source instances using the {@link
- * io.ascend.flockr.engine.modules.source.impl.SourceFactory} based on the source type (ATHENA, S3,
- * KAFKA, etc.).
+ * <p>The module creates Source instances using the {@link SourceFactory} based on the source type
+ * (ATHENA, S3, KAFKA, etc.).
  *
  * <p><b>Sink Creation:</b>
  *
@@ -143,26 +139,16 @@ public class EngineModule extends AbstractModule {
   @Provides
   @Singleton
   @Named("source")
-  public Source<Dataset<Row>> provideSource() {
+  public Source provideSource() {
     log.debug("Providing Source instance");
     SourceTypes type = SourceTypes.valueOf(sourceConfig.getType().toUpperCase());
     Object configObj = sourceConfig.getConfig();
-
-    if (configObj instanceof Config) {
-      Config typesafeConfig = (Config) configObj;
-      switch (type) {
-        case S3:
-          configObj = S3Config.fromConfig(typesafeConfig);
-          break;
-        case ATHENA:
-          configObj = AthenaConfig.fromConfig(typesafeConfig);
-          break;
-        case KAFKA:
-          configObj = KafkaConfig.fromConfig(typesafeConfig);
-          break;
-        default:
-          throw new IllegalArgumentException("Unsupported source type: " + type);
-      }
+    if (configObj instanceof Config typesafeConfig) {
+      configObj =
+          switch (type) {
+            case ATHENA -> AthenaConfig.fromConfig(typesafeConfig);
+            default -> throw new IllegalArgumentException("Unsupported source type: " + type);
+          };
     }
 
     return SourceFactory.createSource(type, configObj, sparkSession);
@@ -204,25 +190,17 @@ public class EngineModule extends AbstractModule {
   @Provides
   @Singleton
   @Named("sinks")
-  public List<Sink<String>> provideSinks() {
+  public List<Sink> provideSinks() {
     log.debug("Providing Sink instances");
-    List<Sink<String>> sinks = new ArrayList<>();
+    List<Sink> sinks = new ArrayList<>();
 
     for (ConnectorConfig config : sinkConfigs) {
       String type = config.getType().toUpperCase();
       switch (type) {
-        case "S3":
-          sinks.add(createS3Sink(config));
-          break;
-        case "API":
-          sinks.add(createApiSink(config));
-          break;
-        case "KAFKA":
-          sinks.add(createKafkaSink(config));
-          break;
-        default:
-          log.warn("Unknown sink type: {}, skipping", type);
-          break;
+        case "S3" -> sinks.add(createS3Sink(config));
+        case "API" -> sinks.add(createApiSink(config));
+        case "KAFKA" -> sinks.add(createKafkaSink(config));
+        default -> log.warn("Unknown sink type: {}, skipping", type);
       }
     }
 
@@ -235,13 +213,13 @@ public class EngineModule extends AbstractModule {
    * @param config The connector configuration.
    * @return An S3SinkImpl instance.
    */
-  private Sink<String> createS3Sink(ConnectorConfig config) {
+  private Sink createS3Sink(ConnectorConfig config) {
     S3Config s3Config = extractConfig(config, S3Config.class, S3Config::fromConfig);
     String writeMode =
         s3Config.getWriteMode() != null ? s3Config.getWriteMode() : Constants.WRITE_MODE_APPEND;
     String outputPath = "s3a://" + s3Config.getBucket() + "/" + s3Config.getPath();
 
-    Sink<String> sink = new S3SinkImpl(s3Config, sparkSession, writeMode, outputPath);
+    Sink sink = new S3SinkImpl(s3Config, sparkSession, writeMode, outputPath);
     log.info("Added S3 sink: {}", outputPath);
     return sink;
   }
@@ -252,9 +230,9 @@ public class EngineModule extends AbstractModule {
    * @param config The connector configuration.
    * @return An ApiSinkImpl instance.
    */
-  private Sink<String> createApiSink(ConnectorConfig config) {
+  private Sink createApiSink(ConnectorConfig config) {
     ApiConfig apiConfig = extractConfig(config, ApiConfig.class, ApiConfig::fromConfig);
-    Sink<String> sink = new ApiSinkImpl(apiConfig, audienceName, action, expireAt);
+    Sink sink = new ApiSinkImpl(apiConfig);
     log.info("Added API sink with rate limit: {}/sec", apiConfig.getRateLimitPerSecond());
     return sink;
   }
@@ -265,7 +243,7 @@ public class EngineModule extends AbstractModule {
    * @param config The connector configuration.
    * @return A KafkaSinkImpl instance.
    */
-  private Sink<String> createKafkaSink(ConnectorConfig config) {
+  private Sink createKafkaSink(ConnectorConfig config) {
     KafkaConfig kafkaConfig = extractConfig(config, KafkaConfig.class, KafkaConfig::fromConfig);
 
     // Create KafkaProducerConfig from KafkaConfig
@@ -276,11 +254,7 @@ public class EngineModule extends AbstractModule {
     producerConfig.setValueSerializerClass(
         "org.apache.kafka.common.serialization.StringSerializer");
 
-    // Create KafkaProducer with optimized settings
-    Properties props = createKafkaProducerProperties(producerConfig);
-    KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(props);
-
-    Sink<String> sink = new KafkaSinkImpl(kafkaProducer, producerConfig);
+    Sink sink = new KafkaSinkImpl(producerConfig);
     log.info(
         "Added Kafka sink for topic: {} at bootstrap servers: {}",
         producerConfig.getTopic(),
@@ -301,7 +275,7 @@ public class EngineModule extends AbstractModule {
   private <T> T extractConfig(
       ConnectorConfig config,
       Class<T> configClass,
-      java.util.function.Function<Config, T> fromConfigConverter) {
+      Function<Config, T> fromConfigConverter) {
     Object configObj = config.getConfig();
 
     if (configClass.isInstance(configObj)) {
@@ -315,25 +289,5 @@ public class EngineModule extends AbstractModule {
               + " sink: "
               + configObj.getClass().getName());
     }
-  }
-
-  /**
-   * Creates Kafka producer properties with optimized settings.
-   *
-   * @param producerConfig The Kafka producer configuration.
-   * @return Properties configured for Kafka producer.
-   */
-  private Properties createKafkaProducerProperties(KafkaProducerConfig producerConfig) {
-    Properties props = new Properties();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, producerConfig.getBootstrapServers());
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, producerConfig.getKeySerializerClass());
-    props.put(
-        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, producerConfig.getValueSerializerClass());
-    props.put(ProducerConfig.ACKS_CONFIG, "all");
-    props.put(ProducerConfig.RETRIES_CONFIG, 3);
-    props.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
-    props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
-    props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
-    return props;
   }
 }

@@ -1,7 +1,11 @@
 package io.ascend.flockr.engine.modules.sink.impl;
 
+import static org.apache.spark.sql.functions.lit;
+
 import io.ascend.flockr.engine.config.S3Config;
 import io.ascend.flockr.engine.constants.Constants;
+import io.ascend.flockr.engine.dto.AudienceMetadata;
+import io.ascend.flockr.engine.dto.UserIdRow;
 import io.ascend.flockr.engine.modules.sink.Sink;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
@@ -54,7 +58,7 @@ import org.apache.spark.sql.SparkSession;
  * @author Shivam-Raghuwanshi
  */
 @Slf4j
-public class S3SinkImpl implements Sink<String> {
+public class S3SinkImpl implements Sink {
 
   /** S3 configuration (bucket, path, format, compression, etc.). */
   private final S3Config sinkConfig;
@@ -114,47 +118,18 @@ public class S3SinkImpl implements Sink<String> {
   }
 
   @Override
-  public void write(String data) throws Exception {
-    if (data == null || data.trim().isEmpty()) {
-      throw new IllegalArgumentException("Data cannot be null or empty");
-    }
-
-    Dataset<Row> singleRow =
-        sparkSession
-            .read()
-            .json(
-                sparkSession.createDataset(
-                    java.util.Arrays.asList(data), org.apache.spark.sql.Encoders.STRING()));
-    writeDataset(singleRow);
-  }
-
-  @Override
-  public void writeDataset(Dataset<Row> dataset) throws Exception {
-    if (dataset == null) {
-      throw new IllegalArgumentException("Dataset cannot be null");
-    }
-
+  public void write(Dataset<UserIdRow> userIds, AudienceMetadata metadata) {
     log.info("Writing dataset to S3 path: {} with mode: {}", outputPath, writeMode);
 
-    Dataset<Row> datasetToWrite = dataset;
-    if (sinkConfig.getPartitions() > 0) {
-      log.debug("Repartitioning dataset to {} partitions", sinkConfig.getPartitions());
-      datasetToWrite = dataset.coalesce(sinkConfig.getPartitions());
-    }
+    // Add metadata columns
+    Dataset<Row> dataWithMetadata =
+        userIds
+            .toDF()
+            .withColumn(Constants.AUDIENCE_NAME_COLUMN, lit(metadata.getAudienceName()))
+            .withColumn(Constants.ACTION_COLUMN, lit(metadata.getAction()))
+            .withColumn(Constants.EXPIRE_AT_COLUMN, lit(metadata.getExpireAt()));
 
-    var writer = datasetToWrite.write().mode(writeMode).format(sinkConfig.getSparkFormat());
-
-    if (sinkConfig.getCompression() != null && !sinkConfig.getCompression().isEmpty()) {
-      writer.option("compression", sinkConfig.getCompression());
-      log.debug("Compression enabled: {}", sinkConfig.getCompression());
-    }
-
-    if (sinkConfig.getOptions() != null && !sinkConfig.getOptions().isEmpty()) {
-      sinkConfig.getOptions().forEach(writer::option);
-      log.debug("Applied {} custom options", sinkConfig.getOptions().size());
-    }
-
-    writer.save(outputPath);
+    dataWithMetadata.write().mode(writeMode).format(sinkConfig.getSparkFormat()).save(outputPath);
     log.info("Successfully wrote dataset to S3 path: {}", outputPath);
   }
 }

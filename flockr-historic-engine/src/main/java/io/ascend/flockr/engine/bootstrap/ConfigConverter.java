@@ -4,8 +4,6 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.ascend.flockr.engine.config.AthenaConfig;
 import io.ascend.flockr.engine.config.ConnectorConfig;
-import io.ascend.flockr.engine.config.KafkaConfig;
-import io.ascend.flockr.engine.config.S3Config;
 import io.ascend.flockr.engine.enums.SourceTypes;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -54,17 +52,9 @@ public class ConfigConverter {
     try {
       SourceTypes sourceType = SourceTypes.valueOf(type.toUpperCase());
       switch (sourceType) {
-        case S3:
-          parsedConfig = S3Config.fromConfig(config);
-          break;
         case ATHENA:
           parsedConfig = AthenaConfig.fromConfig(config);
           break;
-        case KAFKA:
-          parsedConfig = KafkaConfig.fromConfig(config);
-          break;
-        case REDSHIFT:
-          throw new UnsupportedOperationException("Redshift source not yet implemented");
         default:
           throw new IllegalArgumentException("Unknown source type: " + sourceType);
       }

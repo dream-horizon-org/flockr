@@ -3,6 +3,7 @@ package io.ascend.flockr.engine.config;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.ascend.flockr.engine.utils.ConfigUtil;
+import java.io.Serializable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,36 +19,12 @@ import lombok.extern.slf4j.Slf4j;
  * <p>This class loads default values from {@code config/sink/api/default.conf} and merges them with
  * provided configuration, with provided values taking precedence.
  *
- * <p><b>Default Values:</b>
- *
- * <ul>
- *   <li>rateLimitPerSecond: 10 (if config file not found, otherwise from config)
- *   <li>batchSize: 100 (if config file not found, otherwise from config)
- *   <li>timeoutSeconds: 30 (if config file not found, otherwise from config)
- *   <li>contentType: "application/json"
- * </ul>
- *
- * <p><b>Example Configuration:</b>
- *
- * <pre>{@code
- * {
- *   "url": "http://localhost:8080/flockr/users/map-cohorts",
- *   "rateLimitPerSecond": 100,
- *   "batchSize": 100,
- *   "timeoutSeconds": 30,
- *   "contentType": "application/json",
- *   "projectKey": "tenant1_100"
- * }
- * }</pre>
- *
- * @see io.ascend.flockr.engine.modules.sink.impl.ApiSinkImpl
- * @see io.ascend.flockr.engine.utils.ApiClient
  * @author Shivam-Raghuwanshi
  */
 @Slf4j
 @Data
 @NoArgsConstructor
-public class ApiConfig {
+public class ApiConfig implements Serializable {
 
   private String url;
   private int rateLimitPerSecond;

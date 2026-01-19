@@ -1,11 +1,8 @@
-package io.ascend.flockr.engine.modules.source.impl;
+package io.ascend.flockr.engine.modules.source;
 
 import io.ascend.flockr.engine.config.AthenaConfig;
-import io.ascend.flockr.engine.config.S3Config;
 import io.ascend.flockr.engine.enums.SourceTypes;
-import io.ascend.flockr.engine.modules.source.Source;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import io.ascend.flockr.engine.modules.source.impl.AthenaSourceImpl;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -17,10 +14,7 @@ import org.apache.spark.sql.SparkSession;
  * <p><b>Supported Source Types:</b>
  *
  * <ul>
- *   <li><b>S3</b>: Creates S3SourceImpl (requires S3Config)
  *   <li><b>ATHENA</b>: Creates AthenaSourceImpl (requires AthenaConfig)
- *   <li><b>REDSHIFT</b>: Not yet implemented (throws UnsupportedOperationException)
- *   <li><b>KAFKA</b>: Not yet implemented (throws UnsupportedOperationException)
  * </ul>
  *
  * <p><b>Usage:</b>
@@ -28,7 +22,7 @@ import org.apache.spark.sql.SparkSession;
  * <pre>{@code
  * SourceTypes type = SourceTypes.ATHENA;
  * AthenaConfig config = AthenaConfig.fromConfig(...);
- * Source<Dataset<Row>> source = SourceFactory.createSource(type, config, sparkSession);
+ * Source source = SourceFactory.createSource(type, config, sparkSession);
  * }</pre>
  *
  * @see Source
@@ -50,29 +44,19 @@ public class SourceFactory {
    * @throws IllegalArgumentException If config is null or doesn't match the expected type.
    * @throws UnsupportedOperationException If the source type is not yet implemented.
    */
-  public static Source<Dataset<Row>> createSource(
+  public static Source createSource(
       SourceTypes sourceType, Object config, SparkSession sparkSession) {
     if (config == null) {
       throw new IllegalArgumentException("Config cannot be null for source type: " + sourceType);
     }
 
     switch (sourceType) {
-      case S3:
-        if (!(config instanceof S3Config)) {
-          throw new IllegalArgumentException(
-              "S3 source requires S3Config, got: " + config.getClass().getName());
-        }
-        return new S3SourceImpl((S3Config) config, sparkSession);
       case ATHENA:
         if (!(config instanceof AthenaConfig)) {
           throw new IllegalArgumentException(
               "Athena source requires AthenaConfig, got: " + config.getClass().getName());
         }
         return new AthenaSourceImpl((AthenaConfig) config, sparkSession);
-      case REDSHIFT:
-        throw new UnsupportedOperationException("Redshift source implementation not yet available");
-      case KAFKA:
-        throw new UnsupportedOperationException("Kafka source implementation not yet available");
       default:
         throw new IllegalArgumentException("Unsupported source type: " + sourceType);
     }

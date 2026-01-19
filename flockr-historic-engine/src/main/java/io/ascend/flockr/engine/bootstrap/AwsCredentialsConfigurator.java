@@ -53,7 +53,7 @@ public class AwsCredentialsConfigurator {
     }
 
     AthenaConfig athenaConfig = null;
-    S3Config sourceS3Config = null;
+    S3Config sourceS3Config;
 
     if ("ATHENA".equalsIgnoreCase(sourceType)) {
       athenaConfig = (AthenaConfig) configObj;
