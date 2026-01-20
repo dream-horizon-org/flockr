@@ -16,29 +16,6 @@ insert
 values
   ('SOURCE',
 'ATHENA',
-'AWS Athena',
-   '{"type": "object", "properties": {"accessKey": {"type": "string", "description": "AWS Access Key ID"}, "secretKey": {"type": "string", "description": "AWS Secret Access Key"}, "queryOutputLocation": {"type": "string", "description": "S3 path for query results (e.g., s3://bucket-name/path/)"}, "workgroup": {"type": "string", "description": "Athena workgroup name", "default": "primary"}, "region": {"type": "string", "description": "AWS region (e.g., us-east-1)", "default": "us-east-1"}}, "required": ["accessKey", "secretKey", "queryOutputLocation"]}',
-   true)
-on
-CONFLICT (kind,
-type) DO
-update
-set
-	display_name = EXCLUDED.display_name,
-	config_schema = EXCLUDED.config_schema,
-	is_active = EXCLUDED.is_active;
-
--- SOURCE: AWS Athena
-insert
-	into
-	data_connector_types (kind,
-	type,
-	display_name,
-	config_schema,
-	is_active)
-values
-  ('SOURCE',
-'SESSION ATHENA',
 'SESSION AWS Athena',
    '{"type": "object", "properties": {"sessionToken": {"type": "string", "description": "AWS Session Key ID"}, "accessKey": {"type": "string", "description": "AWS Access Key ID"}, "secretKey": {"type": "string", "description": "AWS Secret Access Key"}, "queryOutputLocation": {"type": "string", "description": "S3 path for query results (e.g., s3://bucket-name/path/)"}, "workgroup": {"type": "string", "description": "Athena workgroup name", "default": "primary"}, "region": {"type": "string", "description": "AWS region (e.g., us-east-1)", "default": "us-east-1"}}, "required": ["accessKey", "secretKey", "queryOutputLocation"]}',
    true)
