@@ -126,14 +126,14 @@ public class UserCohortServiceImpl implements UserCohortsService {
   /**
    * Filters cohort map to return only active cohorts (those not expired).
    *
-   * @param cohortMap map of cohort names to expiry timestamps
+   * @param cohortMap map of cohort names to expiry timestamps (in seconds)
    * @return list of active cohort names
    */
   private List<String> getActiveCohortsFromMap(Map<String, Long> cohortMap) {
-    Long currentTime = System.currentTimeMillis();
+    Long currentTimeInSeconds = System.currentTimeMillis() / 1000L;
 
     return cohortMap.entrySet().stream()
-        .filter(cohortEntry -> cohortEntry.getValue() >= currentTime)
+        .filter(cohortEntry -> cohortEntry.getValue() >= currentTimeInSeconds)
         .map(Map.Entry::getKey)
         .toList();
   }
@@ -506,8 +506,8 @@ public class UserCohortServiceImpl implements UserCohortsService {
   /**
    * Assigns a single user to a cohort using Aerospike append operation.
    *
-   * <p>Uses default expiry of 1 year from current time. Returns {@code false} if Aerospike key is
-   * not found.
+   * <p>Uses default expiry of 1 year from current time (in seconds). Returns {@code false} if
+   * Aerospike key is not found.
    *
    * @param userUuid the user identifier to assign
    * @param cohortName the cohort name to assign user to
@@ -516,7 +516,9 @@ public class UserCohortServiceImpl implements UserCohortsService {
    */
   private Single<Boolean> assignSingleUser(String userUuid, String cohortName, String setName) {
     String userKey = userUuid; // User ID is used directly as userKey
-    long expiry = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(365); // 1-year default expiry
+    long expiry =
+        (System.currentTimeMillis() / 1000L)
+            + TimeUnit.DAYS.toSeconds(365); // 1-year default expiry in seconds
 
     return aerospikeClient
         .appendCohort(userKey, cohortName, expiry, setName)
