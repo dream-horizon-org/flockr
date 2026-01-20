@@ -40,16 +40,11 @@ public class SparkSessionFactory {
     log.info("Spark Master: {}", sparkMaster);
 
     SparkConfig sparkConfig = SparkConfig.provider().get();
-    log.debug("Loaded Spark configuration from config file");
 
-    SparkSession.Builder sessionBuilder = SparkSession.builder();
-    sessionBuilder.master(sparkMaster);
+    SparkSession.Builder sessionBuilder = SparkSession.builder().master("local");
     sparkConfig.applyToSessionBuilder(sessionBuilder);
 
-    SparkSession sparkSession = sessionBuilder.getOrCreate();
-    log.debug("SparkSession created successfully with master: {}", sparkMaster);
-
-    return sparkSession;
+    return sessionBuilder.getOrCreate();
   }
 
   /**

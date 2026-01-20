@@ -15,44 +15,6 @@ import org.apache.spark.sql.SparkSession;
 /**
  * Implementation of Sink interface for Amazon S3 destinations.
  *
- * <p>This class writes Spark datasets to S3 in various formats (Parquet, CSV, JSON) with support
- * for:
- *
- * <ul>
- *   <li>Multiple write modes (append, overwrite, etc.)
- *   <li>Compression (snappy, gzip, etc.)
- *   <li>Custom partitioning
- *   <li>Additional Spark options
- *   <li>AWS credentials configuration
- * </ul>
- *
- * <p><b>Supported Formats:</b>
- *
- * <ul>
- *   <li>Parquet (default)
- *   <li>CSV
- *   <li>JSON
- * </ul>
- *
- * <p><b>Write Modes:</b>
- *
- * <ul>
- *   <li>append: Add data to existing files
- *   <li>overwrite: Replace existing data (default)
- *   <li>error: Fail if data already exists
- *   <li>ignore: Do nothing if data already exists
- * </ul>
- *
- * <p><b>Credentials:</b>
- *
- * <p>The sink configures Hadoop/Spark S3A filesystem settings with AWS credentials from the
- * S3Config. Supports both permanent and temporary credentials (with session tokens).
- *
- * <p><b>Individual Writes:</b>
- *
- * <p>Individual write operations (write(String)) are supported by converting the JSON string to a
- * dataset and writing it.
- *
  * @see Sink
  * @see S3Config
  * @author Shivam-Raghuwanshi
@@ -63,26 +25,11 @@ public class S3SinkImpl implements Sink {
   /** S3 configuration (bucket, path, format, compression, etc.). */
   private final S3Config sinkConfig;
 
-  /** Spark session for writing datasets. */
-  private final SparkSession sparkSession;
-
   /** Write mode (append, overwrite, etc.). */
   private final String writeMode;
 
   /** Full S3 output path (s3a://bucket/path). */
   private final String outputPath;
-
-  /**
-   * Creates a new S3SinkImpl with default write mode and output path.
-   *
-   * <p>Uses overwrite mode and the S3 path from sinkConfig.
-   *
-   * @param sinkConfig S3 configuration (must not be null).
-   * @param sparkSession Spark session (must not be null).
-   */
-  public S3SinkImpl(S3Config sinkConfig, SparkSession sparkSession) {
-    this(sinkConfig, sparkSession, null, null);
-  }
 
   /**
    * Creates a new S3SinkImpl with specified write mode and output path.
@@ -105,7 +52,6 @@ public class S3SinkImpl implements Sink {
       throw new IllegalArgumentException("S3Config and SparkSession cannot be null");
     }
     this.sinkConfig = sinkConfig;
-    this.sparkSession = sparkSession;
     this.writeMode =
         writeMode != null
             ? writeMode

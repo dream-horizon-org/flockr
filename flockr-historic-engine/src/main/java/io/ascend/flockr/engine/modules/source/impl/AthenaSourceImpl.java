@@ -13,6 +13,7 @@ import io.ascend.flockr.engine.dto.UserIdRow;
 import io.ascend.flockr.engine.exception.JobException;
 import io.ascend.flockr.engine.modules.source.Source;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -252,20 +253,12 @@ public class AthenaSourceImpl implements Source {
 
     log.debug("Athena client created successfully for region: {}", athenaConfig.getRegion());
 
-    // Create query execution request
-    // Extract database from query if not provided in config (e.g., "SELECT * FROM database.table"
-    // or "FROM 'database'.'table'")
     String database = athenaConfig.getDatabase();
     if ((database == null || database.trim().isEmpty()) && athenaConfig.getSqlQuery() != null) {
-      // Try to extract database from query (format: database.table, 'database'.'table', or
-      // "database"."table")
       String query = athenaConfig.getSqlQuery().trim();
-      // Look for patterns like: FROM database.table, FROM 'database'.'table', JOIN
-      // "database"."table", etc.
-      // This regex handles both quoted and unquoted identifiers
-      java.util.regex.Pattern pattern =
+      Pattern pattern =
           java.util.regex.Pattern.compile(
-              "(?i)(?:FROM|JOIN|UPDATE|INTO)\\s+(?:[\"']?)([a-zA-Z0-9_-]+)(?:[\"']?)\\s*\\.\\s*(?:[\"']?)([a-zA-Z0-9_-]+)(?:[\"']?)",
+              "(?i)(?:FROM|JOIN|UPDATE|INTO)\\s+[\"']?([a-zA-Z0-9_-]+)[\"']?\\s*\\.\\s*[\"']?([a-zA-Z0-9_-]+)[\"']?",
               java.util.regex.Pattern.CASE_INSENSITIVE);
       java.util.regex.Matcher matcher = pattern.matcher(query);
       if (matcher.find()) {

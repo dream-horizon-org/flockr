@@ -36,8 +36,7 @@ public class ValidTimeRangeValidator
     if (startTime == null || endTime == null) {
       return true;
     }
-    // End time must be at least minDiffSeconds after start time
-    if (endTime <= startTime + minDiffSeconds) {
+    if (endTime - startTime < minDiffSeconds) {
       context.disableDefaultConstraintViolation();
       context
           .buildConstraintViolationWithTemplate(

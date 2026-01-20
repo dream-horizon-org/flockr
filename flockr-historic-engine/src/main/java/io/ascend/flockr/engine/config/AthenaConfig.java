@@ -93,7 +93,7 @@ public class AthenaConfig {
     athenaConfig.setSessionToken(getStringOrNull(config, "sessionToken"));
     athenaConfig.setRegion(getStringOrNull(config, "region"));
     athenaConfig.setWorkgroup(getStringOrNull(config, "workgroup"));
-    athenaConfig.setOutputLocation(getStringOrNull(config, "outputLocation"));
+    athenaConfig.setOutputLocation(getStringOrNull(config, "queryOutputLocation"));
     return athenaConfig;
   }
 

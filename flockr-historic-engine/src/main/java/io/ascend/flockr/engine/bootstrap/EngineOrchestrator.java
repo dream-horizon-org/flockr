@@ -36,14 +36,12 @@ public class EngineOrchestrator {
   private final ArgumentParser argumentParser;
   private final ConfigConverter configConverter;
   private final AwsCredentialsConfigurator awsCredentialsConfigurator;
-  private final InternalSinkConfigurator internalSinkConfigurator;
   private final SparkSessionFactory sparkSessionFactory;
 
   private EngineOrchestrator() {
     this.argumentParser = new ArgumentParser();
     this.configConverter = new ConfigConverter();
     this.awsCredentialsConfigurator = new AwsCredentialsConfigurator();
-    this.internalSinkConfigurator = new InternalSinkConfigurator();
     this.sparkSessionFactory = new SparkSessionFactory();
   }
 
@@ -54,6 +52,7 @@ public class EngineOrchestrator {
       EngineArguments engineArgs = argumentParser.parse(args);
 
       String audienceName = engineArgs.getAudienceName();
+      String xProjectId = engineArgs.getXProjectId();
       String action = validateAndNormalizeAction(engineArgs.getAction());
       Long expireAt = engineArgs.getExpireAt();
       SourceConfig source = engineArgs.getSource();
@@ -85,14 +84,7 @@ public class EngineOrchestrator {
                 : "will be extracted from query");
       }
 
-      // Configure AWS credentials
-      AthenaConfig athenaConfig =
-          awsCredentialsConfigurator.configureCredentials(sourceConnectorConfig);
-
-      // Configure internal sinks
-      sinkConfigs =
-          internalSinkConfigurator.configureInternalSinks(
-              sinkConfigs, athenaConfig, sourceConnectorConfig);
+      awsCredentialsConfigurator.configureCredentials(sourceConnectorConfig);
 
       // Create Spark session
       sparkSession = sparkSessionFactory.createSparkSession();
@@ -100,18 +92,11 @@ public class EngineOrchestrator {
       // Set up dependency injection
       log.debug("Guice injector created successfully");
       Injector injector =
-          Guice.createInjector(
-              new EngineModule(
-                  sparkSession,
-                  sourceConnectorConfig,
-                  sinkConfigs,
-                  audienceName,
-                  action,
-                  expireAt));
+          Guice.createInjector(new EngineModule(sparkSession, sourceConnectorConfig, sinkConfigs));
 
       log.info("Starting Base processing with query and action: {}", action);
       BaseProcess baseProcess = injector.getInstance(BaseProcess.class);
-      baseProcess.processWithQuery(audienceName, action, expireAt);
+      baseProcess.processWithQuery(xProjectId, audienceName, action, expireAt);
       log.info("Flocker Engine completed successfully");
     } finally {
       // Ensure SparkSession is properly stopped

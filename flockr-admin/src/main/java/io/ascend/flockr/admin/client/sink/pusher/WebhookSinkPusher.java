@@ -13,9 +13,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.ext.web.client.HttpRequest;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -33,8 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 public class WebhookSinkPusher implements SinkPusher {
 
   private static final String PROJECT_KEY_HEADER = "x-project-key";
-  private static final DateTimeFormatter EXPIRE_DATE_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC"));
 
   private final WebClient webClient;
 
@@ -53,10 +48,8 @@ public class WebhookSinkPusher implements SinkPusher {
     String xProjectId = audience.getXProjectId();
 
     if (Boolean.TRUE.equals(config.getBatchMode())) {
-      // Send all records in a single batch request
       return sendBatchRequest(records, config, audienceId, xProjectId);
     } else {
-      // Send each record individually
       return sendIndividualRequests(records, config, audienceId, xProjectId);
     }
   }
@@ -199,14 +192,9 @@ public class WebhookSinkPusher implements SinkPusher {
     try {
       payload.put("user_id", Long.parseLong(record.getUserId()));
     } catch (NumberFormatException e) {
-      // Fall back to string if not a valid number
       payload.put("user_id", record.getUserId());
     }
-
-    // cohort_key from audienceName
     payload.put("cohort_key", record.getAudienceName());
-
-    // action mapping: "add" -> "append", others pass through
     String action = record.getAction();
     if ("add".equalsIgnoreCase(action)) {
       payload.put("action", "append");
@@ -214,11 +202,9 @@ public class WebhookSinkPusher implements SinkPusher {
       payload.put("action", action);
     }
 
-    // expire_at formatted as "yyyy-MM-dd HH:mm:ss"
     if (record.getExpireDate() != null) {
-      String formattedDate =
-          EXPIRE_DATE_FORMATTER.format(Instant.ofEpochSecond(record.getExpireDate()));
-      payload.put("expire_at", formattedDate);
+      Long expireAtMillis = record.getExpireDate();
+      payload.put("expire_at", expireAtMillis);
     }
 
     return payload;
@@ -226,7 +212,6 @@ public class WebhookSinkPusher implements SinkPusher {
 
   @Override
   public void close() {
-    // No-op: WebClient lifecycle is managed separately
     log.debug("WebhookSinkPusher close called (no-op)");
   }
 }

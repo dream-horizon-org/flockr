@@ -16,8 +16,8 @@ insert
 values
   ('SOURCE',
 'ATHENA',
-'AWS Athena',
-   '{"type": "object", "properties": {"accessKey": {"type": "string", "description": "AWS Access Key ID"}, "secretKey": {"type": "string", "description": "AWS Secret Access Key"}, "queryOutputLocation": {"type": "string", "description": "S3 path for query results (e.g., s3://bucket-name/path/)"}, "workgroup": {"type": "string", "description": "Athena workgroup name", "default": "primary"}, "region": {"type": "string", "description": "AWS region (e.g., us-east-1)", "default": "us-east-1"}}, "required": ["accessKey", "secretKey", "queryOutputLocation"]}',
+'SESSION AWS Athena',
+   '{"type": "object", "properties": {"sessionToken": {"type": "string", "description": "AWS Session Key ID"}, "accessKey": {"type": "string", "description": "AWS Access Key ID"}, "secretKey": {"type": "string", "description": "AWS Secret Access Key"}, "queryOutputLocation": {"type": "string", "description": "S3 path for query results (e.g., s3://bucket-name/path/)"}, "workgroup": {"type": "string", "description": "Athena workgroup name", "default": "primary"}, "region": {"type": "string", "description": "AWS region (e.g., us-east-1)", "default": "us-east-1"}}, "required": ["accessKey", "secretKey", "queryOutputLocation"]}',
    true)
 on
 CONFLICT (kind,
@@ -117,7 +117,7 @@ where
 	kind = 'SOURCE'
 	and type = 'ATHENA'
 limit 1),
-  '{"connectorType": "ATHENA", "accessKey": "AKIAIOSFODNN7EXAMPLE", "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "queryOutputLocation": "s3://flockr-athena-results/output/", "workgroup": "primary", "region": "us-east-1"}',
+  '{"connectorType": "ATHENA", "accessKey": "ASIA54S6SGWZWNBLF73L", "secretKey": "P3o7Wd3BpeFjIsWcyYWW5iMANim7hSy0upafin2y", "queryOutputLocation": "s3://hascend/athena_out/", "workgroup": "primary", "region": "us-east-1"}',
   'ACTIVE',
   'system'
 );

@@ -28,4 +28,6 @@ public class AudienceMetadata implements Serializable {
   private String action;
 
   private Long expireAt;
+
+  private String xProjectId;
 }

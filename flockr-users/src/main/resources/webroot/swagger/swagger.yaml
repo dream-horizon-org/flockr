@@ -262,16 +262,16 @@ components:
             type: array
             items:
               type: string
-        contentTypeFromMessage:
-          type: boolean
-        mediaType:
-          $ref: '#/components/schemas/MediaType'
-        bodyAsString:
-          type: string
-        body:
-          type: object
         fileName:
           type: string
+        bodyAsString:
+          type: string
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
+        contentTypeFromMessage:
+          type: boolean
+        body:
+          type: object
     MediaType:
       type: object
       properties:
@@ -283,9 +283,9 @@ components:
           type: object
           additionalProperties:
             type: string
-        wildcardSubtype:
-          type: boolean
         wildcardType:
+          type: boolean
+        wildcardSubtype:
           type: boolean
     MultipartFormDataInput:
       type: object
@@ -357,10 +357,11 @@ components:
           description: Cohort key/name to assign or remove user from
           example: premium-users
         expire_at:
-          type: string
-          description: Expiry time for the cohort membership (required for append
-            action)
-          example: 2025-12-31 23:59:59
+          type: integer
+          description: Expiry time for the cohort membership as Unix epoch timestamp
+            in milliseconds (required for append action)
+          format: int64
+          example: 1735689599000
       description: Request to map a user to a cohort
     BatchMapUserCohortsRequest:
       required:
@@ -387,8 +388,9 @@ components:
           description: Cohort key/name to assign or remove user from
           example: premium-users
         expire_at:
-          type: string
-          description: Expiry time for the cohort membership (required for append
-            action)
-          example: 2025-12-31 23:59:59
+          type: integer
+          description: Expiry time for the cohort membership as Unix epoch timestamp
+            in milliseconds (required for append action)
+          format: int64
+          example: 1735689599000
       description: Single user cohort mapping request for batch operations

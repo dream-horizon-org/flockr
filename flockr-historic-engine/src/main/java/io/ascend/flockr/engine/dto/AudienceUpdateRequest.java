@@ -22,7 +22,7 @@ public class AudienceUpdateRequest {
   private Object userId;
 
   /** The audience key (name) - maps to audienceName from application arguments. */
-  @JsonProperty("audience_key")
+  @JsonProperty("cohort_key")
   private String audienceKey;
 
   /** The action to perform ("append" or "remove"). */

@@ -22,7 +22,6 @@ import io.ascend.flockr.engine.modules.source.SourceFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 
@@ -74,39 +73,18 @@ public class EngineModule extends AbstractModule {
   /** List of sink connector configurations. */
   private final List<ConnectorConfig> sinkConfigs;
 
-  /** Audience/cohort name (used for API sinks). */
-  private final String audienceName;
-
-  /** Action type ("append" or "remove", used for API sinks). */
-  private final String action;
-
-  /** Expiration timestamp (used for API sinks). */
-  private final Long expireAt;
-
   /**
    * Creates a new EngineModule with the specified configurations.
    *
    * @param sparkSession The Spark session instance.
    * @param sourceConfig Single source connector configuration.
    * @param sinkConfigs List of sink connector configurations.
-   * @param audienceName The audience/cohort name.
-   * @param action The action type ("append" or "remove").
-   * @param expireAt The expiration timestamp in epoch seconds.
    */
   public EngineModule(
-      SparkSession sparkSession,
-      ConnectorConfig sourceConfig,
-      List<ConnectorConfig> sinkConfigs,
-      String audienceName,
-      String action,
-      Long expireAt) {
+      SparkSession sparkSession, ConnectorConfig sourceConfig, List<ConnectorConfig> sinkConfigs) {
     this.sparkSession = sparkSession;
     this.sourceConfig = sourceConfig;
     this.sinkConfigs = sinkConfigs;
-    this.audienceName = audienceName;
-    this.action = action;
-    this.expireAt = expireAt;
-    log.debug("EngineModule initialized with action: {}, expireAt: {}", action, expireAt);
   }
 
   @Override
@@ -147,7 +125,6 @@ public class EngineModule extends AbstractModule {
       configObj =
           switch (type) {
             case ATHENA -> AthenaConfig.fromConfig(typesafeConfig);
-            default -> throw new IllegalArgumentException("Unsupported source type: " + type);
           };
     }
 
@@ -273,9 +250,7 @@ public class EngineModule extends AbstractModule {
    * @throws IllegalArgumentException If the config type is unknown.
    */
   private <T> T extractConfig(
-      ConnectorConfig config,
-      Class<T> configClass,
-      Function<Config, T> fromConfigConverter) {
+      ConnectorConfig config, Class<T> configClass, Function<Config, T> fromConfigConverter) {
     Object configObj = config.getConfig();
 
     if (configClass.isInstance(configObj)) {

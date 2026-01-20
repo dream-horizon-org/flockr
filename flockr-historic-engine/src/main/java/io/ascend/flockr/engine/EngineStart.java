@@ -64,8 +64,7 @@ public class EngineStart {
     try {
       log.info("Starting Flocker Spark Engine...");
 
-      EngineOrchestrator orchestrator = EngineOrchestrator.getInstance();
-      orchestrator.execute(args);
+      EngineOrchestrator.getInstance().execute(args);
 
     } catch (IllegalArgumentException e) {
       log.error("Invalid arguments: {}", e.getMessage(), e);

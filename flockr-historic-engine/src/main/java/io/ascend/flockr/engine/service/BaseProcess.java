@@ -52,7 +52,8 @@ public class BaseProcess {
     this.sinks = sinks;
   }
 
-  public void processWithQuery(String audienceName, String action, Long expireAt) {
+  public void processWithQuery(
+      String xProjectId, String audienceName, String action, Long expireAt) {
     if (source == null) {
       throw new IllegalStateException("Source is not configured");
     }
@@ -67,6 +68,7 @@ public class BaseProcess {
               .audienceName(audienceName)
               .action(action)
               .expireAt(expireAt)
+              .xProjectId(xProjectId)
               .build();
       writeToSinks(userIds, metadata);
     } catch (Exception e) {

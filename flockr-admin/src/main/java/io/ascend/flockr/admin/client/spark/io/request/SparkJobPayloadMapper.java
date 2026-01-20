@@ -69,6 +69,8 @@ public class SparkJobPayloadMapper {
 
     JsonObject payload = new JsonObject();
 
+    payload.put("xProjectId", executableRule.getXProjectId());
+
     payload.put("audienceName", executableRule.getAudienceName());
 
     String action = mapRuleActionToSparkAction(executableRule.getRuleAction());
