@@ -47,7 +47,7 @@ public class MapUserCohortsRequest {
   @JsonProperty("expire_at")
   @Schema(
       description =
-          "Expiry time for the cohort membership as Unix epoch timestamp in milliseconds (required for append action)",
-      example = "1735689599000")
+          "Expiry time for the cohort membership as Unix epoch timestamp in seconds (required for append action)",
+      example = "1735689599")
   private Long expireAt;
 }

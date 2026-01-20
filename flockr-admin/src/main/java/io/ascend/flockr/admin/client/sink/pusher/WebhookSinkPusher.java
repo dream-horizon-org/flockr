@@ -48,10 +48,8 @@ public class WebhookSinkPusher implements SinkPusher {
     String xProjectId = audience.getXProjectId();
 
     if (Boolean.TRUE.equals(config.getBatchMode())) {
-      // Send all records in a single batch request
       return sendBatchRequest(records, config, audienceId, xProjectId);
     } else {
-      // Send each record individually
       return sendIndividualRequests(records, config, audienceId, xProjectId);
     }
   }
@@ -194,14 +192,9 @@ public class WebhookSinkPusher implements SinkPusher {
     try {
       payload.put("user_id", Long.parseLong(record.getUserId()));
     } catch (NumberFormatException e) {
-      // Fall back to string if not a valid number
       payload.put("user_id", record.getUserId());
     }
-
-    // cohort_key from audienceName
     payload.put("cohort_key", record.getAudienceName());
-
-    // action mapping: "add" -> "append", others pass through
     String action = record.getAction();
     if ("add".equalsIgnoreCase(action)) {
       payload.put("action", "append");
@@ -209,10 +202,8 @@ public class WebhookSinkPusher implements SinkPusher {
       payload.put("action", action);
     }
 
-    // expire_at as Unix epoch timestamp in milliseconds
     if (record.getExpireDate() != null) {
-      // Convert from seconds to milliseconds
-      Long expireAtMillis = record.getExpireDate() * 1000L;
+      Long expireAtMillis = record.getExpireDate();
       payload.put("expire_at", expireAtMillis);
     }
 
@@ -221,7 +212,6 @@ public class WebhookSinkPusher implements SinkPusher {
 
   @Override
   public void close() {
-    // No-op: WebClient lifecycle is managed separately
     log.debug("WebhookSinkPusher close called (no-op)");
   }
 }
