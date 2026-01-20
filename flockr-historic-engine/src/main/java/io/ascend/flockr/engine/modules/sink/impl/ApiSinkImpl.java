@@ -138,7 +138,10 @@ public class ApiSinkImpl implements Sink {
             .timeout(Duration.ofSeconds(config.getTimeoutSeconds()))
             .header("Content-Type", config.getContentType());
 
-    requestBuilder.header("x-project-key", xProjectId);
+    // Only set x-project-key header if xProjectId is not null and not blank
+    if (xProjectId != null && !xProjectId.isBlank()) {
+      requestBuilder.header("x-project-key", xProjectId);
+    }
 
     HttpRequest request =
         requestBuilder.POST(HttpRequest.BodyPublishers.ofString(requestBody)).build();
