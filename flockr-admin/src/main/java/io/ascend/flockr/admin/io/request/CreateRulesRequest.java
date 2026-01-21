@@ -4,9 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.domain.rule.*;
-import io.ascend.flockr.admin.validation.ValidFutureEpoch;
 import io.ascend.flockr.admin.validation.ValidRuleTypeConfiguration;
-import io.ascend.flockr.admin.validation.ValidTimeRange;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -37,14 +35,11 @@ public class CreateRulesRequest {
    * Represents a single rule definition within the create rules request.
    *
    * <p>Each rule must have a valid configuration that matches its rule type (BATCH or STREAM).
-   *
-   * <p>Start time and end time must be in the future, and end time must be after start time.
    */
   @Data
   @AllArgsConstructor
   @NoArgsConstructor
   @ValidRuleTypeConfiguration
-  @ValidTimeRange
   @JsonIgnoreProperties()
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public static class Rule {
@@ -56,14 +51,12 @@ public class CreateRulesRequest {
     @NotNull(message = "Rule description is required")
     private String description;
 
-    /** The start time for rule execution (epoch seconds). Must be in the future. */
+    /** The start time for rule execution (epoch seconds). */
     @NotNull(message = "Start time is required")
-    @ValidFutureEpoch(minDeltaSeconds = 60)
     private Long startTime;
 
-    /** The end time for rule execution (epoch seconds). Must be in the future. */
+    /** The end time for rule execution (epoch seconds). */
     @NotNull(message = "End time is required")
-    @ValidFutureEpoch
     private Long endTime;
 
     /** The type of rule (BATCH or STREAM). */

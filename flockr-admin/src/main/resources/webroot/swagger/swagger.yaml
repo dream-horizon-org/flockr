@@ -1098,9 +1098,7 @@ components:
           type: string
           enum:
           - SCHEDULED
-          - SUBMITTING
           - RUNNING
-          - RETRYING
           - FAILED
           - COMPLETED
         configuration:

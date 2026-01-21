@@ -50,9 +50,6 @@ public enum ErrorEnum implements RestError {
 
   DATA_SINK_NOT_FOUND("DATA_SINK_NOT_FOUND", "Data sink not found", HttpStatus.SC_NOT_FOUND),
 
-  SINK_NOT_ACTIVE(
-      "SINK_NOT_ACTIVE", "One or more specified sinks are not active", HttpStatus.SC_BAD_REQUEST),
-
   OWNER_NOT_FOUND("OWNER_NOT_FOUND", "Owner not found", HttpStatus.SC_NOT_FOUND),
 
   RESOURCE_NOT_FOUND("RESOURCE_NOT_FOUND", "Requested resource not found", HttpStatus.SC_NOT_FOUND),

@@ -6,6 +6,7 @@ import io.ascend.flockr.users.dto.ResponseEntity;
 import io.ascend.flockr.users.service.UserCohortsService;
 import io.ascend.flockr.users.util.ErrorHandler;
 import io.ascend.flockr.users.validator.BulkCohortAssignmentValidator;
+import io.ascend.flockr.users.validator.HeaderValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,7 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.concurrent.CompletionStage;
@@ -82,7 +83,7 @@ public class BulkCohortAssignment {
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
   public CompletionStage<ResponseEntity.Success<BulkOperationResult>> bulkAssignUsers(
-      @NotBlank(message = "x-project-key header is required")
+      @NotNull(message = "x-project-key header is required")
           @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
@@ -93,6 +94,9 @@ public class BulkCohortAssignment {
               description =
                   "Multipart form data with 'csv_file' (CSV file with user IDs) and 'cohort_name' (target cohort)")
           MultipartFormDataInput input) {
+
+    // Validate header
+    HeaderValidator.validateProjectKeyHeader(projectKey);
 
     // Validate and extract form data
     String cohortName = BulkCohortAssignmentValidator.validateAndExtractCohortName(input);

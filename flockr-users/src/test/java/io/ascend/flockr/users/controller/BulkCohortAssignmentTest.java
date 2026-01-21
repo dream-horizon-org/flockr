@@ -141,29 +141,26 @@ public class BulkCohortAssignmentTest {
   }
 
   @Test
-  public void bulkAssignUsers_WithMissingProjectKeyHeader_ThrowsException() throws Exception {
-    // Header validation is done by JAX-RS @NotBlank annotation at runtime
+  public void bulkAssignUsers_WithMissingProjectKeyHeader_ThrowsException() {
+    // Arrange
     String projectKey = null;
+    // No stubbings needed - exception is thrown synchronously before formDataMap is accessed
 
-    Map<String, List<InputPart>> formDataMap = new HashMap<>();
-    formDataMap.put("csv_file", Collections.singletonList(csvFilePart));
-    formDataMap.put("cohort_name", Collections.singletonList(cohortNamePart));
-
-    when(multipartInput.getFormDataMap()).thenReturn(formDataMap);
-    lenient().when(cohortNamePart.getBodyAsString()).thenReturn("test-cohort");
-    lenient()
-        .when(csvFilePart.getMediaType())
-        .thenReturn(new jakarta.ws.rs.core.MediaType("text", "csv"));
-    lenient()
-        .when(
-            userCohortsService.assignUsersToCohort(anyString(), anyString(), any(InputPart.class)))
-        .thenReturn(Single.just(new BulkOperationResult()));
-
+    // Act & Assert - HeaderValidator throws synchronously
     try {
-      controller.bulkAssignUsers(projectKey, multipartInput).toCompletableFuture().get();
-      assertTrue(true);
+      controller.bulkAssignUsers(projectKey, multipartInput);
+      fail("Expected exception to be thrown for missing x-project-key header");
     } catch (Exception e) {
-      assertTrue(true);
+      // Exception is thrown synchronously, check message directly or in cause
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
+      assertTrue(
+          (message != null
+                  && (message.contains("MISSING_PROJECT_KEY_HEADER")
+                      || message.contains("x-project-key")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                      || cause.getMessage().contains("x-project-key"))));
     }
   }
 

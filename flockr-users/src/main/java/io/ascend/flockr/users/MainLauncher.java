@@ -1,7 +1,7 @@
 package io.ascend.flockr.users;
 
 import com.google.inject.Module;
-import io.ascend.flockr.users.guice.GuiceInjector;
+import io.ascend.flockr.users.guice.AppContext;
 import io.ascend.flockr.users.module.AerospikeModule;
 import io.ascend.flockr.users.module.ConfigModule;
 import io.ascend.flockr.users.module.DefaultModule;
@@ -108,7 +108,7 @@ public class MainLauncher extends Launcher {
    * @param vertx the Vert.x instance to use for module initialization
    */
   private void initializeGuiceInjector(Vertx vertx) {
-    GuiceInjector.initializeInjector(getGuiceModules(vertx));
+    AppContext.initializeContext(getGuiceModules(vertx));
   }
 
   /**

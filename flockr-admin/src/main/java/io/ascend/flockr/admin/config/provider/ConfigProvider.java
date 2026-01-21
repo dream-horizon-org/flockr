@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.config.provider;
 
 import com.google.inject.Provider;
-import io.ascend.flockr.admin.util.ConfigurationUtil;
+import io.ascend.flockr.admin.util.ConfigUtil;
 import lombok.Getter;
 
 @Getter
@@ -18,7 +18,7 @@ public class ConfigProvider<T> implements Provider<T> {
 
   @Override
   public T get() {
-    return ConfigurationUtil.getTypedConfigFromFile(getConfigPath(), clazz);
+    return ConfigUtil.getTypedConfigFromConfigFile(getConfigPath(), clazz);
   }
 
   protected String getConfigPath() {

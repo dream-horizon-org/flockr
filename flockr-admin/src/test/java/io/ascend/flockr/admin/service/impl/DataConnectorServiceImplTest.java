@@ -17,7 +17,7 @@ import io.ascend.flockr.admin.io.request.OnboardDataSinkRequest;
 import io.ascend.flockr.admin.io.request.OnboardDataSourceRequest;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
-import io.ascend.flockr.admin.util.JsonUtil;
+import io.ascend.flockr.admin.util.json.JsonSchemaValidationUtil;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.observers.TestObserver;
 import io.vertx.core.json.JsonObject;
@@ -42,18 +42,19 @@ public class DataConnectorServiceImplTest {
   private static final Long SINK_ID = 200L;
 
   /**
-   * Initialize the static fields in JsonUtil before running tests. This is necessary because the
-   * utility class uses Guice @Inject on static fields which aren't available in unit tests.
+   * Initialize the static fields in JsonSchemaValidationUtil before running tests. This is
+   * necessary because the utility class uses Guice @Inject on static fields which aren't available
+   * in unit tests.
    */
   @BeforeClass
   public static void setupSchemaValidator() throws Exception {
     // Initialize ObjectMapper
-    Field objectMapperField = JsonUtil.class.getDeclaredField("objectMapper");
+    Field objectMapperField = JsonSchemaValidationUtil.class.getDeclaredField("objectMapper");
     objectMapperField.setAccessible(true);
     objectMapperField.set(null, new ObjectMapper());
 
     // Initialize JsonSchemaFactory
-    Field schemaFactoryField = JsonUtil.class.getDeclaredField("schemaFactory");
+    Field schemaFactoryField = JsonSchemaValidationUtil.class.getDeclaredField("schemaFactory");
     schemaFactoryField.setAccessible(true);
     schemaFactoryField.set(null, JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4));
   }

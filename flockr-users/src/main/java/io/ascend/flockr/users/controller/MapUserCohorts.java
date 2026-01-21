@@ -7,6 +7,7 @@ import io.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import io.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import io.ascend.flockr.users.service.UserCohortsService;
 import io.ascend.flockr.users.util.ErrorHandler;
+import io.ascend.flockr.users.validator.HeaderValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,7 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
@@ -76,11 +77,11 @@ public class MapUserCohorts {
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
   public CompletionStage<ResponseEntity.Success<Boolean>> handle(
-      @NotBlank(message = "userId header is required")
+      @NotNull(message = "userId header is required")
           @Parameter(description = "User ID (must be positive)", required = true, example = "12345")
           @HeaderParam("userId")
           String userIdHeader,
-      @NotBlank(message = "x-project-key header is required")
+      @NotNull(message = "x-project-key header is required")
           @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
@@ -97,6 +98,8 @@ public class MapUserCohorts {
           @Valid
           MapUserCohortsRequest request) {
 
+    // Validate headers
+    HeaderValidator.validateProjectKeyHeader(projectKey);
     return ErrorHandler.handleAsync(
         userCohortsService.mapUserCohorts(userIdHeader, projectKey, request), "mapUserCohorts");
   }
@@ -141,7 +144,7 @@ public class MapUserCohorts {
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
   public CompletionStage<ResponseEntity.Success<BulkOperationResult>> handleBatch(
-      @NotBlank(message = "x-project-key header is required")
+      @NotNull(message = "x-project-key header is required")
           @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
@@ -157,6 +160,8 @@ public class MapUserCohorts {
                       schema = @Schema(implementation = BatchMapUserCohortsRequest[].class)))
           @Valid
           List<BatchMapUserCohortsRequest> requests) {
+
+    HeaderValidator.validateProjectKeyHeader(projectKey);
 
     return ErrorHandler.handleAsync(
         userCohortsService.batchMapUserCohorts(projectKey, requests), "batchMapUserCohorts");

@@ -14,6 +14,7 @@ import io.ascend.flockr.users.dto.request.BatchMapUserCohortsRequest;
 import io.ascend.flockr.users.dto.request.MapUserCohortsRequest;
 import io.ascend.flockr.users.exception.errors.DefinedErrors;
 import io.ascend.flockr.users.service.UserCohortsService;
+import io.ascend.flockr.users.util.CommonUtils;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
@@ -95,7 +96,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
     Single<Boolean> single;
     try {
       if (request.getAction().equals(Constants.ACTION_APPEND)) {
-        Long cohortExpiry = request.getExpireAt();
+        Long cohortExpiry = request.expiryEpochFromExpireAt();
         single =
             aerospikeClient.appendCohort(userKey, request.getCohortKey(), cohortExpiry, setName);
       } else {
@@ -126,14 +127,14 @@ public class UserCohortServiceImpl implements UserCohortsService {
   /**
    * Filters cohort map to return only active cohorts (those not expired).
    *
-   * @param cohortMap map of cohort names to expiry timestamps (in seconds)
+   * @param cohortMap map of cohort names to expiry timestamps
    * @return list of active cohort names
    */
   private List<String> getActiveCohortsFromMap(Map<String, Long> cohortMap) {
-    Long currentTimeInSeconds = System.currentTimeMillis() / 1000L;
+    Long currentTime = System.currentTimeMillis();
 
     return cohortMap.entrySet().stream()
-        .filter(cohortEntry -> cohortEntry.getValue() >= currentTimeInSeconds)
+        .filter(cohortEntry -> cohortEntry.getValue() >= currentTime)
         .map(Map.Entry::getKey)
         .toList();
   }
@@ -506,8 +507,8 @@ public class UserCohortServiceImpl implements UserCohortsService {
   /**
    * Assigns a single user to a cohort using Aerospike append operation.
    *
-   * <p>Uses default expiry of 1 year from current time (in seconds). Returns {@code false} if
-   * Aerospike key is not found.
+   * <p>Uses default expiry of 1 year from current time. Returns {@code false} if Aerospike key is
+   * not found.
    *
    * @param userUuid the user identifier to assign
    * @param cohortName the cohort name to assign user to
@@ -516,9 +517,7 @@ public class UserCohortServiceImpl implements UserCohortsService {
    */
   private Single<Boolean> assignSingleUser(String userUuid, String cohortName, String setName) {
     String userKey = userUuid; // User ID is used directly as userKey
-    long expiry =
-        (System.currentTimeMillis() / 1000L)
-            + TimeUnit.DAYS.toSeconds(365); // 1-year default expiry in seconds
+    long expiry = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(365); // 1-year default expiry
 
     return aerospikeClient
         .appendCohort(userKey, cohortName, expiry, setName)
@@ -715,7 +714,8 @@ public class UserCohortServiceImpl implements UserCohortsService {
   private Single<Boolean> createAppendOperation(
       BatchMapUserCohortsRequest request, String userKey, String setName) {
 
-    Long cohortExpiry = request.getExpireAt();
+    Long cohortExpiry =
+        CommonUtils.getEpochFromExpireAt(request.getExpireAt(), request.getAction());
     return aerospikeClient.appendCohort(userKey, request.getCohortKey(), cohortExpiry, setName);
   }
 

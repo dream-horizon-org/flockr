@@ -14,12 +14,10 @@ FROM maven:3.9.5-eclipse-temurin-17 AS builder
 
 WORKDIR /app
 
-# Copy all POMs (parent + all modules to satisfy Maven reactor)
-# Note: We only copy POMs, not source code of other modules
+# Copy POMs first for dependency caching
 COPY pom.xml .
 COPY flockr-admin/pom.xml ./flockr-admin/
 COPY flockr-users/pom.xml ./flockr-users/
-COPY flockr-historic-engine/pom.xml ./flockr-historic-engine/
 
 # Download dependencies (cached layer)
 RUN mvn dependency:go-offline -B -pl flockr-users -am

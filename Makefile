@@ -1,7 +1,7 @@
 # =============================================================================
 # Makefile for Flockr Multi-Module Docker Management
 # =============================================================================
-.PHONY: help build up down restart status logs clean test generate-keys
+.PHONY: help build up down restart status logs clean test
 .DEFAULT_GOAL := help
 
 # -----------------------------------------------------------------------------
@@ -177,14 +177,6 @@ clean-all: ## Remove everything (containers, volumes, images, networks)
 # -----------------------------------------------------------------------------
 # Development
 # -----------------------------------------------------------------------------
-generate-keys: ## Generate encryption keys
-	@echo "🔑 Generating encryption keys..."
-	./docker/generate-encryption-keys.sh
-
-generate-keys-file: ## Generate and save keys to env.docker
-	@echo "🔑 Generating encryption keys and saving to env.docker..."
-	./docker/generate-encryption-keys.sh --output-file env.docker
-
 dev: ## Start in development mode (all services)
 	@echo "🛠️  Starting development environment..."
 	docker-compose up -d

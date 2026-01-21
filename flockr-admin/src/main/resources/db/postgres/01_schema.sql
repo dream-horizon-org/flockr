@@ -83,7 +83,7 @@ CREATE TABLE rules (
     end_time TIMESTAMP NOT NULL,
     rule_action VARCHAR(50) NOT NULL,
     rule_type VARCHAR(50) NOT NULL CHECK (rule_type IN ('STREAM', 'BATCH')),
-    status VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED',
+    status VARCHAR(50) NOT NULL,
     configuration JSONB NOT NULL,
     created_by VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -94,31 +94,6 @@ CREATE TABLE rules (
 CREATE INDEX idx_rules_audience_id ON rules(audience_id);
 CREATE INDEX idx_rules_x_project_id ON rules(x_project_id);
 CREATE INDEX idx_rules_audience_x_project ON rules(audience_id, x_project_id);
-
--- Rule execution tracking table
-CREATE TABLE IF NOT EXISTS rule_execution (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name VARCHAR(255),
-    rule_id BIGINT NOT NULL,
-    type VARCHAR(50) NOT NULL CHECK (type IN ('BATCH', 'STREAM')),
-    status VARCHAR(50) NOT NULL CHECK (status IN ('SUBMITTING', 'SUBMITTED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED')),
-    metadata JSONB,
-    external_job_id VARCHAR(255),
-    created_by VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    
-    CONSTRAINT fk_rule_execution_rule FOREIGN KEY (rule_id) REFERENCES rules(id)
-);
-
--- Indexes for rule execution queries
-CREATE INDEX idx_rule_execution_rule_id ON rule_execution(rule_id);
-CREATE INDEX idx_rule_execution_status ON rule_execution(status);
-CREATE INDEX idx_rule_execution_external_job_id ON rule_execution(external_job_id);
-CREATE INDEX idx_rule_execution_created_at ON rule_execution(created_at);
-CREATE INDEX idx_rule_execution_stale_submitting ON rule_execution(status, created_at) 
-    WHERE status = 'SUBMITTING';
-
 
 
 CREATE TABLE audience_owners (
@@ -143,14 +118,3 @@ CREATE INDEX idx_audience_owners_x_project_id ON audience_owners(x_project_id);
 CREATE INDEX idx_audience_owners_email ON audience_owners(owner_email);
 CREATE INDEX idx_audience_owners_status ON audience_owners(status) WHERE status = 'ACTIVE';
 CREATE INDEX idx_audience_owners_lookup ON audience_owners(audience_id, x_project_id, status);
-
--- Distributed lease table for coordinating scheduled tasks across instances
-CREATE TABLE IF NOT EXISTS distributed_lease (
-    lease_key VARCHAR(255) PRIMARY KEY,
-    holder_id VARCHAR(255) NOT NULL,
-    acquired_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
-    CONSTRAINT valid_expiry CHECK (expires_at > acquired_at)
-);
-
-CREATE INDEX idx_lease_expires ON distributed_lease(expires_at);

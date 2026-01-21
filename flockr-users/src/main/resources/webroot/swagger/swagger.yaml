@@ -264,14 +264,14 @@ components:
               type: string
         fileName:
           type: string
-        bodyAsString:
-          type: string
         mediaType:
           $ref: '#/components/schemas/MediaType'
-        contentTypeFromMessage:
-          type: boolean
         body:
           type: object
+        bodyAsString:
+          type: string
+        contentTypeFromMessage:
+          type: boolean
     MediaType:
       type: object
       properties:
@@ -357,11 +357,10 @@ components:
           description: Cohort key/name to assign or remove user from
           example: premium-users
         expire_at:
-          type: integer
-          description: Expiry time for the cohort membership as Unix epoch timestamp
-            in milliseconds (required for append action)
-          format: int64
-          example: 1735689599000
+          type: string
+          description: Expiry time for the cohort membership (required for append
+            action)
+          example: 2025-12-31 23:59:59
       description: Request to map a user to a cohort
     BatchMapUserCohortsRequest:
       required:
@@ -388,9 +387,8 @@ components:
           description: Cohort key/name to assign or remove user from
           example: premium-users
         expire_at:
-          type: integer
-          description: Expiry time for the cohort membership as Unix epoch timestamp
-            in milliseconds (required for append action)
-          format: int64
-          example: 1735689599000
+          type: string
+          description: Expiry time for the cohort membership (required for append
+            action)
+          example: 2025-12-31 23:59:59
       description: Single user cohort mapping request for batch operations

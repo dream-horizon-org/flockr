@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import io.ascend.flockr.users.annotation.validators.Validator;
 import io.ascend.flockr.users.constants.Constants;
 import io.ascend.flockr.users.dto.BulkOperationResult;
 import io.ascend.flockr.users.dto.ResponseEntity;
@@ -52,7 +53,7 @@ public class MapUserCohortsTest {
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(Constants.ACTION_APPEND);
-    request.setExpireAt(1735689599000L); // Unix epoch timestamp in milliseconds
+    request.setExpireAt("2025-12-31 23:59:59");
 
     when(userCohortsService.mapUserCohorts(
             eq(userIdHeader), eq(projectKey), any(MapUserCohortsRequest.class)))
@@ -78,7 +79,7 @@ public class MapUserCohortsTest {
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(Constants.ACTION_REMOVE);
-    request.setExpireAt(1735689599000L); // Unix epoch timestamp in milliseconds
+    request.setExpireAt("2025-12-31 23:59:59");
 
     when(userCohortsService.mapUserCohorts(
             eq(userIdHeader), eq(projectKey), any(MapUserCohortsRequest.class)))
@@ -102,7 +103,7 @@ public class MapUserCohortsTest {
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(Constants.ACTION_APPEND);
-    request.setExpireAt(1735689599000L); // Unix epoch timestamp in milliseconds
+    request.setExpireAt("2025-12-31 23:59:59");
 
     // Controller doesn't validate userId header, it passes it directly to the service
     when(userCohortsService.mapUserCohorts(
@@ -121,25 +122,28 @@ public class MapUserCohortsTest {
 
   @Test
   public void handle_WithMissingProjectKeyHeader_ThrowsException() {
-    // Header validation is done by JAX-RS @NotBlank annotation at runtime
+    // Arrange
     String userIdHeader = "123";
     String projectKey = null;
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(Constants.ACTION_APPEND);
-    request.setExpireAt(1735689599000L);
+    request.setExpireAt("2025-12-31 23:59:59");
 
-    lenient()
-        .when(
-            userCohortsService.mapUserCohorts(
-                anyString(), anyString(), any(MapUserCohortsRequest.class)))
-        .thenReturn(Single.just(true));
-
+    // Act & Assert - HeaderValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey, request).toCompletableFuture().get();
-      assertTrue(true);
+      controller.handle(userIdHeader, projectKey, request);
+      fail("Expected exception to be thrown when x-project-key header is missing");
     } catch (Exception e) {
-      assertTrue(true);
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
+      assertTrue(
+          (message != null
+                  && (message.contains("MISSING_PROJECT_KEY_HEADER")
+                      || message.contains("x-project-key")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                      || cause.getMessage().contains("x-project-key"))));
     }
   }
 
@@ -172,18 +176,19 @@ public class MapUserCohortsTest {
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey(null); // Missing cohortKey
     request.setAction(Constants.ACTION_APPEND);
-    request.setExpireAt(1735689599000L); // Unix epoch timestamp in milliseconds
+    request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert - JAX-RS Bean Validation (@Valid) would throw ConstraintViolationException in
-    // real request
-    // In unit tests without JAX-RS container, controller just passes to service which may fail
+    // Act & Assert - Bean Validation throws ConstraintViolationException for @NotBlank violation
     try {
+      // Manually validate using Bean Validation (simulating @Valid behavior)
+      Validator.validateConstraint(request);
       controller.handle(userIdHeader, projectKey, request);
-      // May succeed in unit test context without JAX-RS validation
+      fail("Expected exception to be thrown for missing cohort_key");
+    } catch (ConstraintViolationException e) {
+      // Expected: Bean Validation should throw ConstraintViolationException
+      assertTrue(true);
     } catch (Exception e) {
-      // Expected: Some exception (ConstraintViolationException in real runtime,
-      // NullPointer/RestException in unit test)
-      assertNotNull(e);
+      fail("Expected ConstraintViolationException but got: " + e.getClass().getName());
     }
   }
 
@@ -195,18 +200,19 @@ public class MapUserCohortsTest {
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(null); // Missing action
-    request.setExpireAt(1735689599000L); // Unix epoch timestamp in milliseconds
+    request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert - JAX-RS Bean Validation (@Valid) would throw ConstraintViolationException in
-    // real request
-    // In unit tests without JAX-RS container, controller just passes to service which may fail
+    // Act & Assert - Bean Validation throws ConstraintViolationException for @NotBlank violation
     try {
+      // Manually validate using Bean Validation (simulating @Valid behavior)
+      Validator.validateConstraint(request);
       controller.handle(userIdHeader, projectKey, request);
-      // May succeed in unit test context without JAX-RS validation
+      fail("Expected exception to be thrown for missing action");
+    } catch (ConstraintViolationException e) {
+      // Expected: Bean Validation should throw ConstraintViolationException
+      assertTrue(true);
     } catch (Exception e) {
-      // Expected: Some exception (ConstraintViolationException in real runtime,
-      // NullPointer/RestException in unit test)
-      assertNotNull(e);
+      fail("Expected ConstraintViolationException but got: " + e.getClass().getName());
     }
   }
 
@@ -220,16 +226,17 @@ public class MapUserCohortsTest {
     request.setAction(Constants.ACTION_APPEND);
     request.setExpireAt(null); // Missing expireAt
 
-    // Act & Assert - JAX-RS Bean Validation (@Valid) would throw ConstraintViolationException in
-    // real request
-    // In unit tests without JAX-RS container, controller just passes to service which may fail
+    // Act & Assert - Bean Validation throws ConstraintViolationException for @NotBlank violation
     try {
+      // Manually validate using Bean Validation (simulating @Valid behavior)
+      Validator.validateConstraint(request);
       controller.handle(userIdHeader, projectKey, request);
-      // May succeed in unit test context without JAX-RS validation
+      fail("Expected exception to be thrown for missing expire_at");
+    } catch (ConstraintViolationException e) {
+      // Expected: Bean Validation should throw ConstraintViolationException
+      assertTrue(true);
     } catch (Exception e) {
-      // Expected: Some exception (ConstraintViolationException in real runtime,
-      // NullPointer/RestException in unit test)
-      assertNotNull(e);
+      fail("Expected ConstraintViolationException but got: " + e.getClass().getName());
     }
   }
 
@@ -241,18 +248,20 @@ public class MapUserCohortsTest {
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction("invalid-action"); // Invalid action
-    request.setExpireAt(1735689599000L); // Unix epoch timestamp in milliseconds
+    request.setExpireAt("2025-12-31 23:59:59");
 
-    // Act & Assert - JAX-RS Bean Validation (@Valid) would throw ConstraintViolationException in
-    // real request
-    // In unit tests without JAX-RS container, controller just passes to service which may fail
+    // Act & Assert - Bean Validation throws ConstraintViolationException for @AcceptedValues
+    // violation
     try {
+      // Manually validate using Bean Validation (simulating @Valid behavior)
+      Validator.validateConstraint(request);
       controller.handle(userIdHeader, projectKey, request);
-      // May succeed in unit test context without JAX-RS validation
+      fail("Expected exception to be thrown for invalid action");
+    } catch (ConstraintViolationException e) {
+      // Expected: Bean Validation should throw ConstraintViolationException
+      assertTrue(true);
     } catch (Exception e) {
-      // Expected: Some exception (ConstraintViolationException in real runtime, other exception in
-      // unit test)
-      assertNotNull(e);
+      fail("Expected ConstraintViolationException but got: " + e.getClass().getName());
     }
   }
 
@@ -264,7 +273,7 @@ public class MapUserCohortsTest {
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(Constants.ACTION_APPEND);
-    request.setExpireAt(1735689599000L); // Unix epoch timestamp in milliseconds
+    request.setExpireAt("2025-12-31 23:59:59");
 
     when(userCohortsService.mapUserCohorts(
             eq(userIdHeader), eq(projectKey), any(MapUserCohortsRequest.class)))
@@ -288,7 +297,7 @@ public class MapUserCohortsTest {
     MapUserCohortsRequest request = new MapUserCohortsRequest();
     request.setCohortKey("test-cohort");
     request.setAction(Constants.ACTION_APPEND);
-    request.setExpireAt(1735689599000L); // Unix epoch timestamp in milliseconds
+    request.setExpireAt("2025-12-31 23:59:59");
 
     RuntimeException serviceError = new RuntimeException("Service error");
     when(userCohortsService.mapUserCohorts(
@@ -314,9 +323,9 @@ public class MapUserCohortsTest {
     List<BatchMapUserCohortsRequest> requests =
         Arrays.asList(
             new BatchMapUserCohortsRequest(
-                "123", "cohort1", Constants.ACTION_APPEND, 1735689599000L),
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
             new BatchMapUserCohortsRequest(
-                "456", "cohort2", Constants.ACTION_REMOVE, 1735689599000L));
+                "456", "cohort2", Constants.ACTION_REMOVE, "2025-12-31 23:59:59"));
 
     BulkOperationResult expectedResult =
         new BulkOperationResult(2, 2, 0, "Processed 2 users successfully");
@@ -361,22 +370,27 @@ public class MapUserCohortsTest {
 
   @Test
   public void handleBatch_WithMissingProjectKeyHeader_ThrowsException() {
-    // Header validation is done by JAX-RS @NotBlank annotation at runtime
+    // Arrange
     String projectKey = null;
     List<BatchMapUserCohortsRequest> requests =
         Arrays.asList(
             new BatchMapUserCohortsRequest(
-                "123", "cohort1", Constants.ACTION_APPEND, 1735689599000L));
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
 
-    lenient()
-        .when(userCohortsService.batchMapUserCohorts(anyString(), anyList()))
-        .thenReturn(Single.just(new BulkOperationResult()));
-
+    // Act & Assert - HeaderValidator throws synchronously
     try {
-      controller.handleBatch(projectKey, requests).toCompletableFuture().get();
-      assertTrue(true);
+      controller.handleBatch(projectKey, requests);
+      fail("Expected exception to be thrown for missing x-project-key header");
     } catch (Exception e) {
-      assertTrue(true);
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
+      assertTrue(
+          (message != null
+                  && (message.contains("MISSING_PROJECT_KEY_HEADER")
+                      || message.contains("x-project-key")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                      || cause.getMessage().contains("x-project-key"))));
     }
   }
 
@@ -387,7 +401,7 @@ public class MapUserCohortsTest {
     List<BatchMapUserCohortsRequest> requests =
         Arrays.asList(
             new BatchMapUserCohortsRequest(
-                "123", "cohort1", Constants.ACTION_APPEND, 1735689599000L));
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
 
     RuntimeException serviceError = new RuntimeException("Batch processing error");
     when(userCohortsService.batchMapUserCohorts(eq(projectKey), anyList()))
@@ -410,9 +424,9 @@ public class MapUserCohortsTest {
     List<BatchMapUserCohortsRequest> requests =
         Arrays.asList(
             new BatchMapUserCohortsRequest(
-                "123", "cohort1", Constants.ACTION_APPEND, 1735689599000L),
+                "123", "cohort1", Constants.ACTION_APPEND, "2025-12-31 23:59:59"),
             new BatchMapUserCohortsRequest(
-                "456", "cohort2", Constants.ACTION_APPEND, 1735689599000L));
+                "456", "cohort2", Constants.ACTION_APPEND, "2025-12-31 23:59:59"));
 
     BulkOperationResult expectedResult =
         new BulkOperationResult(2, 1, 1, "Processed 2 users. Success: 1, Failed: 1");

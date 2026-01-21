@@ -99,19 +99,24 @@ public class GetUserCohortsTest {
 
   @Test
   public void handle_WithMissingProjectKeyHeader_ThrowsException() {
-    // Header validation is done by JAX-RS @NotBlank annotation at runtime
+    // Arrange
     String userIdHeader = "123";
     String projectKey = null;
 
-    lenient()
-        .when(userCohortsService.getCohorts(anyString(), anyString()))
-        .thenReturn(Single.just(Arrays.asList("cohort1")));
-
+    // Act & Assert - HeaderValidator throws synchronously
     try {
-      controller.handle(userIdHeader, projectKey).toCompletableFuture().get();
-      assertTrue(true);
+      controller.handle(userIdHeader, projectKey);
+      fail("Expected exception to be thrown for missing x-project-key header");
     } catch (Exception e) {
-      assertTrue(true);
+      String message = e.getMessage();
+      Throwable cause = e.getCause();
+      assertTrue(
+          (message != null
+                  && (message.contains("MISSING_PROJECT_KEY_HEADER")
+                      || message.contains("x-project-key")))
+              || (cause != null
+                  && (cause.getMessage().contains("MISSING_PROJECT_KEY_HEADER")
+                      || cause.getMessage().contains("x-project-key"))));
     }
   }
 

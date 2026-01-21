@@ -22,9 +22,6 @@ public class BatchConfiguration<T extends SourceInfo> implements RuleConfigurati
   @NotNull(message = "Source is required")
   private T source;
 
-  @NotEmpty
-  @ValidSqlQuery(requiredColumn = "user_id")
-  private String query;
-
+  @NotEmpty @ValidSqlQuery private String query;
   private String cronExpression;
 }

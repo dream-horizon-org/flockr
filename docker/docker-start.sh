@@ -58,20 +58,6 @@ while [ $attempt -lt $max_attempts ]; do
     sleep 2
 done
 
-# Wait for Spark Master
-attempt=0
-while [ $attempt -lt $max_attempts ]; do
-    attempt=$((attempt + 1))
-    
-    if curl -sf http://localhost:8210 > /dev/null 2>&1; then
-        echo "✅ Spark Master is ready"
-        break
-    fi
-    
-    echo "⏳ Waiting for Spark Master... ($attempt/$max_attempts)"
-    sleep 2
-done
-
 # Wait a bit for other services to fully initialize
 sleep 10
 
@@ -84,8 +70,6 @@ echo "  • Flockr Admin Swagger: http://localhost:8250/swagger-ui/"
 echo "  • Flockr Users API:    http://localhost:8260"
 echo "  • PostgreSQL:          localhost:8230"
 echo "  • Aerospike:           localhost:8200"
-echo "  • Spark Master Web UI: http://localhost:8210"
-echo "  • Spark Worker Web UI: http://localhost:8220"
 echo ""
 echo "🔍 Health Checks:"
 echo "  • Admin Health:        curl http://localhost:8250/healthcheck"

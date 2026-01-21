@@ -1,7 +1,8 @@
 package io.ascend.flockr.users.verticle;
 
+import io.ascend.flockr.users.config.HttpServerConfig;
 import io.ascend.flockr.users.constants.Constants;
-import io.ascend.flockr.users.guice.GuiceInjector;
+import io.ascend.flockr.users.guice.AppContext;
 import io.ascend.flockr.users.util.CommonUtils;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
@@ -23,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class MainVerticle extends AbstractVerticle {
+  private static final String PACKAGE_NAME = "io.ascend.flockr.users";
+  private final HttpServerConfig httpServerConfig = AppContext.getInstance(HttpServerConfig.class);
 
   @Override
   public Completable rxStart() {
@@ -39,7 +42,7 @@ public class MainVerticle extends AbstractVerticle {
   private List<VerticleDeployment> getVerticleDeployments() {
     return List.of(
         new VerticleDeployment(
-            () -> GuiceInjector.getInstance(RestVerticle.class),
+            () -> AppContext.getInstance(RestVerticle.class),
             new DeploymentOptions()
                 .setInstances(
                     Math.min(CommonUtils.getNumOfCores(), Constants.MAX_NUM_REST_VERTICLES))

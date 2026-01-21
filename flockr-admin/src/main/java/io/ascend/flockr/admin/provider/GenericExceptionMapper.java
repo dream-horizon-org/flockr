@@ -1,9 +1,9 @@
 package io.ascend.flockr.admin.provider;
 
 import com.dream11.rest.exception.RestException;
-import io.ascend.flockr.admin.client.flink.FlinkClientException;
 import io.ascend.flockr.admin.exception.ConfigParsingException;
 import io.ascend.flockr.admin.exception.ConfigValidationException;
+import io.ascend.flockr.admin.exception.FlinkClientException;
 import io.ascend.flockr.admin.exception.ForbiddenAccessException;
 import io.ascend.flockr.admin.exception.ResourceNotFoundException;
 import io.ascend.flockr.admin.io.ResponseEntity;

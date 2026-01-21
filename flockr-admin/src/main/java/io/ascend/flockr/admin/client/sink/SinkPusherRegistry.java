@@ -1,7 +1,5 @@
 package io.ascend.flockr.admin.client.sink;
 
-import io.ascend.flockr.admin.client.sink.factory.SinkPusherFactory;
-import io.ascend.flockr.admin.client.sink.pusher.SinkPusher;
 import io.ascend.flockr.admin.domain.audience.AudienceMeta;
 import io.ascend.flockr.admin.domain.audience.AudienceRecord;
 import io.ascend.flockr.admin.domain.dataconnectors.DataSinkDetails;
@@ -14,22 +12,21 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Registry that manages all sink pusher factories and routes push requests to the appropriate
+ * Registry that manages all sink pushers and routes push requests to the appropriate
  * implementation.
  */
 @Slf4j
 public class SinkPusherRegistry {
 
-  private final Map<String, SinkPusherFactory> factoriesByType;
+  private final Map<String, SinkPusher> pushersByType;
 
-  public SinkPusherRegistry(Set<SinkPusherFactory> factories) {
-    this.factoriesByType =
-        factories.stream()
-            .collect(Collectors.toMap(SinkPusherFactory::getSinkType, Function.identity()));
+  public SinkPusherRegistry(Set<SinkPusher> pushers) {
+    this.pushersByType =
+        pushers.stream().collect(Collectors.toMap(SinkPusher::getSinkType, Function.identity()));
     log.info(
-        "Initialized SinkPusherRegistry with {} factories: {}",
-        factories.size(),
-        factoriesByType.keySet());
+        "Initialized SinkPusherRegistry with {} pushers: {}",
+        pushers.size(),
+        pushersByType.keySet());
   }
 
   /**
@@ -43,14 +40,13 @@ public class SinkPusherRegistry {
   public Completable pushBatch(
       List<AudienceRecord> records, DataSinkDetails sink, AudienceMeta audience) {
     String sinkType = sink.getType();
-    SinkPusherFactory factory = factoriesByType.get(sinkType);
+    SinkPusher pusher = pushersByType.get(sinkType);
 
-    if (factory == null) {
-      log.warn("No factory found for sink type '{}', skipping sink '{}'", sinkType, sink.getName());
+    if (pusher == null) {
+      log.warn("No pusher found for sink type '{}', skipping sink '{}'", sinkType, sink.getName());
       return Completable.complete();
     }
 
-    SinkPusher pusher = factory.create(sink);
     return pusher.pushBatch(records, sink, audience);
   }
 
@@ -78,6 +74,6 @@ public class SinkPusherRegistry {
 
   /** Returns the set of supported sink types. */
   public Set<String> getSupportedTypes() {
-    return factoriesByType.keySet();
+    return pushersByType.keySet();
   }
 }

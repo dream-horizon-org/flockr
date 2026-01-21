@@ -2,10 +2,12 @@ package io.ascend.flockr.users.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.ascend.flockr.users.annotation.AcceptedValues;
+import io.ascend.flockr.users.annotation.DateTimeFormat;
+import io.ascend.flockr.users.annotation.validators.Validator;
 import io.ascend.flockr.users.constants.Constants;
+import io.ascend.flockr.users.util.CommonUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -42,12 +44,31 @@ public class MapUserCohortsRequest {
       allowableValues = {"append", "remove"})
   private String action;
 
-  /** Expiry time as Unix epoch timestamp in milliseconds (required for append action). */
-  @NotNull
+  /** Expiry time in format "yyyy-MM-dd HH:mm:ss" (required for append action). */
+  @NotBlank
+  @DateTimeFormat
   @JsonProperty("expire_at")
   @Schema(
-      description =
-          "Expiry time for the cohort membership as Unix epoch timestamp in seconds (required for append action)",
-      example = "1735689599")
-  private Long expireAt;
+      description = "Expiry time for the cohort membership (required for append action)",
+      example = "2025-12-31 23:59:59")
+  private String expireAt;
+
+  /**
+   * Validates the request using Bean Validation constraints.
+   *
+   * @throws jakarta.validation.ConstraintViolationException if validation fails
+   */
+  public void validate() {
+    Validator.validateConstraint(this);
+  }
+
+  /**
+   * Converts the expireAt string to epoch milliseconds.
+   *
+   * @return expiry time in epoch milliseconds
+   * @throws IllegalArgumentException if expireAt format is invalid
+   */
+  public Long expiryEpochFromExpireAt() {
+    return CommonUtils.getEpochFromExpireAt(expireAt, action);
+  }
 }

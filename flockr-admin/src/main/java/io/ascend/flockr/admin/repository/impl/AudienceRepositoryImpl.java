@@ -49,6 +49,12 @@ public class AudienceRepositoryImpl implements AudienceRepository {
           + "EXTRACT(EPOCH FROM expire_date)::BIGINT AS expire_date, sinks, created_by "
           + "FROM audiences WHERE id = $1 AND x_project_id = $2";
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation serializes JSON fields (custom_audience_config, sinks) and handles
+   * timestamp conversion for expiry dates.
+   */
   @Override
   public Single<Long> createAudience(AudienceMeta audienceMeta) {
     log.info("audienceMeta {}", audienceMeta);

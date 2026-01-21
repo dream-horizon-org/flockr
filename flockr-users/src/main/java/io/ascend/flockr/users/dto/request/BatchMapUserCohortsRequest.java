@@ -1,11 +1,9 @@
 package io.ascend.flockr.users.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.ascend.flockr.users.annotation.AcceptedValues;
-import io.ascend.flockr.users.constants.Constants;
+import io.ascend.flockr.users.annotation.DateTimeFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -42,18 +40,17 @@ public class BatchMapUserCohortsRequest {
   private String cohortKey;
 
   @NotBlank
-  @AcceptedValues(values = {Constants.ACTION_APPEND, Constants.ACTION_REMOVE})
   @Schema(
       description = "Action to perform: 'append' to add user or 'remove' to remove user",
       example = "append",
       allowableValues = {"append", "remove"})
   private String action;
 
-  @NotNull
+  @NotBlank
+  @DateTimeFormat
   @JsonProperty("expire_at")
   @Schema(
-      description =
-          "Expiry time for the cohort membership as Unix epoch timestamp in seconds (required for append action)",
-      example = "1735689599")
-  private Long expireAt;
+      description = "Expiry time for the cohort membership (required for append action)",
+      example = "2025-12-31 23:59:59")
+  private String expireAt;
 }
