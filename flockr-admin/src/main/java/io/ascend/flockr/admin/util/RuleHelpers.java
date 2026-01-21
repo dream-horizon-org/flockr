@@ -3,11 +3,15 @@ package io.ascend.flockr.admin.util;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.ascend.flockr.admin.constants.rule.RuleConstants;
+import io.ascend.flockr.admin.domain.dataconnectors.DataSourceDetails;
 import io.ascend.flockr.admin.domain.rule.*;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.sqlclient.Row;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import lombok.experimental.UtilityClass;
 
 /**
@@ -41,6 +45,16 @@ public final class RuleHelpers {
     }
   }
 
+  /**
+   * Maps a database row to a RuleMeta object.
+   *
+   * <p>This method extracts rule metadata from a database row and constructs a RuleMeta instance
+   * with basic source information. The configuration JSON is deserialized into a RuleConfiguration
+   * object.
+   *
+   * @param row the database row containing rule data
+   * @return a RuleMeta object with basic source information
+   */
   public static RuleMeta<SourceInfo> mapRuleRow(Row row) {
     RuleConfiguration<SourceInfo> configuration =
         RuleHelpers.deserializeRuleConfiguration(row.getJsonObject(RuleConstants.CONFIGURATION));
@@ -61,6 +75,54 @@ public final class RuleHelpers {
         .createdAt(row.getLong(RuleConstants.CREATED_AT))
         .updatedAt(row.getLong(RuleConstants.UPDATED_AT))
         .build();
+  }
+
+  /**
+   * Maps a database row to a RuleMetaVerbose object with sink information.
+   *
+   * <p>This method creates a RuleMetaVerbose that extends RuleMeta and includes a list of SinkInfo
+   * objects populated from the sink IDs array in the audiences table. The sink IDs array is
+   * expected to be present in the row under the "sink_ids" column name (typically from a JOIN with
+   * the audiences table).
+   *
+   * <p>This mapper is specifically designed for queries that join rules with audiences to fetch
+   * sink information in a single query, supporting the two-phase enrichment pattern where sink IDs
+   * are fetched first and full sink details are enriched later.
+   *
+   * @param row the database row containing rule data and sink IDs from the joined audiences table
+   * @return a RuleMetaVerbose object with rule metadata and sink list populated with basic SinkInfo
+   *     (containing only IDs)
+   */
+  public static ExecutableRule<SourceInfo, SinkInfo> mapRuleRowWithSinkIds(Row row) {
+    RuleMeta<SourceInfo> ruleMeta = mapRuleRow(row);
+    List<SinkInfo> sinkList = new ArrayList<>();
+    Long[] sinkArray = row.getArrayOfLongs("sink_ids");
+    if (sinkArray != null) {
+      for (Long sinkId : sinkArray) {
+        sinkList.add(SinkInfo.builder().id(sinkId).build());
+      }
+    }
+
+    ExecutableRule<SourceInfo, SinkInfo> executableRule = new ExecutableRule<>();
+    executableRule.setXProjectId(ruleMeta.getXProjectId());
+    executableRule.setRuleId(ruleMeta.getRuleId());
+    executableRule.setAudienceId(ruleMeta.getAudienceId());
+    executableRule.setName(ruleMeta.getName());
+    executableRule.setDescription(ruleMeta.getDescription());
+    executableRule.setStartTime(ruleMeta.getStartTime());
+    executableRule.setEndTime(ruleMeta.getEndTime());
+    executableRule.setRuleAction(ruleMeta.getRuleAction());
+    executableRule.setRuleType(ruleMeta.getRuleType());
+    executableRule.setStatus(ruleMeta.getStatus());
+    executableRule.setConfiguration(ruleMeta.getConfiguration());
+    executableRule.setCreatedBy(ruleMeta.getCreatedBy());
+    executableRule.setCreatedAt(ruleMeta.getCreatedAt());
+    executableRule.setUpdatedAt(ruleMeta.getUpdatedAt());
+    executableRule.setAudienceName(row.getString("audience_name"));
+    executableRule.setExpireAt(row.getLong("expire_date"));
+    executableRule.setSinkList(sinkList);
+
+    return executableRule;
   }
 
   /**
@@ -93,5 +155,236 @@ public final class RuleHelpers {
       sourceIds.add(batchConfiguration.getSource().getId());
     }
     return sourceIds;
+  }
+
+  /**
+   * Extracts all unique source IDs and sink IDs from a list of RuleMetaVerbose objects.
+   *
+   * <p>This method processes a collection of rules and aggregates:
+   *
+   * <ul>
+   *   <li><b>Source IDs</b>: Extracted from rule configurations (STREAM rules may have multiple
+   *       sources, BATCH rules have one)
+   *   <li><b>Sink IDs</b>: Extracted from the sinkList field in each RuleMetaVerbose
+   * </ul>
+   *
+   * <p>All IDs are deduplicated across the entire list of rules, making this ideal for batch
+   * enrichment operations where you need to fetch unique data sources and sinks referenced by
+   * multiple rules.
+   *
+   * @param ruleMetaList the list of verbose rule metadata containing configurations and sink lists
+   * @return a SourceAndSinkIds object containing lists of unique source IDs and sink IDs
+   */
+  public static SourceAndSinkIds extractSourceAndSinkIdsFromRules(
+      List<ExecutableRule<SourceInfo, SinkInfo>> ruleMetaList) {
+    Set<Long> uniqueSourceIds = new HashSet<>();
+    Set<Long> uniqueSinkIds = new HashSet<>();
+
+    for (ExecutableRule<SourceInfo, SinkInfo> ruleMeta : ruleMetaList) {
+      // Extract source IDs from rule configuration
+      uniqueSourceIds.addAll(extractSourceIdFromRuleMeta(ruleMeta));
+
+      // Extract sink IDs from sinkList
+      if (ruleMeta.getSinkList() != null) {
+        for (SinkInfo sinkInfo : ruleMeta.getSinkList()) {
+          if (sinkInfo.getId() != null) {
+            uniqueSinkIds.add(sinkInfo.getId());
+          }
+        }
+      }
+    }
+
+    return new SourceAndSinkIds(new ArrayList<>(uniqueSourceIds), new ArrayList<>(uniqueSinkIds));
+  }
+
+  /**
+   * Container class for holding extracted source and sink IDs.
+   *
+   * <p>Used by {@link #extractSourceAndSinkIdsFromRules} to return both lists of IDs in a type-safe
+   * manner.
+   */
+  public record SourceAndSinkIds(List<Long> sourceIds, List<Long> sinkIds) {}
+
+  /**
+   * Builds an enriched rule configuration by merging {@link DataSourceDetails} into a basic
+   * configuration.
+   *
+   * <p>Depending on the provided {@link RuleType}, this method delegates to either {@link
+   * #buildEnrichedBatchConfiguration(BatchConfiguration, Map)} or {@link
+   * #buildEnrichedStreamConfiguration(StreamConfiguration, Map)}.
+   *
+   * @param basicConfig the basic configuration containing {@link SourceInfo} references
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @param ruleType the type of rule (e.g. {@link RuleType#BATCH} or {@link RuleType#STREAM})
+   * @return a {@link RuleConfiguration} where source information is represented as {@link
+   *     SourceInfoEnriched}
+   */
+  public static RuleConfiguration<SourceInfoEnriched> buildEnrichedConfiguration(
+      RuleConfiguration<SourceInfo> basicConfig,
+      Map<Long, DataSourceDetails> sourceDetailsMap,
+      RuleType ruleType) {
+
+    if (ruleType == RuleType.BATCH) {
+      return buildEnrichedBatchConfiguration(
+          (BatchConfiguration<SourceInfo>) basicConfig, sourceDetailsMap);
+    } else {
+      return buildEnrichedStreamConfiguration(
+          (StreamConfiguration<SourceInfo>) basicConfig, sourceDetailsMap);
+    }
+  }
+
+  /**
+   * Builds an enriched batch configuration from a basic configuration.
+   *
+   * <p>The source information in the basic configuration is replaced with {@link
+   * SourceInfoEnriched} using the provided {@link DataSourceDetails}.
+   *
+   * @param basicConfig the original batch configuration containing {@link SourceInfo}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return a {@link BatchConfiguration} with enriched source information
+   */
+  private BatchConfiguration<SourceInfoEnriched> buildEnrichedBatchConfiguration(
+      BatchConfiguration<SourceInfo> basicConfig, Map<Long, DataSourceDetails> sourceDetailsMap) {
+
+    SourceInfo basicSource = basicConfig.getSource();
+    SourceInfoEnriched enrichedSource =
+        SourceInfoEnriched.builder()
+            .id(basicSource.getId())
+            .details(sourceDetailsMap.get(basicSource.getId()))
+            .build();
+
+    return BatchConfiguration.<SourceInfoEnriched>builder()
+        .cronExpression(basicConfig.getCronExpression())
+        .query(basicConfig.getQuery())
+        .source(enrichedSource)
+        .build();
+  }
+
+  /**
+   * Builds an enriched stream configuration from a basic configuration.
+   *
+   * <p>Pattern definitions are transformed so that each step and event uses {@link
+   * SourceInfoEnriched} instead of {@link SourceInfo}.
+   *
+   * @param basicConfig the original stream configuration containing {@link SourceInfo}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return a {@link StreamConfiguration} with enriched pattern definitions
+   */
+  private StreamConfiguration<SourceInfoEnriched> buildEnrichedStreamConfiguration(
+      StreamConfiguration<SourceInfo> basicConfig, Map<Long, DataSourceDetails> sourceDetailsMap) {
+
+    StreamConfiguration.PatternDefinition<SourceInfo> basicPattern = basicConfig.getPattern();
+    StreamConfiguration.PatternDefinition<SourceInfoEnriched> enrichedPattern =
+        buildEnrichedPatternDefinition(basicPattern, sourceDetailsMap);
+
+    return StreamConfiguration.<SourceInfoEnriched>builder().pattern(enrichedPattern).build();
+  }
+
+  /**
+   * Builds an enriched pattern definition for a stream configuration.
+   *
+   * <p>Each pattern step is transformed to use {@link SourceInfoEnriched} while preserving the
+   * grouping, filters and constraints from the basic definition.
+   *
+   * @param basicPattern the original pattern definition containing {@link SourceInfo}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return a pattern definition with enriched pattern steps
+   */
+  private StreamConfiguration.PatternDefinition<SourceInfoEnriched> buildEnrichedPatternDefinition(
+      StreamConfiguration.PatternDefinition<SourceInfo> basicPattern,
+      Map<Long, DataSourceDetails> sourceDetailsMap) {
+
+    List<StreamConfiguration.PatternStep<SourceInfoEnriched>> enrichedSteps = new ArrayList<>();
+
+    if (basicPattern.getPattern() != null) {
+      for (StreamConfiguration.PatternStep<SourceInfo> basicStep : basicPattern.getPattern()) {
+        enrichedSteps.add(buildEnrichedPatternStep(basicStep, sourceDetailsMap));
+      }
+    }
+
+    StreamConfiguration.PatternDefinition<SourceInfoEnriched> enrichedPattern =
+        new StreamConfiguration.PatternDefinition<>();
+    enrichedPattern.setGroupBy(basicPattern.getGroupBy());
+    enrichedPattern.setPattern(enrichedSteps);
+    enrichedPattern.setCohortFilter(basicPattern.getCohortFilter());
+    enrichedPattern.setConstraint(basicPattern.getConstraint());
+
+    return enrichedPattern;
+  }
+
+  /**
+   * Builds an enriched pattern step from a basic pattern step.
+   *
+   * <p>Event definitions inside the step are transformed to use {@link SourceInfoEnriched} while
+   * preserving ordering and contiguity semantics.
+   *
+   * @param basicStep the original pattern step containing {@link SourceInfo}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return a pattern step with enriched event data
+   */
+  private StreamConfiguration.PatternStep<SourceInfoEnriched> buildEnrichedPatternStep(
+      StreamConfiguration.PatternStep<SourceInfo> basicStep,
+      Map<Long, DataSourceDetails> sourceDetailsMap) {
+
+    StreamConfiguration.StepData<SourceInfoEnriched> enrichedData = null;
+
+    if (basicStep.getData() != null) {
+      List<StreamConfiguration.EventDefinition<SourceInfoEnriched>> enrichedEvents =
+          new ArrayList<>();
+
+      if (basicStep.getData().getEvent() != null) {
+        for (StreamConfiguration.EventDefinition<SourceInfo> basicEvent :
+            basicStep.getData().getEvent()) {
+          enrichedEvents.add(buildEnrichedEventDefinition(basicEvent, sourceDetailsMap));
+        }
+      }
+
+      enrichedData = new StreamConfiguration.StepData<>();
+      enrichedData.setQuantifier(basicStep.getData().getQuantifier());
+      enrichedData.setEvent(enrichedEvents);
+    }
+
+    StreamConfiguration.PatternStep<SourceInfoEnriched> enrichedStep =
+        new StreamConfiguration.PatternStep<>();
+    enrichedStep.setOrder(basicStep.getOrder());
+    enrichedStep.setData(enrichedData);
+    enrichedStep.setContiguity(basicStep.getContiguity());
+
+    return enrichedStep;
+  }
+
+  /**
+   * Builds an enriched event definition from a basic event definition.
+   *
+   * <p>The source information is enriched using the provided {@link DataSourceDetails}, while the
+   * event name and condition are preserved.
+   *
+   * @param basicEvent the original event definition containing {@link SourceInfo}
+   * @param sourceDetailsMap a map of source identifier to {@link DataSourceDetails} used for
+   *     enrichment
+   * @return an event definition with enriched source information
+   */
+  private StreamConfiguration.EventDefinition<SourceInfoEnriched> buildEnrichedEventDefinition(
+      StreamConfiguration.EventDefinition<SourceInfo> basicEvent,
+      Map<Long, DataSourceDetails> sourceDetailsMap) {
+
+    SourceInfoEnriched enrichedSource =
+        SourceInfoEnriched.builder()
+            .id(basicEvent.getSourceInfo().getId())
+            .details(sourceDetailsMap.get(basicEvent.getSourceInfo().getId()))
+            .build();
+
+    StreamConfiguration.EventDefinition<SourceInfoEnriched> enrichedEvent =
+        new StreamConfiguration.EventDefinition<>();
+    enrichedEvent.setSourceInfo(enrichedSource);
+    enrichedEvent.setEventName(basicEvent.getEventName());
+    enrichedEvent.setCondition(basicEvent.getCondition());
+
+    return enrichedEvent;
   }
 }

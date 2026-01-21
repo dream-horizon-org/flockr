@@ -4,7 +4,6 @@ import com.google.inject.Inject;
 import io.ascend.flockr.users.dto.ResponseEntity;
 import io.ascend.flockr.users.service.UserCohortsService;
 import io.ascend.flockr.users.util.ErrorHandler;
-import io.ascend.flockr.users.validator.HeaderValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -13,7 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
@@ -69,20 +68,17 @@ public class GetUserCohorts {
                 schema = @Schema(implementation = ResponseEntity.Failure.class)))
   })
   public CompletionStage<ResponseEntity.Success<List<String>>> handle(
-      @NotNull(message = "userId header is required")
+      @NotBlank(message = "userId header is required")
           @Parameter(required = true, example = "12345")
           @HeaderParam("userId")
           String userIdHeader,
-      @NotNull(message = "x-project-key header is required")
+      @NotBlank(message = "x-project-key header is required")
           @Parameter(
               description = "Project key used as Aerospike set name for multi-tenant isolation",
               required = true,
               example = "tenant1_project1")
           @HeaderParam("x-project-key")
           String projectKey) {
-
-    // Validate headers
-    HeaderValidator.validateProjectKeyHeader(projectKey);
 
     return ErrorHandler.handleAsync(
         userCohortsService.getCohorts(userIdHeader, projectKey), "getUserCohorts");

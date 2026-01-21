@@ -60,7 +60,7 @@ class AsyncValidationUtilTest {
     BatchConfiguration<SourceInfo> config =
         BatchConfiguration.<SourceInfo>builder()
             .source(sourceInfo)
-            .query("SELECT * FROM users WHERE status = 'active'")
+            .query("SELECT user_id FROM users WHERE status = 'active'")
             .cronExpression("0 0 * * *")
             .build();
 
@@ -121,14 +121,15 @@ class AsyncValidationUtilTest {
             .cronExpression("0 0 * * *")
             .build();
 
+    long currentTimeSeconds = System.currentTimeMillis() / 1000;
     CreateRulesRequest.Rule rule = new CreateRulesRequest.Rule();
     rule.setName("High Volume Users");
     rule.setDescription("Users with many orders");
     rule.setRuleType(RuleType.BATCH);
     rule.setRuleAction(RuleAction.ADD);
     rule.setConfiguration(config);
-    rule.setStartTime(System.currentTimeMillis());
-    rule.setEndTime(System.currentTimeMillis() + 86400000);
+    rule.setStartTime(currentTimeSeconds + 100); // 100 seconds in future
+    rule.setEndTime(currentTimeSeconds + 500); // 500 seconds in future
 
     CreateRulesRequest request = new CreateRulesRequest();
     request.setAudienceId(10L);
@@ -164,10 +165,9 @@ class AsyncValidationUtilTest {
             + "  WHERE created_at > CURRENT_DATE - INTERVAL '90 days' "
             + "  GROUP BY user_id "
             + ") "
-            + "SELECT u.* "
-            + "FROM users u "
-            + "INNER JOIN recent_orders ro ON u.id = ro.user_id "
-            + "WHERE ro.order_count >= 3";
+            + "SELECT user_id "
+            + "FROM recent_orders "
+            + "WHERE order_count >= 3";
 
     BatchConfiguration<SourceInfo> config =
         BatchConfiguration.<SourceInfo>builder()
@@ -194,7 +194,7 @@ class AsyncValidationUtilTest {
     BatchConfiguration<SourceInfo> config =
         BatchConfiguration.<SourceInfo>builder()
             .source(sourceInfo)
-            .query("SELECT * FROM users")
+            .query("SELECT user_id FROM users")
             .cronExpression("0 0 * * *")
             .build();
 

@@ -16,6 +16,16 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class ApplicationConfig {
+  private VertxSchedulerConfig executeRuleHandler;
+  private VertxSchedulerConfig reconcileJobHandler;
+
+  @Data
+  @NoArgsConstructor
+  public static class VertxSchedulerConfig {
+    private String schedulerKey;
+    private Long periodicDelayMs;
+    private Long minExecutionDelay;
+  }
 
   /**
    * Creates a provider for ApplicationConfig that loads configuration from the application config

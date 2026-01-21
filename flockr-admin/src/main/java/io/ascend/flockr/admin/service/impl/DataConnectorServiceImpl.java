@@ -12,7 +12,8 @@ import io.ascend.flockr.admin.io.request.OnboardDataSourceRequest;
 import io.ascend.flockr.admin.io.response.PaginatedResponse;
 import io.ascend.flockr.admin.repository.DataConnectorRepository;
 import io.ascend.flockr.admin.service.DataConnectorService;
-import io.ascend.flockr.admin.util.json.JsonSchemaValidationUtil;
+import io.ascend.flockr.admin.util.EncryptionUtils;
+import io.ascend.flockr.admin.util.JsonUtil;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
@@ -43,6 +44,24 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class DataConnectorServiceImpl implements DataConnectorService {
 
+  // Connector kind constants
+  private static final String KIND_SOURCE = "SOURCE";
+  private static final String KIND_SINK = "SINK";
+
+  // Status constants
+  private static final String STATUS_ACTIVE = "ACTIVE";
+
+  // Config field keys
+  private static final String CONFIG_CONNECTOR_TYPE = "connectorType";
+
+  // Error messages
+  private static final String ERROR_NOT_SOURCE = "Provided typeId %d is not a SOURCE";
+  private static final String ERROR_NOT_SINK = "Provided typeId %d is not a SINK";
+  private static final String ERROR_INVALID_KIND = "Kind must be either 'SOURCE' or 'SINK'";
+
+  // Resource name for exceptions
+  private static final String RESOURCE_CONNECTOR_TYPE = "ConnectorType";
+
   private final DataConnectorRepository repository;
 
   /**
@@ -71,42 +90,34 @@ public class DataConnectorServiceImpl implements DataConnectorService {
             error -> {
               if (error instanceof NoSuchElementException) {
                 return Single.error(
-                    new ResourceNotFoundException("ConnectorType", request.getTypeId()));
+                    new ResourceNotFoundException(RESOURCE_CONNECTOR_TYPE, request.getTypeId()));
               }
               return Single.error(error);
             })
-        .map(
-            type -> {
-              if (!"SOURCE".equalsIgnoreCase(type.getKind())) {
-                throw ErrorEnum.INVALID_ARGUMENT
-                            .toException("Provided typeId is not a SOURCE connector type")
-                            .getCause()
-                        != null
-                    ? ErrorEnum.INVALID_ARGUMENT.toException(
-                        "Provided typeId is not a SOURCE connector type")
-                    : ErrorEnum.INVALID_ARGUMENT.toException(
-                        "Provided typeId " + request.getTypeId() + " is not a SOURCE");
-              }
-              validateConfigAgainstSchema(request.getConfig(), type);
-              request.getConfig().put("connectorType", type.getType());
-              return type;
-            })
         .flatMap(
-            type ->
-                repository
-                    .createDataSource(
-                        request.getName(), request.getTypeId(), createdBy, request.getConfig())
-                    .map(
-                        id ->
-                            DataSourceDetails.builder()
-                                .id(id)
-                                .name(request.getName())
-                                .typeId(request.getTypeId())
-                                .type(type.getType())
-                                .config(request.getConfig())
-                                .status("ACTIVE")
-                                .createdBy(createdBy)
-                                .build()));
+            type -> {
+              validateConnectorKind(type, KIND_SOURCE, request.getTypeId());
+              validateConfigAgainstSchema(request.getConfig(), type);
+              request.getConfig().put(CONFIG_CONNECTOR_TYPE, type.getType());
+              JsonObject configForStorage = EncryptionUtils.processForStorage(request.getConfig());
+              return repository
+                  .createDataSource(
+                      request.getName(), request.getTypeId(), createdBy, configForStorage)
+                  .map(
+                      id -> {
+                        JsonObject plaintextConfig =
+                            EncryptionUtils.processFromStorage(configForStorage);
+                        return DataSourceDetails.builder()
+                            .id(id)
+                            .name(request.getName())
+                            .typeId(request.getTypeId())
+                            .type(type.getType())
+                            .config(plaintextConfig)
+                            .status(STATUS_ACTIVE)
+                            .createdBy(createdBy)
+                            .build();
+                      });
+            });
   }
 
   /**
@@ -123,36 +134,36 @@ public class DataConnectorServiceImpl implements DataConnectorService {
             error -> {
               if (error instanceof NoSuchElementException) {
                 return Single.error(
-                    new ResourceNotFoundException("ConnectorType", request.getTypeId()));
+                    new ResourceNotFoundException(RESOURCE_CONNECTOR_TYPE, request.getTypeId()));
               }
               return Single.error(error);
             })
-        .map(
-            type -> {
-              if (!"SINK".equalsIgnoreCase(type.getKind())) {
-                throw ErrorEnum.INVALID_ARGUMENT.toException(
-                    "Provided typeId " + request.getTypeId() + " is not a SINK");
-              }
-              validateConfigAgainstSchema(request.getConfig(), type);
-              request.getConfig().put("connectorType", type.getType());
-              return type;
-            })
         .flatMap(
-            type ->
-                repository
-                    .createDataSink(
-                        request.getName(), request.getTypeId(), createdBy, request.getConfig())
-                    .map(
-                        id ->
-                            DataSinkDetails.builder()
-                                .id(id)
-                                .name(request.getName())
-                                .typeId(request.getTypeId())
-                                .type(type.getType())
-                                .config(request.getConfig())
-                                .status("ACTIVE")
-                                .createdBy(createdBy)
-                                .build()));
+            type -> {
+              validateConnectorKind(type, KIND_SINK, request.getTypeId());
+              validateConfigAgainstSchema(request.getConfig(), type);
+              request.getConfig().put(CONFIG_CONNECTOR_TYPE, type.getType());
+              JsonObject configForStorage = EncryptionUtils.processForStorage(request.getConfig());
+
+              return repository
+                  .createDataSink(
+                      request.getName(), request.getTypeId(), createdBy, configForStorage)
+                  .map(
+                      id -> {
+                        JsonObject plaintextConfig =
+                            EncryptionUtils.processFromStorage(configForStorage);
+
+                        return DataSinkDetails.builder()
+                            .id(id)
+                            .name(request.getName())
+                            .typeId(request.getTypeId())
+                            .type(type.getType())
+                            .config(plaintextConfig)
+                            .status(STATUS_ACTIVE)
+                            .createdBy(createdBy)
+                            .build();
+                      });
+            });
   }
 
   /**
@@ -195,11 +206,9 @@ public class DataConnectorServiceImpl implements DataConnectorService {
   @Override
   public Single<DataConnectorType> onboardConnectorType(
       OnboardConnectorTypeRequest request, String createdBy) {
-    // Validate kind is either SOURCE or SINK
     String kind = request.getKind().toUpperCase();
-    if (!"SOURCE".equals(kind) && !"SINK".equals(kind)) {
-      return Single.error(
-          ErrorEnum.INVALID_ARGUMENT.toException("Kind must be either 'SOURCE' or 'SINK'"));
+    if (!KIND_SOURCE.equals(kind) && !KIND_SINK.equals(kind)) {
+      return Single.error(ErrorEnum.INVALID_ARGUMENT.toException(ERROR_INVALID_KIND));
     }
 
     JsonObject configSchemaJson = request.getConfigSchema();
@@ -215,7 +224,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
                         error -> {
                           if (error instanceof NoSuchElementException) {
                             return Single.error(
-                                new ResourceNotFoundException("ConnectorType", typeId));
+                                new ResourceNotFoundException(RESOURCE_CONNECTOR_TYPE, typeId));
                           }
                           return Single.error(error);
                         }));
@@ -233,10 +242,28 @@ public class DataConnectorServiceImpl implements DataConnectorService {
         .onErrorResumeNext(
             error -> {
               if (error instanceof NoSuchElementException) {
-                return Single.error(new ResourceNotFoundException("ConnectorType", typeId));
+                return Single.error(new ResourceNotFoundException(RESOURCE_CONNECTOR_TYPE, typeId));
               }
               return Single.error(error);
             });
+  }
+
+  /**
+   * Validates that a connector type matches the expected kind.
+   *
+   * @param type the connector type to validate
+   * @param expectedKind the expected kind (SOURCE or SINK)
+   * @param typeId the connector type ID for error messages
+   * @throws RuntimeException if kind doesn't match
+   */
+  private void validateConnectorKind(DataConnectorType type, String expectedKind, Long typeId) {
+    if (!expectedKind.equalsIgnoreCase(type.getKind())) {
+      String errorMessage =
+          KIND_SOURCE.equals(expectedKind)
+              ? String.format(ERROR_NOT_SOURCE, typeId)
+              : String.format(ERROR_NOT_SINK, typeId);
+      throw ErrorEnum.INVALID_ARGUMENT.toException(errorMessage);
+    }
   }
 
   /**
@@ -253,7 +280,7 @@ public class DataConnectorServiceImpl implements DataConnectorService {
           "Validating config against schema for connector type: {} (ID: {})",
           connectorType.getType(),
           connectorType.getId());
-      JsonSchemaValidationUtil.validate(config, schema);
+      JsonUtil.validateAgainstSchema(config, schema);
     } else {
       log.warn(
           "No schema found for connector type ID: {}, skipping schema validation",

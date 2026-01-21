@@ -51,6 +51,20 @@ else
     echo "❌ Flockr Users API    - Unhealthy"
 fi
 
+# Check Spark Master
+if curl -sf http://localhost:8210 > /dev/null 2>&1; then
+    echo "✅ Spark Master        - Healthy (port 8210)"
+else
+    echo "❌ Spark Master        - Unhealthy"
+fi
+
+# Check Spark Worker
+if curl -sf http://localhost:8220 > /dev/null 2>&1; then
+    echo "✅ Spark Worker        - Healthy (port 8220)"
+else
+    echo "❌ Spark Worker        - Unhealthy"
+fi
+
 echo ""
 echo "📊 Resource Usage:"
 containers=$(docker compose ps -q 2>/dev/null)
@@ -64,6 +78,8 @@ echo ""
 echo "📊 Service URLs:"
 echo "  • Flockr Admin API:    http://localhost:8250"
 echo "  • Flockr Users API:    http://localhost:8260"
+echo "  • Spark Master Web UI: http://localhost:8210"
+echo "  • Spark Worker Web UI: http://localhost:8220"
 echo ""
 echo "💡 To view logs: docker compose logs -f [service-name]"
 echo ""
