@@ -197,7 +197,7 @@ public class SparkClientImpl implements SparkClient {
   /** Execute GET request to Spark Master Web UI (port 8080 by default for web UI). */
   private Single<HttpResponse<Buffer>> executeWebUIRequest(String path) {
     HttpRequest<Buffer> request =
-        webClient.prepareHttpGETRequest(sparkConfig.getHost(), sparkConfig.getPort(), path);
+        webClient.prepareHttpGETRequest(sparkConfig.getHost(), 8080, path);
     request.timeout(sparkConfig.getRequestTimeout());
 
     return request
