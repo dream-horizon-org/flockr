@@ -28,52 +28,6 @@ set
 	config_schema = EXCLUDED.config_schema,
 	is_active = EXCLUDED.is_active;
 
--- SINK: Apache Kafka
-insert
-	into
-	data_connector_types (kind,
-	type,
-	display_name,
-	config_schema,
-	is_active)
-values
-  ('SINK',
-'KAFKA',
-'Apache Kafka (Sink)',
-   '{"type": "object", "properties": {"topic": {"type": "string"}, "bootstrapServersUrl": {"type": "string"}}, "required": ["topic", "bootstrapServersUrl"]}',
-   true)
-on
-CONFLICT (kind,
-type) DO
-update
-set
-	display_name = EXCLUDED.display_name,
-	config_schema = EXCLUDED.config_schema,
-	is_active = EXCLUDED.is_active;
-
--- SINK: AWS S3 Folder
-insert
-	into
-	data_connector_types (kind,
-	type,
-	display_name,
-	config_schema,
-	is_active)
-values
-  ('SINK',
-'S3_FOLDER',
-'AWS S3 Folder',
-   '{"type": "object", "properties": {"bucket": {"type": "string"}, "folderPath": {"type": "string"}, "region": {"type": "string"}, "accessKey": {"type": "string"}, "secretKey": {"type": "string"}, "fileFormat": {"type": "string"}}, "required": ["bucket", "folderPath", "accessKey", "secretKey"]}',
-   true)
-on
-CONFLICT (kind,
-type) DO
-update
-set
-	display_name = EXCLUDED.display_name,
-	config_schema = EXCLUDED.config_schema,
-	is_active = EXCLUDED.is_active;
-
 -- SINK: Webhook/HTTP API
 insert
 	into
