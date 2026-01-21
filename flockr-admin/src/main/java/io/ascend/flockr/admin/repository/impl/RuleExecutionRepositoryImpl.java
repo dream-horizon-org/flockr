@@ -5,7 +5,6 @@ import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
 import io.ascend.flockr.admin.domain.rule.JobStatus;
 import io.ascend.flockr.admin.domain.rule.JobType;
-import io.ascend.flockr.admin.domain.rule.ReconciliationMatch;
 import io.ascend.flockr.admin.domain.rule.RuleExecution;
 import io.ascend.flockr.admin.domain.rule.RuleStatus;
 import io.ascend.flockr.admin.repository.RuleExecutionRepository;
@@ -60,21 +59,12 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
           + "created_by, created_at, updated_at "
           + "FROM rule_execution "
           + "WHERE status = ANY($1) "
-          + "AND updated_at < NOW() - INTERVAL '%d minutes' "
+          + "AND updated_at < NOW() - ($2 * INTERVAL '1 minute') "
           + "ORDER BY updated_at ASC "
           + "LIMIT 100";
 
-  /** SQL for batch update using UNNEST for efficient multi-row update. */
-  private static final String SQL_BATCH_UPDATE_STATUS_AND_REF =
-      "UPDATE rule_execution AS re SET "
-          + "status = $1, "
-          + "external_job_id = u.external_job_id, "
-          + "started_at = u.started_at, "
-          + "updated_at = NOW() "
-          + "FROM (SELECT UNNEST($2::bigint[]) AS id, "
-          + "             UNNEST($3::text[]) AS external_job_id, "
-          + "             UNNEST($4::timestamp[]) AS started_at) AS u "
-          + "WHERE re.id = u.id";
+  private static final String SQL_BATCH_UPDATE_STATUS =
+      "UPDATE rule_execution SET status = $1, updated_at = NOW() WHERE id = $2";
 
   @Override
   public Completable updateStatusAndExternalJobId(
@@ -223,24 +213,15 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
   @Override
   public Single<List<RuleExecution>> findStaleExecutionsForReconciliation(
       int thresholdMinutes, List<JobStatus> statuses) {
-    if (statuses.isEmpty()) {
-      return Single.just(List.of());
-    }
-
-    String sql = String.format(SQL_FIND_STALE_FOR_RECONCILIATION, thresholdMinutes);
     String[] statusArray = statuses.stream().map(JobStatus::name).toArray(String[]::new);
-
-    log.debug(
-        "Finding stale executions with statuses {} older than {} minutes (limit 100)",
-        statuses,
-        thresholdMinutes);
+    Tuple sqlParams = Tuple.of(statusArray, thresholdMinutes);
 
     return postgresWriterClient
         .getConnection()
         .flatMap(
             conn ->
-                conn.preparedQuery(sql)
-                    .rxExecute(Tuple.of((Object) statusArray))
+                conn.preparedQuery(SQL_FIND_STALE_FOR_RECONCILIATION)
+                    .rxExecute(sqlParams)
                     .map(
                         rows -> {
                           List<RuleExecution> result = new ArrayList<>();
@@ -250,35 +231,15 @@ public class RuleExecutionRepositoryImpl implements RuleExecutionRepository {
                     .doFinally(conn::close));
   }
 
-  /** {@inheritDoc} */
   @Override
-  public Completable batchUpdateStatusAndExternalJobId(
-      List<ReconciliationMatch> matches, JobStatus status) {
-
-    if (matches.isEmpty()) {
-      return Completable.complete();
-    }
-
-    Long[] ids = matches.stream().map(ReconciliationMatch::getExecutionId).toArray(Long[]::new);
-
-    String[] externalJobIds =
-        matches.stream().map(ReconciliationMatch::getExternalJobId).toArray(String[]::new);
-
-    LocalDateTime[] startedAts =
-        matches.stream()
-            .map(
-                m ->
-                    m.getStartedAt() != null
-                        ? LocalDateTime.ofInstant(m.getStartedAt(), ZoneOffset.UTC)
-                        : null)
-            .toArray(LocalDateTime[]::new);
-
+  public Completable batchUpdateStatus(List<Long> executionIds, JobStatus status) {
+    List<Tuple> batch = executionIds.stream().map(id -> Tuple.of(status.name(), id)).toList();
     return postgresWriterClient
         .getConnection()
         .flatMapCompletable(
             conn ->
-                conn.preparedQuery(SQL_BATCH_UPDATE_STATUS_AND_REF)
-                    .rxExecute(Tuple.of(status.name(), ids, externalJobIds, startedAts))
+                conn.preparedQuery(SQL_BATCH_UPDATE_STATUS)
+                    .rxExecuteBatch(batch)
                     .ignoreElement()
                     .doFinally(conn::close));
   }

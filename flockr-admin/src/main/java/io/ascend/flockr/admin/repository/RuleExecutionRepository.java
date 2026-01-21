@@ -1,7 +1,6 @@
 package io.ascend.flockr.admin.repository;
 
 import io.ascend.flockr.admin.domain.rule.JobStatus;
-import io.ascend.flockr.admin.domain.rule.ReconciliationMatch;
 import io.ascend.flockr.admin.domain.rule.RuleExecution;
 import io.ascend.flockr.admin.domain.rule.RuleStatus;
 import io.reactivex.rxjava3.core.Completable;
@@ -90,15 +89,11 @@ public interface RuleExecutionRepository {
       int thresholdMinutes, List<JobStatus> statuses);
 
   /**
-   * Batch update execution status and external job details for reconciled executions.
+   * Batch update execution status for multiple executions.
    *
-   * <p>Uses PostgreSQL UNNEST for efficient multi-row updates. Each execution gets its own
-   * external_job_id and started_at.
-   *
-   * @param matches list of reconciliation matches containing execution and job details
+   * @param executionIds list of execution IDs to update
    * @param status the status to set for all executions
    * @return Completable that completes when all updates are done
    */
-  Completable batchUpdateStatusAndExternalJobId(
-      List<ReconciliationMatch> matches, JobStatus status);
+  Completable batchUpdateStatus(List<Long> executionIds, JobStatus status);
 }

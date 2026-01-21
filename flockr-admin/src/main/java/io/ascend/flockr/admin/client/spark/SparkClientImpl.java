@@ -196,11 +196,8 @@ public class SparkClientImpl implements SparkClient {
 
   /** Execute GET request to Spark Master Web UI (port 8080 by default for web UI). */
   private Single<HttpResponse<Buffer>> executeWebUIRequest(String path) {
-    // Spark Master Web UI is typically on port 8080, not the REST submission port (6066)
-    int webUIPort = 8080;
-
     HttpRequest<Buffer> request =
-        webClient.prepareHttpGETRequest(sparkConfig.getHost(), webUIPort, path);
+        webClient.prepareHttpGETRequest(sparkConfig.getHost(), sparkConfig.getPort(), path);
     request.timeout(sparkConfig.getRequestTimeout());
 
     return request
@@ -230,11 +227,15 @@ public class SparkClientImpl implements SparkClient {
    * <pre>
    * {
    *   "activeapps": [...],
-   *   "completedapps": [...]
+   *   "completedapps": [...],
+   *   "activedrivers": [...],
+   *   "completeddrivers": [...]
    * }
    * </pre>
    *
+   * <p>Apps appear when submitted in client mode, drivers appear when submitted in cluster mode.
    * Each app has: id, starttime, name, cores, user, memoryperslave, submitdate, state, duration
+   * Each driver has: id, starttime (string), state, cores, memory, mainclass, worker
    */
   private List<SparkApplicationInfo> parseApplicationListFromWebUI(
       HttpResponse<Buffer> response,
@@ -246,7 +247,7 @@ public class SparkClientImpl implements SparkClient {
     JsonObject root = response.bodyAsJsonObject();
     List<SparkApplicationInfo> result = new ArrayList<>();
 
-    // Parse active applications
+    // Parse active applications (client mode jobs)
     JsonArray activeApps = root.getJsonArray("activeapps");
     if (activeApps != null) {
       for (int i = 0; i < activeApps.size(); i++) {
@@ -258,7 +259,7 @@ public class SparkClientImpl implements SparkClient {
       }
     }
 
-    // Parse completed applications
+    // Parse completed applications (client mode jobs)
     JsonArray completedApps = root.getJsonArray("completedapps");
     if (completedApps != null) {
       for (int i = 0; i < completedApps.size(); i++) {
@@ -266,6 +267,30 @@ public class SparkClientImpl implements SparkClient {
         SparkApplicationInfo app = parseWebUIApplication(appJson, "FINISHED");
         if (matchesFilters(app, statusFilter, minDate, maxDate)) {
           result.add(app);
+        }
+      }
+    }
+
+    // Parse active drivers (cluster mode jobs)
+    JsonArray activeDrivers = root.getJsonArray("activedrivers");
+    if (activeDrivers != null) {
+      for (int i = 0; i < activeDrivers.size(); i++) {
+        JsonObject driverJson = activeDrivers.getJsonObject(i);
+        SparkApplicationInfo driver = parseWebUIDriver(driverJson);
+        if (matchesFilters(driver, statusFilter, minDate, maxDate)) {
+          result.add(driver);
+        }
+      }
+    }
+
+    // Parse completed drivers (cluster mode jobs)
+    JsonArray completedDrivers = root.getJsonArray("completeddrivers");
+    if (completedDrivers != null) {
+      for (int i = 0; i < completedDrivers.size(); i++) {
+        JsonObject driverJson = completedDrivers.getJsonObject(i);
+        SparkApplicationInfo driver = parseWebUIDriver(driverJson);
+        if (matchesFilters(driver, statusFilter, minDate, maxDate)) {
+          result.add(driver);
         }
       }
     }
@@ -278,7 +303,7 @@ public class SparkClientImpl implements SparkClient {
     return result;
   }
 
-  /** Parse a single application from Spark Master Web UI format. */
+  /** Parse a single application from Spark Master Web UI format (client mode jobs). */
   private SparkApplicationInfo parseWebUIApplication(JsonObject appJson, String state) {
     // starttime is in milliseconds
     Long startTimeMs = appJson.getLong("starttime");
@@ -300,6 +325,38 @@ public class SparkClientImpl implements SparkClient {
         .endTime(endTime)
         .duration(duration)
         .user(appJson.getString("user"))
+        .build();
+  }
+
+  /**
+   * Parse a single driver from Spark Master Web UI format (cluster mode jobs).
+   *
+   * <p>Driver JSON format differs from app format:
+   *
+   * <ul>
+   *   <li>starttime is a STRING (not Long)
+   *   <li>Has "state" field directly (e.g., "RUNNING", "FINISHED", "FAILED")
+   *   <li>Has "mainclass" instead of "name"
+   *   <li>No "duration" field
+   * </ul>
+   */
+  private SparkApplicationInfo parseWebUIDriver(JsonObject driverJson) {
+    // starttime for drivers is a STRING containing epoch millis
+    String startTimeStr = driverJson.getString("starttime");
+    Long startTimeMs = startTimeStr != null ? Long.parseLong(startTimeStr) : null;
+    Instant startTime = parseEpochMillis(startTimeMs);
+
+    // Drivers have state directly in the JSON
+    String state = driverJson.getString("state");
+
+    return SparkApplicationInfo.builder()
+        .id(driverJson.getString("id"))
+        .name(null) // Drivers don't have names, matching done by ID
+        .state(state)
+        .startTime(startTime)
+        .endTime(null)
+        .duration(null)
+        .user(null)
         .build();
   }
 

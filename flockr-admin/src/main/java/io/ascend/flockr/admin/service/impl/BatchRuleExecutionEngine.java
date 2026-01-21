@@ -167,6 +167,7 @@ public class BatchRuleExecutionEngine implements RuleExecutionEngine {
     Instant minDate =
         executions.stream()
             .map(RuleExecution::getCreatedAt)
+            .map(instant -> instant.minus(Duration.ofHours(1)))
             .min(Instant::compareTo)
             .orElse(Instant.now().minus(Duration.ofDays(1)));
     Instant maxDate = Instant.now();
@@ -183,22 +184,30 @@ public class BatchRuleExecutionEngine implements RuleExecutionEngine {
   }
 
   /**
-   * Matches executions to Spark applications and converts to ReconciliationMatch.
+   * Matches executions to Spark applications/drivers and converts to ReconciliationMatch.
+   *
+   * <p>Supports both client mode (apps with names) and cluster mode (drivers matched by ID).
    *
    * @param executions list of executions to match
-   * @param sparkApps list of Spark applications fetched from History Server
+   * @param sparkApps list of Spark applications/drivers fetched from Master
    * @return list of matched executions (unmatched are excluded)
    */
   private List<ReconciliationMatch> matchExecutionsToApps(
       List<RuleExecution> executions, List<SparkApplicationInfo> sparkApps) {
 
-    log.info("Fetched {} Spark applications from List", sparkApps.size());
+    log.info("Fetched {} Spark applications/drivers from Master", sparkApps.size());
 
-    // Build lookup map: applicationName -> SparkApplicationInfo
+    // Build lookup map: applicationName -> SparkApplicationInfo (for client mode apps)
     Map<String, SparkApplicationInfo> appByName = new HashMap<>();
+    // Build lookup map: driverId -> SparkApplicationInfo (for cluster mode drivers)
+    Map<String, SparkApplicationInfo> appById = new HashMap<>();
+
     for (SparkApplicationInfo app : sparkApps) {
       if (app.getName() != null) {
         appByName.put(app.getName(), app);
+      }
+      if (app.getId() != null) {
+        appById.put(app.getId(), app);
       }
     }
 
@@ -207,7 +216,7 @@ public class BatchRuleExecutionEngine implements RuleExecutionEngine {
     int unmatchedCount = 0;
 
     for (RuleExecution execution : executions) {
-      SparkApplicationInfo app = findMatchingApp(execution, appByName);
+      SparkApplicationInfo app = findMatchingApp(execution, appByName, appById);
 
       if (app != null) {
         matches.add(
@@ -220,16 +229,18 @@ public class BatchRuleExecutionEngine implements RuleExecutionEngine {
                 .build());
 
         log.debug(
-            "Matched execution {} to Spark app '{}' (state: {})",
+            "Matched execution {} to Spark app/driver '{}' (id: {}, state: {})",
             execution.getExecutionId(),
             app.getName(),
+            app.getId(),
             app.getState());
       } else {
         unmatchedCount++;
         log.debug(
-            "No matching Spark app found for execution {} (rule {})",
+            "No matching Spark app/driver found for execution {} (rule {}, externalJobId: {})",
             execution.getExecutionId(),
-            execution.getRuleId());
+            execution.getRuleId(),
+            execution.getExternalJobId());
       }
     }
 
@@ -242,22 +253,43 @@ public class BatchRuleExecutionEngine implements RuleExecutionEngine {
   }
 
   /**
-   * Finds a matching Spark application for the given execution.
+   * Finds a matching Spark application or driver for the given execution.
    *
-   * <p>Looks up the application by its expected name: {@code
-   * flockr-batch-rule-{ruleId}-exec-{executionId}}
+   * <p>Matching strategy:
+   *
+   * <ol>
+   *   <li>First tries to match by expected app name: {@code
+   *       flockr-batch-rule-{ruleId}-exec-{executionId}} (works for client mode apps that have
+   *       spark.app.name set)
+   *   <li>Falls back to matching by externalJobId/driverId (works for cluster mode drivers)
+   * </ol>
    *
    * @param execution the execution to find a match for
    * @param appByName map of application name to application info
+   * @param appById map of application/driver ID to application info
    * @return matching SparkApplicationInfo, or null if not found
    */
   private SparkApplicationInfo findMatchingApp(
-      RuleExecution execution, Map<String, SparkApplicationInfo> appByName) {
+      RuleExecution execution,
+      Map<String, SparkApplicationInfo> appByName,
+      Map<String, SparkApplicationInfo> appById) {
 
+    // First try: match by expected app name (client mode)
     String expectedName =
         String.format(
             "flockr-batch-rule-%d-exec-%d", execution.getRuleId(), execution.getExecutionId());
 
-    return appByName.get(expectedName);
+    SparkApplicationInfo app = appByName.get(expectedName);
+    if (app != null) {
+      return app;
+    }
+
+    // Second try: match by externalJobId (cluster mode drivers)
+    String externalJobId = execution.getExternalJobId();
+    if (externalJobId != null) {
+      return appById.get(externalJobId);
+    }
+
+    return null;
   }
 }

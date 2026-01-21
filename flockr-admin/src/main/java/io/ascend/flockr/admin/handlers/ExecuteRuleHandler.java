@@ -68,8 +68,7 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
           JobStatus.SUBMITTED, RuleStatus.RUNNING,
           JobStatus.RUNNING, RuleStatus.RUNNING,
           JobStatus.COMPLETED, RuleStatus.COMPLETED,
-          JobStatus.FAILED, RuleStatus.FAILED,
-          JobStatus.RETRYING, RuleStatus.RETRYING);
+          JobStatus.FAILED, RuleStatus.FAILED);
 
   /**
    * Constructs the ExecuteRuleHandler with required dependencies.
@@ -78,7 +77,6 @@ public non-sealed class ExecuteRuleHandler extends AbstractHandler {
    * @param config the application configuration
    * @param executionSync the distributed synchronization mechanism
    * @param objectMapper the JSON object mapper
-   * @param jobServiceRegistry registry for accessing job services by rule type
    * @param ruleRepository repository for rule operations
    * @param ruleExecutionRepository repository for execution records
    * @param dataConnectorRepository repository for data source/sink details

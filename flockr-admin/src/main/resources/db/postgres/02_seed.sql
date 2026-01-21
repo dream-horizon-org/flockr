@@ -97,31 +97,6 @@ set
 	config_schema = EXCLUDED.config_schema,
 	is_active = EXCLUDED.is_active;
 
--- Insert sample data sources
-insert
-	into
-	data_sources (name,
-	type_id,
-	config,
-	status,
-	created_by)
-values
-(
-  'Production Athena - User Events',
-  (
-select
-	id
-from
-	data_connector_types
-where
-	kind = 'SOURCE'
-	and type = 'ATHENA'
-limit 1),
-  '{"connectorType": "ATHENA", "accessKey": "ASIA54S6SGWZWNBLF73L", "secretKey": "P3o7Wd3BpeFjIsWcyYWW5iMANim7hSy0upafin2y", "queryOutputLocation": "s3://hascend/athena_out/", "workgroup": "primary", "region": "us-east-1"}',
-  'ACTIVE',
-  'system'
-);
-
 -- Insert sample data sinks
 insert
 	into

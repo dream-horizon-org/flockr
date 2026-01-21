@@ -30,35 +30,19 @@ import lombok.extern.slf4j.Slf4j;
  * <p>Periodically finds executions in reconcilable statuses (configured via {@link JobStatus}) and
  * syncs their status with the external execution engine (Spark/Flink).
  *
- * <p><b>Reconciliation flow:</b>
- *
- * <ol>
- *   <li>Find stale executions in reconcilable statuses (limit 100, using updated_at threshold)
- *   <li>Fetch apps from external engine (single batch API call per job type)
- *   <li>For matched executions: update status if changed
- *   <li>Unmatched executions are left alone (will be picked up in next cycle)
- * </ol>
- *
- * <p><b>Performance optimizations:</b>
- *
- * <ul>
- *   <li>Single Spark/Flink API call instead of N individual calls
- *   <li>Batch database updates grouped by status
- *   <li>Skip updates when status unchanged
- *   <li>Statuses to reconcile are configurable via {@link JobStatus#isReconcilable()}
- * </ul>
- *
  * @author Sudhanshu Rai
  * @since 1.0
  */
 @Slf4j
 public non-sealed class ReconcileJobHandler extends AbstractHandler {
   /** Minimum age (in minutes) for an execution to be considered stale. */
-  private static final int RECONCILE_THRESHOLD_MINUTES = 5;
+  private static final int RECONCILE_THRESHOLD_MINUTES = 1;
 
   private final RuleExecutionRepository ruleExecutionRepository;
   private final RuleRepository ruleRepository;
   private final RuleExecutionEngineRegistry ruleExecutionEngineRegistry;
+  private final List<JobStatus> reconcilableStatuses =
+      List.of(JobStatus.SUBMITTED, JobStatus.RUNNING);
 
   /**
    * Creates a new ReconcileJobHandler.
@@ -120,12 +104,9 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
    * @return Single containing count of successfully reconciled executions
    */
   private Single<Integer> reconcileStaleExecutions() {
-    List<JobStatus> reconcilableStatuses = JobStatus.getReconcilableStatuses();
-
-    log.debug("Reconciling executions with statuses: {}", reconcilableStatuses);
-
     return ruleExecutionRepository
-        .findStaleExecutionsForReconciliation(RECONCILE_THRESHOLD_MINUTES, reconcilableStatuses)
+        .findStaleExecutionsForReconciliation(
+            RECONCILE_THRESHOLD_MINUTES, this.reconcilableStatuses)
         .flatMap(this::processExecutions);
   }
 
@@ -226,7 +207,7 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
     operations.addAll(buildRuleUpdateOperations(ruleIdsByRuleStatus));
 
     return Completable.merge(operations)
-        .toSingle(() -> changedMatches.size())
+        .toSingle(changedMatches::size)
         .onErrorResumeNext(
             error -> {
               log.error("Error during batch updates", error);
@@ -319,9 +300,10 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
     for (Map.Entry<JobStatus, List<ReconciliationMatch>> entry : matchesByJobStatus.entrySet()) {
       JobStatus status = entry.getKey();
       List<ReconciliationMatch> group = entry.getValue();
+      List<Long> executionIds = group.stream().map(ReconciliationMatch::getExecutionId).toList();
 
-      log.info("Batch updating {} executions to status {}", group.size(), status);
-      operations.add(ruleExecutionRepository.batchUpdateStatusAndExternalJobId(group, status));
+      log.info("Batch updating {} executions to status {}", executionIds.size(), status);
+      operations.add(ruleExecutionRepository.batchUpdateStatus(executionIds, status));
     }
 
     return operations;
@@ -376,8 +358,8 @@ public non-sealed class ReconcileJobHandler extends AbstractHandler {
     return switch (jobStatus) {
       case RUNNING, SUBMITTED, SUBMITTING -> RuleStatus.RUNNING;
       case COMPLETED -> RuleStatus.COMPLETED;
-      case FAILED, CANCELLED -> RuleStatus.FAILED;
-      case RETRYING -> RuleStatus.RETRYING;
+      case FAILED -> RuleStatus.FAILED;
+      case CANCELLED -> RuleStatus.CANCELLED;
     };
   }
 }

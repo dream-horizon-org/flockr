@@ -81,7 +81,7 @@ public class RuleRepositoryImpl implements RuleRepository {
       "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
 
   private static final String SQL_BATCH_UPDATE_RULE_STATUS =
-      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = ANY($2) AND status = $3";
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2";
 
   @Override
   public Single<Boolean> createRules(List<RuleMeta<SourceInfo>> ruleMetas) {
@@ -150,17 +150,16 @@ public class RuleRepositoryImpl implements RuleRepository {
   public Completable batchUpdateRuleStatus(
       List<Long> ruleIds, RuleStatus newStatus, RuleStatus expectedCurrentStatus) {
 
-    if (ruleIds.isEmpty()) {
-      return Completable.complete();
+    List<Tuple> batchParams = new ArrayList<>();
+    for (Long ruleId : ruleIds) {
+      batchParams.add(Tuple.of(newStatus, ruleId));
     }
-
-    Long[] ids = ruleIds.toArray(new Long[0]);
     return postgresWriterClient
         .getConnection()
         .flatMapCompletable(
             conn ->
                 conn.preparedQuery(SQL_BATCH_UPDATE_RULE_STATUS)
-                    .rxExecute(Tuple.of(newStatus.name(), ids, expectedCurrentStatus.name()))
+                    .rxExecuteBatch(batchParams)
                     .ignoreElement()
                     .doFinally(conn::close));
   }
