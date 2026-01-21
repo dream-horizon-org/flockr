@@ -1,7 +1,7 @@
 package io.ascend.flockr.admin.repository;
 
-import io.ascend.flockr.admin.domain.rule.RuleMeta;
-import io.ascend.flockr.admin.domain.rule.SourceInfo;
+import io.ascend.flockr.admin.domain.rule.*;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 
@@ -14,6 +14,9 @@ import java.util.List;
  *   <li>Creating rules in batch
  *   <li>Retrieving individual rules by ID
  *   <li>Retrieving all rules associated with an audience
+ *   <li>Finding scheduled rules ready for execution (domain-specific)
+ *   <li>Finding rules by status (generic queries)
+ *   <li>Updating rule status
  * </ul>
  *
  * @author Prithu Sharma
@@ -46,4 +49,47 @@ public interface RuleRepository {
    *     first)
    */
   Single<List<RuleMeta<SourceInfo>>> getRulesByAudienceId(String xProjectId, Long audienceId);
+
+  /**
+   * Finds all rules that are scheduled and ready for execution with their associated sink IDs. A
+   * rule is ready when:
+   *
+   * <ul>
+   *   <li>status = SCHEDULED
+   *   <li>start_time <= current time
+   *   <li>end_time > current time
+   * </ul>
+   *
+   * <p>This method joins with the audiences table to fetch the sink IDs associated with each rule's
+   * audience. The sink details can then be enriched separately using batch fetch operations.
+   *
+   * <p><b>This is a domain-specific method</b> that encapsulates business logic for finding "ready
+   * to execute" rules.
+   *
+   * @return Single emitting list of rules with populated sink IDs ready for execution
+   */
+  Single<List<ExecutableRule<SourceInfo, SinkInfo>>> findScheduledRulesReadyWithSinkIds();
+
+  /**
+   * Updates the status of a rule if it matches the current status.
+   *
+   * @param ruleId the unique rule identifier
+   * @param newStatus the new status to set
+   * @param currentStatus the expected current status
+   * @return a Single emitting true if the status was updated, false otherwise
+   */
+  Single<Boolean> updateRuleStatus(Long ruleId, RuleStatus newStatus, RuleStatus currentStatus);
+
+  /**
+   * Batch update rule status for multiple rules.
+   *
+   * <p>Uses PostgreSQL ANY() for efficient batch update with optimistic locking.
+   *
+   * @param ruleIds list of rule IDs to update
+   * @param newStatus the new status to set
+   * @param expectedCurrentStatus the expected current status (for optimistic locking)
+   * @return Completable that completes when all updates are done
+   */
+  Completable batchUpdateRuleStatus(
+      List<Long> ruleIds, RuleStatus newStatus, RuleStatus expectedCurrentStatus);
 }

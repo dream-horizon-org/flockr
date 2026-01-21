@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Standalone module - no parent inheritance -->
+    <groupId>com.ascend</groupId>
+    <artifactId>flockr-historic-engine</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+    <name>flockr-historic-engine</name>
+    <description>Spark job that executes operations on S3</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Main class for this module -->
+        <main.class>io.ascend.flockr.engine.EngineStart</main.class>
+        <mainClass>io.ascend.flockr.engine.EngineStart</mainClass>
+
+        <!-- Spark and Hadoop versions -->
+        <spark.version>4.0.1</spark.version>
+        <scala.binary.version>2.13</scala.binary.version>
+        <hadoop.version>3.3.6</hadoop.version>
+        <aws.sdk.bundle.version>1.12.772</aws.sdk.bundle.version>
+        <kafka.version>3.7.0</kafka.version>
+        <jackson.version>2.18.0</jackson.version>
+        <guice.version>7.0.0</guice.version>
+        
+        <!-- Dependency versions -->
+        <lombok.version>1.18.30</lombok.version>
+        <slf4j.version>2.0.9</slf4j.version>
+        <typesafe.version>1.4.3</typesafe.version>
+        <kafka-client.version>3.6.0</kafka-client.version>
+        
+        <!-- Plugin versions -->
+        <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
+        <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
+        <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
+        <fmt-maven-plugin.version>2.21.1</fmt-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
+    </properties>
+
+    <dependencies>
+        <!-- Spark (provided when running with spark-submit) -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-aws</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-bundle</artifactId>
+            <version>${aws.sdk.bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- SLF4J API for logging (required by Lombok @Slf4j) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- SLF4J Simple implementation for standalone execution -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.9</version>
+            <scope>runtime</scope>
+        </dependency>
+
+       <!-- Guice 4.0 is compatible with Guava 14.0+ -->
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <version>${guice.version}</version>
+        </dependency>
+
+        <!-- Typesafe Config for configuration management -->
+        <dependency>
+            <groupId>com.typesafe</groupId>
+            <artifactId>config</artifactId>
+            <version>${typesafe.version}</version>
+        </dependency>
+
+        <!-- Apache Kafka for sink implementation -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${kafka-client.version}</version>
+        </dependency>
+
+        <!-- Jackson for JSON parsing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <!-- Inherit fmt-maven-plugin from parent -->
+            <plugin>
+                <groupId>com.spotify.fmt</groupId>
+                <artifactId>fmt-maven-plugin</artifactId>
+                <version>${fmt-maven-plugin.version}</version>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <release>${maven.compiler.release}</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- Create a runnable fat jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${maven-shade-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <outputFile>${project.basedir}/target/flockr/${project.artifactId}-${project.version}-fat.jar</outputFile>
+                            <transformers combine.children="override">
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <Main-Class>${main.class}</Main-Class>
+                                        <X-Compile-Source-JDK>${maven.compiler.source}</X-Compile-Source-JDK>
+                                        <X-Compile-Target-JDK>${maven.compiler.target}</X-Compile-Target-JDK>
+                                    </manifestEntries>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Generate JavaDoc HTML documentation -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${maven-javadoc-plugin.version}</version>
+                <configuration>
+                    <source>17</source>
+                    <encoding>UTF-8</encoding>
+                    <doclint>none</doclint>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

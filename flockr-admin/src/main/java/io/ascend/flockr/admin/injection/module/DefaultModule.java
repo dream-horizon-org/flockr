@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.AbstractModule;
-import io.ascend.flockr.admin.util.json.JsonObjectDeserializer;
+import io.ascend.flockr.admin.util.JsonUtil;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.core.Vertx;
 
@@ -23,7 +23,8 @@ public class DefaultModule extends AbstractModule {
           .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true)
           .serializationInclusion(JsonInclude.Include.NON_NULL)
           .addModule(
-              new SimpleModule().addDeserializer(JsonObject.class, new JsonObjectDeserializer()))
+              new SimpleModule()
+                  .addDeserializer(JsonObject.class, new JsonUtil.JsonObjectDeserializer()))
           .build();
 
   public DefaultModule(Vertx vertx) {

@@ -3,16 +3,17 @@ package io.ascend.flockr.admin.repository.impl;
 import com.google.inject.Inject;
 import io.ascend.flockr.admin.client.postgres.PostgresReaderClient;
 import io.ascend.flockr.admin.client.postgres.PostgresWriterClient;
-import io.ascend.flockr.admin.domain.rule.RuleMeta;
-import io.ascend.flockr.admin.domain.rule.SourceInfo;
+import io.ascend.flockr.admin.domain.rule.*;
 import io.ascend.flockr.admin.repository.RuleRepository;
 import io.ascend.flockr.admin.util.RuleHelpers;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.sqlclient.Tuple;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of {@link RuleRepository} using PostgreSQL as the data store.
@@ -31,6 +32,7 @@ import lombok.RequiredArgsConstructor;
  * @author Prithu Sharma
  * @since 1.0
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class RuleRepositoryImpl implements RuleRepository {
   private final PostgresReaderClient postgresReaderClient;
@@ -56,6 +58,30 @@ public class RuleRepositoryImpl implements RuleRepository {
           + "created_by, EXTRACT(EPOCH FROM created_at)::BIGINT as created_at, "
           + "EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at "
           + "FROM rules WHERE audience_id = $1 AND x_project_id = $2 ORDER BY created_at DESC";
+
+  private static final String SQL_FIND_SCHEDULED_READY_WITH_SINK_IDS =
+      "SELECT "
+          + "r.id, r.audience_id, r.x_project_id, r.name, r.description, "
+          + "EXTRACT(EPOCH FROM r.start_time)::BIGINT as start_time, "
+          + "EXTRACT(EPOCH FROM r.end_time)::BIGINT as end_time, "
+          + "r.rule_action, r.rule_type, r.status, r.configuration, "
+          + "r.created_by, "
+          + "EXTRACT(EPOCH FROM r.created_at)::BIGINT as created_at, "
+          + "EXTRACT(EPOCH FROM r.updated_at)::BIGINT as updated_at, "
+          + "a.name as audience_name, "
+          + "a.sinks as sink_ids, "
+          + "EXTRACT(EPOCH FROM a.expire_date)::BIGINT AS expire_date "
+          + "FROM rules r "
+          + "INNER JOIN audiences a ON r.audience_id = a.id "
+          + "WHERE r.status = 'SCHEDULED' "
+          + "AND r.start_time <= NOW() "
+          + "AND r.end_time > NOW()";
+
+  private static final String SQL_UPDATE_STATUS_IF_CURRENT =
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3";
+
+  private static final String SQL_BATCH_UPDATE_RULE_STATUS =
+      "UPDATE rules SET status = $1, updated_at = NOW() WHERE id = $2";
 
   @Override
   public Single<Boolean> createRules(List<RuleMeta<SourceInfo>> ruleMetas) {
@@ -96,5 +122,45 @@ public class RuleRepositoryImpl implements RuleRepository {
       String xProjectId, Long audienceId) {
     return postgresReaderClient.fetchAll(
         SQL_GET_RULES_BY_AUDIENCE, Tuple.of(audienceId, xProjectId), RuleHelpers::mapRuleRow);
+  }
+
+  @Override
+  public Single<List<ExecutableRule<SourceInfo, SinkInfo>>> findScheduledRulesReadyWithSinkIds() {
+    return postgresReaderClient.fetchAll(
+        SQL_FIND_SCHEDULED_READY_WITH_SINK_IDS, Tuple.tuple(), RuleHelpers::mapRuleRowWithSinkIds);
+  }
+
+  @Override
+  public Single<Boolean> updateRuleStatus(
+      Long ruleId, RuleStatus newStatus, RuleStatus currentStatus) {
+    return postgresWriterClient
+        .getConnection()
+        .flatMap(
+            conn ->
+                postgresWriterClient
+                    .execute(
+                        conn,
+                        SQL_UPDATE_STATUS_IF_CURRENT,
+                        Tuple.of(newStatus, ruleId, currentStatus))
+                    .doFinally(conn::close));
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public Completable batchUpdateRuleStatus(
+      List<Long> ruleIds, RuleStatus newStatus, RuleStatus expectedCurrentStatus) {
+
+    List<Tuple> batchParams = new ArrayList<>();
+    for (Long ruleId : ruleIds) {
+      batchParams.add(Tuple.of(newStatus, ruleId));
+    }
+    return postgresWriterClient
+        .getConnection()
+        .flatMapCompletable(
+            conn ->
+                conn.preparedQuery(SQL_BATCH_UPDATE_RULE_STATUS)
+                    .rxExecuteBatch(batchParams)
+                    .ignoreElement()
+                    .doFinally(conn::close));
   }
 }

@@ -5,6 +5,7 @@ search_path to flockr,
 public;
 -- Seed supported connector types
 
+-- SOURCE: AWS Athena
 insert
 	into
 	data_connector_types (kind,
@@ -13,10 +14,10 @@ insert
 	config_schema,
 	is_active)
 values
-  ('SINK',
-'KAFKA',
-'Apache Kafka (Sink)',
-   '{"type": "object", "properties": {"topic": {"type": "string"}, "bootstrapServersUrl": {"type": "string"}}, "required": ["topic", "bootstrapServersUrl"]}',
+  ('SOURCE',
+'ATHENA',
+'SESSION AWS Athena',
+   '{"type": "object", "properties": {"sessionToken": {"type": "string", "description": "AWS Session Key ID"}, "accessKey": {"type": "string", "description": "AWS Access Key ID"}, "secretKey": {"type": "string", "description": "AWS Secret Access Key"}, "queryOutputLocation": {"type": "string", "description": "S3 path for query results (e.g., s3://bucket-name/path/)"}, "workgroup": {"type": "string", "description": "Athena workgroup name", "default": "primary"}, "region": {"type": "string", "description": "AWS region (e.g., us-east-1)", "default": "us-east-1"}}, "required": ["accessKey", "secretKey", "queryOutputLocation"]}',
    true)
 on
 CONFLICT (kind,
@@ -27,28 +28,7 @@ set
 	config_schema = EXCLUDED.config_schema,
 	is_active = EXCLUDED.is_active;
 
-insert
-	into
-	data_connector_types (kind,
-	type,
-	display_name,
-	config_schema,
-	is_active)
-values
-  ('SINK',
-'S3_FOLDER',
-'AWS S3 Folder',
-   '{"type": "object", "properties": {"bucket": {"type": "string"}, "folderPath": {"type": "string"}, "region": {"type": "string"}, "accessKey": {"type": "string"}, "secretKey": {"type": "string"}, "fileFormat": {"type": "string"}}, "required": ["bucket", "folderPath", "accessKey", "secretKey"]}',
-   true)
-on
-CONFLICT (kind,
-type) DO
-update
-set
-	display_name = EXCLUDED.display_name,
-	config_schema = EXCLUDED.config_schema,
-	is_active = EXCLUDED.is_active;
-
+-- SINK: Webhook/HTTP API
 insert
 	into
 	data_connector_types (kind,
@@ -71,7 +51,7 @@ set
 	config_schema = EXCLUDED.config_schema,
 	is_active = EXCLUDED.is_active;
 
--- Insert sample data sinks (configs match KafkaSinkConfig and S3FolderSinkConfig POJOs)
+-- Insert sample data sinks
 insert
 	into
 	data_sinks (name,
@@ -95,3 +75,23 @@ limit 1),
   'ACTIVE',
   'system'
 );
+
+-- Lease for ExecuteRuleHandler (executes scheduled rules)
+INSERT INTO distributed_lease (lease_key, holder_id, acquired_at, expires_at)
+VALUES (
+    'executeRuleHandler',
+    'system-init',
+    NOW() - INTERVAL '1 hour',  -- Set to past so it's immediately available
+    NOW() - INTERVAL '55 minutes'  -- Expired so any handler can acquire it
+)
+ON CONFLICT (lease_key) DO NOTHING;
+
+-- Lease for ReconcileJobHandler (reconciles job states)
+INSERT INTO distributed_lease (lease_key, holder_id, acquired_at, expires_at)
+VALUES (
+    'reconcileJobHandler',
+    'system-init',
+    NOW() - INTERVAL '1 hour',  -- Set to past so it's immediately available
+    NOW() - INTERVAL '55 minutes'  -- Expired so any handler can acquire it
+)
+ON CONFLICT (lease_key) DO NOTHING;

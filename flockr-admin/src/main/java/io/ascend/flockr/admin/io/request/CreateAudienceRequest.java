@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.ascend.flockr.admin.domain.audience.AudienceType;
 import io.ascend.flockr.admin.validation.ValidEnum;
+import io.ascend.flockr.admin.validation.ValidFutureEpoch;
 import io.vertx.core.json.JsonObject;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -52,6 +53,7 @@ public class CreateAudienceRequest {
    * The expiry date of the audience (epoch milliseconds). Must not exceed year 2039 to prevent
    * overflow issues.
    */
+  @ValidFutureEpoch
   @Max(2177452799000L)
   @NotNull(message = "Expire date is required")
   private Long expireDate;

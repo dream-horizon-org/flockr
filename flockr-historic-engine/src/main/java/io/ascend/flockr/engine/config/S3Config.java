@@ -1,0 +1,173 @@
+package io.ascend.flockr.engine.config;
+
+import com.typesafe.config.Config;
+import io.ascend.flockr.engine.config.provider.ConfigProvider;
+import io.ascend.flockr.engine.enums.FormatTypes;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
+
+/**
+ * Configuration for S3 data source or sink.
+ *
+ * <p>This class contains all configuration parameters needed to read from or write to Amazon S3,
+ * including bucket, path, format, compression, and AWS credentials.
+ *
+ * @see io.ascend.flockr.engine.modules.sink.impl.S3SinkImpl
+ * @author Shivam-Raghuwanshi
+ */
+@Slf4j
+@Data
+@NoArgsConstructor
+public class S3Config {
+
+  private String bucket;
+  private String path;
+  private FormatTypes format;
+  private String accessKey;
+  private String secretKey;
+  private String region;
+
+  /** Write mode for S3 sink (append, overwrite, etc.). */
+  private String writeMode;
+
+  /**
+   * Creates a ConfigProvider for S3 source configuration.
+   *
+   * <p>This provider loads configuration from the default config file location: {@code
+   * config/source/s3/default.conf}
+   *
+   * @return A ConfigProvider instance for S3Config.
+   */
+  public static ConfigProvider<S3Config> providerForSource() {
+    return ConfigProvider.forSource("s3", S3Config.class);
+  }
+
+  /**
+   * Creates a ConfigProvider for S3 sink configuration.
+   *
+   * <p>This provider loads configuration from the default config file location: {@code
+   * config/sink/s3/default.conf}
+   *
+   * @return A ConfigProvider instance for S3Config.
+   */
+  public static ConfigProvider<S3Config> providerForSink() {
+    return ConfigProvider.forSink("s3", S3Config.class);
+  }
+
+  /** AWS session token for temporary credentials. */
+  private String sessionToken;
+
+  /**
+   * Configures Hadoop/Spark S3A filesystem settings with AWS credentials.
+   *
+   * <p>This method sets the following Hadoop configuration properties:
+   *
+   * <ul>
+   *   <li>fs.s3a.access.key: AWS access key
+   *   <li>fs.s3a.secret.key: AWS secret key
+   *   <li>fs.s3a.session.token: AWS session token (if provided)
+   *   <li>fs.s3a.aws.credentials.provider: Credentials provider class
+   *   <li>fs.s3a.region: AWS region (if provided)
+   * </ul>
+   *
+   * <p>If a session token is provided, it uses TemporaryAWSCredentialsProvider, otherwise it uses
+   * SimpleAWSCredentialsProvider.
+   *
+   * @param hadoopConf The Hadoop Configuration object to configure.
+   */
+  public void configureHadoop(Configuration hadoopConf) {
+    if (accessKey != null && secretKey != null) {
+      hadoopConf.set("fs.s3a.access.key", accessKey);
+      hadoopConf.set("fs.s3a.secret.key", secretKey);
+
+      if (sessionToken != null && !sessionToken.isEmpty()) {
+        hadoopConf.set("fs.s3a.session.token", sessionToken);
+        hadoopConf.set(
+            "fs.s3a.aws.credentials.provider",
+            "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider");
+        log.debug(
+            "S3 credentials configured with session token - using TemporaryAWSCredentialsProvider");
+      } else {
+        hadoopConf.set(
+            "fs.s3a.aws.credentials.provider",
+            "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider");
+        log.debug("S3 credentials configured");
+      }
+    }
+    if (region != null && !region.isEmpty()) {
+      hadoopConf.set("fs.s3a.region", region);
+      log.debug("S3 region configured: {}", region);
+    }
+  }
+
+  /**
+   * Gets the full S3 path (URI) for this configuration.
+   *
+   * <p>If the path already starts with "s3://" or "s3a://", it is returned as-is. Otherwise, it
+   * constructs the path as "s3a://{bucket}/{path}".
+   *
+   * <p>The path is cleaned to remove leading slashes before construction.
+   *
+   * @return The full S3 URI path.
+   * @throws IllegalArgumentException If bucket is null or empty when path is not a full URI.
+   */
+  public String getS3Path() {
+    if (path != null && (path.startsWith("s3://") || path.startsWith("s3a://"))) {
+      return path;
+    }
+    if (bucket == null || bucket.isEmpty()) {
+      throw new IllegalArgumentException(
+          "S3 bucket cannot be null or empty when path is not a full S3 URI");
+    }
+    String cleanPath = path != null && path.startsWith("/") ? path.substring(1) : path;
+    return "s3a://" + bucket + "/" + (cleanPath != null ? cleanPath : "");
+  }
+
+  /**
+   * Gets the Spark format string for this configuration.
+   *
+   * <p>Returns the format name in lowercase (e.g., "parquet", "csv", "json"). Defaults to "parquet"
+   * if format is not specified.
+   *
+   * @return The Spark format string.
+   */
+  public String getSparkFormat() {
+    return format != null ? format.getFormat().toLowerCase() : "parquet";
+  }
+
+  /**
+   * Creates an S3Config instance from a Typesafe Config object.
+   *
+   * <p>This method extracts configuration values from the provided Config object, including
+   * optional fields like format, compression, partitions, and options.
+   *
+   * @param config The Typesafe Config object containing S3 configuration.
+   * @return A new S3Config instance with values from the config.
+   * @throws IllegalArgumentException If an invalid format type is specified.
+   */
+  public static S3Config fromConfig(Config config) {
+    S3Config s3Config = new S3Config();
+
+    s3Config.setBucket(getStringOrNull(config, "bucket"));
+    s3Config.setPath(getStringOrNull(config, "path"));
+    s3Config.setAccessKey(getStringOrNull(config, "accessKey"));
+    s3Config.setSecretKey(getStringOrNull(config, "secretKey"));
+    s3Config.setRegion(getStringOrNull(config, "region"));
+    s3Config.setWriteMode(getStringOrNull(config, "writeMode"));
+
+    if (config.hasPath("format")) {
+      try {
+        s3Config.setFormat(FormatTypes.valueOf(config.getString("format").toUpperCase()));
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("Invalid format type: " + config.getString("format"), e);
+      }
+    }
+    return s3Config;
+  }
+
+  private static String getStringOrNull(Config config, String path) {
+    return config.hasPath(path) ? config.getString(path) : null;
+  }
+}

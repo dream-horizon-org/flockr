@@ -12,7 +12,8 @@ import java.lang.annotation.Target;
  * Validates SQL query syntax using JSqlParser.
  *
  * <p>This annotation ensures that the SQL query string is syntactically valid and can be parsed
- * successfully.
+ * successfully. Optionally validates that the outermost SELECT statement contains ONLY a specific
+ * required column.
  *
  * @author Prithu Sharma
  * @since 1.0
@@ -27,4 +28,14 @@ public @interface ValidSqlQuery {
   Class<?>[] groups() default {};
 
   Class<? extends Payload>[] payload() default {};
+
+  /**
+   * Optional column name that must be the ONLY column in the outermost SELECT statement.
+   *
+   * <p>If specified, the validator will check that the outermost SELECT contains ONLY this column
+   * (case-insensitive). Multiple columns or SELECT * are not allowed.
+   *
+   * @return required column name, or empty string for no column validation
+   */
+  String requiredColumn() default "";
 }
